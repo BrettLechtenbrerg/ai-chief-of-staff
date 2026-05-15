@@ -234,9 +234,9 @@ export function isValidModeId(mode: string): mode is AgentModeId {
   return mode in AGENT_MODES;
 }
 
-/** Get the mode config, falling back to 'coder' for invalid IDs */
+/** Get the mode config, falling back to 'general' for invalid IDs */
 export function getModeConfig(mode: string): AgentMode {
-  return AGENT_MODES[mode as AgentModeId] || AGENT_MODES.coder;
+  return AGENT_MODES[mode as AgentModeId] || AGENT_MODES.general;
 }
 
 /** Get all modes as an array (for UI rendering) */

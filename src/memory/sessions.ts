@@ -19,7 +19,7 @@ export interface Session {
 export function createSession(
   db: Database.Database,
   name: string,
-  mode: AgentModeId = 'coder',
+  mode: AgentModeId = 'general',
   workingDirectory?: string | null
 ): Session {
   // Check for duplicate name
@@ -46,7 +46,7 @@ export function createSession(
 export function ensureSession(
   db: Database.Database,
   id: string,
-  mode: AgentModeId = 'coder'
+  mode: AgentModeId = 'general'
 ): void {
   const existing = getSession(db, id);
   if (existing) return;
@@ -130,7 +130,7 @@ export function getSessions(db: Database.Database): Session[] {
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
-    mode: (row.mode as AgentModeId) || 'coder',
+    mode: (row.mode as AgentModeId) || 'general',
     working_directory: row.working_directory,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -255,13 +255,14 @@ export function getSessionMessageCount(db: Database.Database, sessionId: string)
 }
 
 /**
- * Get the mode for a session (defaults to 'coder' for legacy sessions)
+ * Get the mode for a session (defaults to 'general' for legacy sessions).
+ * AI Chief of Staff ships as a personal assistant, not a coding agent.
  */
 export function getSessionMode(db: Database.Database, sessionId: string): AgentModeId {
   const row = db.prepare('SELECT mode FROM sessions WHERE id = ?').get(sessionId) as
     | { mode: string | null }
     | undefined;
-  return (row?.mode as AgentModeId) || 'coder';
+  return (row?.mode as AgentModeId) || 'general';
 }
 
 /**

@@ -419,7 +419,7 @@ class SettingsManagerClass {
    * Get agent identity: name, description, personality (who am I).
    */
   getFormattedIdentity(): string {
-    const agentName = this.get('personalize.agentName') || 'Frankie';
+    const agentName = this.get('personalize.agentName') || 'AI Chief of Staff';
     const description = this.get('personalize.description');
     const personality = this.get('personalize.personality');
 

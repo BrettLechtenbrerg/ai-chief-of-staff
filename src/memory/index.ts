@@ -356,7 +356,7 @@ export class MemoryManager {
     // Migration: add mode column to sessions for per-session mode lock
     const sessColumnsForMode = this.db.pragma('table_info(sessions)') as Array<{ name: string }>;
     if (!sessColumnsForMode.some((c) => c.name === 'mode')) {
-      this.db.exec("ALTER TABLE sessions ADD COLUMN mode TEXT DEFAULT 'coder'");
+      this.db.exec("ALTER TABLE sessions ADD COLUMN mode TEXT DEFAULT 'general'");
       console.log('[Memory] Migrated sessions table: added mode column');
     }
 
@@ -547,13 +547,13 @@ export class MemoryManager {
 
   createSession(
     name: string,
-    mode: AgentModeId = 'coder',
+    mode: AgentModeId = 'general',
     workingDirectory?: string | null
   ): Session {
     return _createSession(this.db, name, mode, workingDirectory);
   }
 
-  ensureSession(id: string, mode: AgentModeId = 'coder'): void {
+  ensureSession(id: string, mode: AgentModeId = 'general'): void {
     _ensureSession(this.db, id, mode);
   }
 

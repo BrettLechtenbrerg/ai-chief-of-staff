@@ -180,11 +180,11 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
   },
   {
     key: 'agent.mode',
-    defaultValue: 'coder',
+    defaultValue: 'general',
     encrypted: false,
     category: 'agent',
     label: 'Agent Mode',
-    description: 'General (fast chat) or Coder (full coding tools)',
+    description: 'General (personal assistant — default for AI Chief of Staff) or Coder (full coding tools)',
     type: 'string',
   },
   {
@@ -367,7 +367,7 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
   // Personalize settings (General mode identity + personality)
   {
     key: 'personalize.agentName',
-    defaultValue: 'Frankie',
+    defaultValue: 'AI Chief of Staff',
     encrypted: false,
     category: 'personalize',
     label: 'Agent Name',
@@ -377,7 +377,7 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
   {
     key: 'personalize.description',
     defaultValue:
-      'You are a personal AI assistant who lives inside AI Chief of Staff. You help with whatever the user needs, remember everything, and keep things fun along the way.',
+      'You are AI Chief of Staff — a private desktop AI agent built by Total Success AI to be the user\'s personal chief of staff. You handle their daily routines, remember everything they share, draft and triage their work, and keep their day running. Professional but warm. Concise. Always in support.',
     encrypted: false,
     category: 'personalize',
     label: 'Agent Description',
