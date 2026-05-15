@@ -211,3 +211,223 @@ async function rtnDeleteJob(name) {
     _rtnLoadJobs();
   } catch (err) { _rtnShowToast(err.message, 'error'); }
 }
+
+// ============================================================================
+// Routine Recipes — ready-made templates with copy-to-clipboard.
+//
+// Each recipe describes one common routine your AI Chief of Staff can run
+// for you. Recipes are intentionally generic — clients tweak the wording,
+// schedule, and channel after copying. Cron schedules follow the 5-field
+// node-cron format: "minute hour day-of-month month day-of-week".
+// Times are local. Update channel to 'email' or 'telegram' if preferred.
+// ============================================================================
+
+const ROUTINE_RECIPES = [
+  {
+    icon: '☀️',
+    title: 'Daily Morning Briefing',
+    suggestedTime: 'Every weekday at 6:00 AM',
+    cron: '0 6 * * 1-5',
+    channel: 'desktop',
+    summary: 'Wake up to your priorities, calendar, and weather in one shot.',
+    prompt:
+`Give me my morning briefing.
+
+1. What's on my calendar today? Flag any tight back-to-back meetings or unusual events.
+2. What 3 things should I prioritize today, based on my goals and what I've been working on?
+3. Any unread emails in the last 12 hours that look urgent or time-sensitive?
+4. Weather for my home location.
+
+Keep it under 200 words. Bullets are fine. Use my name.`
+  },
+  {
+    icon: '📧',
+    title: 'Email Triage with Draft Replies',
+    suggestedTime: 'Every weekday at 8:00 AM and 1:00 PM',
+    cron: '0 8,13 * * 1-5',
+    channel: 'desktop',
+    summary: 'Scan unread inbox, categorize what matters, and pre-draft replies in your voice.',
+    prompt:
+`Check my unread Gmail inbox.
+
+1. Group messages into: urgent (needs reply today), important (this week), FYI (no action), and noise (newsletters, receipts).
+2. For each urgent + important email, draft a reply in my voice based on my writing rules. Save the drafts to Gmail so I can review and send.
+3. List the urgent emails by subject + sender + the one-line gist of my drafted reply.
+
+Don't send anything — drafts only.`
+  },
+  {
+    icon: '📅',
+    title: 'Calendar Conflict & Gap Check',
+    suggestedTime: 'Every Sunday at 6:00 PM',
+    cron: '0 18 * * 0',
+    channel: 'desktop',
+    summary: 'Find overlaps, gaps, and meetings that need prep before the week starts.',
+    prompt:
+`Look at my calendar for the coming week (Monday through Friday).
+
+1. Any back-to-back meetings with less than 15 min between them? Flag them.
+2. Any double-bookings or overlaps? List them.
+3. Which meetings have no agenda or unclear purpose in the description?
+4. Which meetings probably need prep from me? Why?
+5. Suggest 2-3 specific things I should block focus time for.`
+  },
+  {
+    icon: '📊',
+    title: 'Friday End-of-Week Review',
+    suggestedTime: 'Every Friday at 4:30 PM',
+    cron: '30 16 * * 5',
+    channel: 'desktop',
+    summary: 'Recap what got done, what slipped, and what to carry into next week.',
+    prompt:
+`It's Friday afternoon. Review this week.
+
+1. Based on my calendar + the conversations we've had, what did I actually accomplish this week? Be specific.
+2. What did I say I'd do but didn't? Carry these forward.
+3. Any wins worth celebrating?
+4. Three things to focus on next week, given my current goals.
+
+Tone: honest, friendly, no hype.`
+  },
+  {
+    icon: '🔔',
+    title: 'Daily Hydration & Movement Nudge',
+    suggestedTime: 'Every 2 hours from 9 AM to 5 PM, weekdays',
+    cron: '0 9,11,13,15,17 * * 1-5',
+    channel: 'desktop',
+    summary: 'A short, kind reminder to drink water and stand up.',
+    prompt:
+`Send me a short, friendly nudge — one sentence — to drink water and stand up for 60 seconds. Vary the wording each time. No emojis if it'd feel forced.`
+  },
+  {
+    icon: '📰',
+    title: 'Weekly Industry Scan',
+    suggestedTime: 'Every Monday at 7:00 AM',
+    cron: '0 7 * * 1',
+    channel: 'desktop',
+    summary: 'Surface the 3-5 stories actually worth my attention from my industry.',
+    prompt:
+`Search the web for the most relevant news from the past 7 days in my industry (AI, business automation, coaching, SMB consulting — adjust based on what I do).
+
+Return the top 3 to 5 stories. For each:
+- One-line headline
+- Why it matters to me specifically (1 sentence — connect it to my business or goals)
+- Source link
+
+Skip fluff, hype pieces, and press releases. Real signal only.`
+  },
+  {
+    icon: '💰',
+    title: 'Monthly Money Check-In',
+    suggestedTime: '1st of every month at 9:00 AM',
+    cron: '0 9 1 * *',
+    channel: 'desktop',
+    summary: 'Remind me to check the metrics that actually matter, with specific prompts.',
+    prompt:
+`It's the first of the month. Send me a short, specific check-in:
+
+1. "Did you review last month's revenue, expenses, and profit?"
+2. "Did you check accounts receivable / outstanding invoices?"
+3. "What's one financial decision you've been putting off?"
+4. "What did last month teach you about the business?"
+
+Keep it to 4 short questions. No fluff.`
+  },
+  {
+    icon: '🎂',
+    title: 'Birthday & Anniversary Reminders',
+    suggestedTime: 'Every day at 8:00 AM',
+    cron: '0 8 * * *',
+    channel: 'desktop',
+    summary: 'Never miss an important date for people you care about.',
+    prompt:
+`Check what you remember about important people in my life. Are any birthdays, anniversaries, or other significant dates happening today or in the next 3 days?
+
+If yes:
+- List who and what.
+- Suggest one specific, thoughtful gesture for each (a text, a call, a small gift idea).
+
+If no important dates are coming up, send nothing.`
+  }
+];
+
+function _renderRecipes() {
+  const list = document.getElementById('recipes-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const [i, recipe] of ROUTINE_RECIPES.entries()) {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    card.innerHTML = `
+      <div class="recipe-head">
+        <span class="recipe-icon" aria-hidden="true">${recipe.icon}</span>
+        <div class="recipe-titleblock">
+          <h3>${recipe.title}</h3>
+          <p class="recipe-summary">${recipe.summary}</p>
+        </div>
+      </div>
+      <div class="recipe-meta">
+        <span><strong>When:</strong> ${recipe.suggestedTime}</span>
+        <span><strong>Cron:</strong> <code>${recipe.cron}</code></span>
+        <span><strong>Channel:</strong> ${recipe.channel}</span>
+      </div>
+      <details class="recipe-promptbox">
+        <summary>Show prompt</summary>
+        <pre class="recipe-prompt-text">${_escapeHtml(recipe.prompt)}</pre>
+      </details>
+      <div class="recipe-actions">
+        <button class="recipe-copy" data-recipe-index="${i}">Copy prompt</button>
+      </div>
+    `;
+    list.appendChild(card);
+  }
+
+  list.querySelectorAll('.recipe-copy').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      playNormalClick();
+      const idx = parseInt(btn.dataset.recipeIndex, 10);
+      const recipe = ROUTINE_RECIPES[idx];
+      if (!recipe) return;
+      navigator.clipboard.writeText(recipe.prompt).then(() => {
+        _rtnShowToast(`Copied: ${recipe.title}`, 'success');
+        btn.textContent = '✓ Copied';
+        setTimeout(() => { btn.textContent = 'Copy prompt'; }, 1800);
+      }).catch(() => {
+        _rtnShowToast("Couldn't copy — select the text manually", 'error');
+      });
+    });
+  });
+}
+
+function _escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+let _recipesRendered = false;
+function showRecipesModal() {
+  if (!_recipesRendered) {
+    _renderRecipes();
+    _recipesRendered = true;
+  }
+  const m = document.getElementById('recipes-modal');
+  if (m) m.classList.add('active');
+}
+
+function hideRecipesModal() {
+  const m = document.getElementById('recipes-modal');
+  if (m) m.classList.remove('active');
+}
+
+function openRoutineEditorFromRecipes() {
+  // Closes the modal and opens the existing routine editor window so the
+  // user can paste the recipe prompt they just copied.
+  hideRecipesModal();
+  try {
+    window.pocketAgent.app.openRoutines();
+  } catch (err) {
+    console.error('[Routines] openRoutines failed:', err);
+  }
+}

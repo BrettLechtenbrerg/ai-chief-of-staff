@@ -858,6 +858,9 @@
     <div class="routines-header">
       <h1><span>Routines</span></h1>
       <div class="routines-header-actions">
+        <button onclick="playNormalClick(); showRecipesModal()" title="Browse ready-made routine templates">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="vertical-align: -3px; margin-right: 4px;"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/><path d="M8 7h8M8 11h6"/></g></svg>Recipes
+        </button>
         <button onclick="playNormalClick(); hideRoutinesPanel()">Back</button>
       </div>
     </div>
@@ -872,6 +875,36 @@
       </div>
     </div>
   </div><!-- #routines-view -->
+
+  <!-- Routine Recipes Modal — ready-made templates with copy-to-clipboard.
+       Opened from the Routines view header. Read-only; users copy the prompt
+       into the routine editor (opened via 'Open Routine Editor' button or
+       the existing + button in the routines list). -->
+  <div class="modal-overlay" id="recipes-modal">
+    <div class="modal recipes-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>Routine Recipes</h2>
+          <p>Copy-paste-ready routines to get you started</p>
+        </div>
+        <button class="modal-close" id="recipes-close-btn" onclick="playNormalClick(); hideRecipesModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 6L6 18m12 0L6 6"/></svg>
+        </button>
+      </div>
+      <div class="modal-body recipes-body">
+        <p class="recipes-intro">
+          Routines are scheduled prompts your agent runs automatically. Pick a recipe below, copy the prompt, then click <strong>Open Routine Editor</strong> and paste it in. Edit the wording, schedule, and delivery channel to fit you.
+        </p>
+        <div class="recipes-list" id="recipes-list"><!-- filled by JS --></div>
+        <div class="recipes-footer">
+          <button class="recipes-open-editor" onclick="playNormalClick(); openRoutineEditorFromRecipes()">
+            Open Routine Editor
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="vertical-align: -2px; margin-left: 4px;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M7 7h10v10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Personalize View -->
   <div id="personalize-view">
