@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 /**
  * electron-builder afterPack hook to reduce app size
@@ -64,6 +65,60 @@ exports.default = async function(context) {
   }
 
   console.log('[afterPack] Cleanup complete');
+
+  // 4. macOS only: apply a proper ad-hoc codesign if electron-builder skipped
+  //    signing (i.e. local unsigned builds). Without this the bundle keeps the
+  //    linker's default ad-hoc signature with Identifier=Electron and an
+  //    unsealed Info.plist, which Finder shows as a 'no entry' icon and
+  //    macOS refuses to launch. We bind Info.plist, seal resources, and set
+  //    the correct bundle identifier from package.json.
+  if (platform === 'darwin') {
+    const appBundle = path.join(appOutDir, 'AI Chief of Staff.app');
+    const entitlements = path.join(__dirname, 'entitlements.mac.plist');
+    const bundleId = 'com.totalsuccessai.ai-chief-of-staff';
+
+    // Detect: if electron-builder already applied a non-linker signature, skip.
+    let needsResign = true;
+    try {
+      const out = execSync(`codesign -dv "${appBundle}" 2>&1`).toString();
+      // A real (or properly re-signed) bundle has Identifier=<bundleId> AND
+      // Info.plist entries=N (i.e. plist IS bound). Linker-default signature
+      // shows Identifier=Electron and 'Info.plist=not bound'.
+      if (out.includes(`Identifier=${bundleId}`) && !out.includes('Info.plist=not bound')) {
+        needsResign = false;
+      }
+    } catch {
+      // codesign -dv exits non-zero on unsigned bundles; treat as needing resign
+    }
+
+    if (needsResign) {
+      console.log('[afterPack] applying ad-hoc codesign with proper identifier...');
+      try {
+        execSync(
+          `codesign --force --deep --sign - ` +
+            `--entitlements "${entitlements}" ` +
+            `--identifier "${bundleId}" ` +
+            `"${appBundle}"`,
+          { stdio: 'inherit' }
+        );
+        // Strip quarantine attributes that might have been set by tools that
+        // touched the bundle in /private/var or similar.
+        execSync(`xattr -cr "${appBundle}"`, { stdio: 'inherit' });
+        // Verify
+        const verify = execSync(`codesign --verify --deep --strict "${appBundle}" 2>&1 || true`).toString();
+        if (verify.trim()) {
+          console.warn('[afterPack] codesign verify output:', verify.trim());
+        } else {
+          console.log('[afterPack] codesign verified OK');
+        }
+      } catch (err) {
+        console.error('[afterPack] codesign step failed:', err.message);
+        throw err;
+      }
+    } else {
+      console.log('[afterPack] bundle already properly signed, skipping re-sign');
+    }
+  }
 };
 
 function cleanDirectory(dir, extensions) {
