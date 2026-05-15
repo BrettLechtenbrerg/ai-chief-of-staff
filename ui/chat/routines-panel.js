@@ -412,13 +412,15 @@ function showRecipesModal() {
     _renderRecipes();
     _recipesRendered = true;
   }
+  // Upstream modal-overlay CSS uses .show as the visibility toggle
+  // (see ui/chat/overlays.css). 'active' was the wrong class name.
   const m = document.getElementById('recipes-modal');
-  if (m) m.classList.add('active');
+  if (m) m.classList.add('show');
 }
 
 function hideRecipesModal() {
   const m = document.getElementById('recipes-modal');
-  if (m) m.classList.remove('active');
+  if (m) m.classList.remove('show');
 }
 
 function openRoutineEditorFromRecipes() {
