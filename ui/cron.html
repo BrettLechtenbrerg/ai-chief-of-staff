@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; connect-src 'self';">
-  <title>Routines</title>
+  <title>Scheduled Tasks</title>
 
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
@@ -435,7 +435,7 @@
 </head>
 <body>
   <header>
-    <h1><span>Routines</span></h1>
+    <h1><span>Scheduled Tasks</span></h1>
     <div class="header-actions">
       <button onclick="playNormalClick(); window.close()">Done</button>
     </div>
@@ -560,7 +560,7 @@
 
     <section class="section">
       <h2 class="section-title">Running on Autopilot</h2>
-      <p class="section-desc">Your scheduled routines.</p>
+      <p class="section-desc">Your scheduled tasks.</p>
 
       <div class="settings-grid">
         <div id="jobs-list" class="jobs-list">
@@ -942,7 +942,7 @@
           document.getElementById('job-prompt').value = '';
           document.getElementById('prompt-source').value = 'custom';
           handlePromptSourceChange();
-          showToast('Routine created! 🎉', 'success');
+          showToast('Scheduled task created! 🎉', 'success');
           loadJobs();
         } else {
           showToast('Couldn\'t create that', 'error');

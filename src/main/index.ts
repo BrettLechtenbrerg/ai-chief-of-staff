@@ -329,7 +329,7 @@ function openChatWindow(): void {
 function openCronWindow(): void {
   createWindow({
     id: WIN.CRON,
-    title: 'My Routines - AI Chief of Staff',
+    title: 'My Scheduled Tasks - AI Chief of Staff',
     htmlFile: 'cron.html',
     width: 700,
     height: 500,

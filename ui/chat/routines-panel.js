@@ -2,6 +2,11 @@
 
 let _rtnNotyf = null;
 let _rtnSessionsMap = {};
+// Cache of the most recently fetched jobs (filtered to recurring only) so
+// we can re-render when the user switches Daily/Weekly/Monthly tabs without
+// hitting the DB again.
+let _rtnAllJobs = [];
+let _rtnActiveBucket = 'daily';
 
 // ---- Show / Hide ----
 
@@ -19,6 +24,7 @@ function showRoutinesPanel() {
   const sidebarBtn = document.getElementById('sidebar-routines-btn');
   if (sidebarBtn) sidebarBtn.classList.add('active');
 
+  _rtnBindTabs();
   _rtnLoadSessions();
   _rtnLoadJobs();
 }
@@ -140,20 +146,63 @@ async function _rtnLoadSessions() {
   } catch (err) { console.error('[Routines] Failed to load sessions:', err); }
 }
 
-async function _rtnLoadJobs() {
+// Classify a job into 'daily' | 'weekly' | 'monthly' based on its cron string
+// or interval. The rules:
+//   • cron with day-of-month ≠ '*'          → monthly
+//   • cron with day-of-week  ≠ '*'          → weekly
+//   • cron with both '*'                    → daily (incl. */N hour/minute)
+//   • 'every' with interval_ms ≥ ~28d       → monthly
+//   • 'every' with interval_ms ≥ ~7d        → weekly
+//   • 'every' shorter / anything else       → daily (sensible default)
+function _rtnBucketJob(job) {
+  const scheduleType = job.schedule_type || 'cron';
+
+  if (scheduleType === 'every' && job.interval_ms) {
+    const DAY_MS = 86400000;
+    if (job.interval_ms >= 28 * DAY_MS) return 'monthly';
+    if (job.interval_ms >= 7 * DAY_MS) return 'weekly';
+    return 'daily';
+  }
+
+  if (scheduleType === 'cron' && job.schedule) {
+    const parts = job.schedule.split(' ');
+    if (parts.length === 5) {
+      const [, , dom, , dow] = parts;
+      if (dom && dom !== '*') return 'monthly';
+      if (dow && dow !== '*') return 'weekly';
+      return 'daily';
+    }
+  }
+
+  return 'daily';
+}
+
+function _rtnEmptyMessageForBucket(bucket) {
+  if (bucket === 'weekly') return 'No weekly tasks yet';
+  if (bucket === 'monthly') return 'No monthly tasks yet';
+  return 'No daily tasks yet';
+}
+
+function _rtnRenderJobs() {
   const jobsList = document.getElementById('rtn-jobs-list');
   if (!jobsList) return;
 
-  try {
-    const allJobs = await window.pocketAgent.cron.list();
-    const jobs = allJobs.filter(job => (job.schedule_type || 'cron') !== 'at');
+  // Bucket counts — always reflect the full cached set.
+  const counts = { daily: 0, weekly: 0, monthly: 0 };
+  for (const job of _rtnAllJobs) counts[_rtnBucketJob(job)]++;
+  for (const b of ['daily', 'weekly', 'monthly']) {
+    const el = document.getElementById(`rtn-count-${b}`);
+    if (el) el.textContent = String(counts[b]);
+  }
 
-    if (jobs.length === 0) {
-      jobsList.innerHTML = '<div class="rtn-empty"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg><p>Nothing scheduled yet</p></div>';
-      return;
-    }
+  const jobs = _rtnAllJobs.filter(j => _rtnBucketJob(j) === _rtnActiveBucket);
 
-    jobsList.innerHTML = jobs.map(job => {
+  if (jobs.length === 0) {
+    jobsList.innerHTML = `<div class="rtn-empty"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg><p>${_rtnEscapeHtml(_rtnEmptyMessageForBucket(_rtnActiveBucket))}</p></div>`;
+    return;
+  }
+
+  jobsList.innerHTML = jobs.map(job => {
       const sessionName = _rtnSessionsMap[job.session_id] || job.session_id || 'Default';
       const promptDisplay = job.prompt.startsWith('[Workflow: ')
         ? '⚡ ' + _rtnEscapeHtml(job.prompt.substring(11, job.prompt.indexOf(']')))
@@ -181,10 +230,45 @@ async function _rtnLoadJobs() {
             </button>
           </div>
         </div>`;
-    }).join('');
+  }).join('');
+}
+
+async function _rtnLoadJobs() {
+  const jobsList = document.getElementById('rtn-jobs-list');
+  if (!jobsList) return;
+
+  try {
+    const allJobs = await window.pocketAgent.cron.list();
+    // 'at' jobs are one-shot reminders — not recurring routines, so they
+    // don't belong on any cadence tab.
+    _rtnAllJobs = allJobs.filter(job => (job.schedule_type || 'cron') !== 'at');
+    _rtnRenderJobs();
   } catch (err) {
     jobsList.innerHTML = `<div class="rtn-empty"><p>Error: ${_rtnEscapeHtml(err.message)}</p></div>`;
   }
+}
+
+// Wire up the cadence tab buttons. Called once on first show.
+let _rtnTabsBound = false;
+function _rtnBindTabs() {
+  if (_rtnTabsBound) return;
+  const tabs = document.querySelectorAll('#routines-view .rtn-tab');
+  if (!tabs.length) return;
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      playNormalClick();
+      const bucket = btn.dataset.rtnTab;
+      if (!bucket || bucket === _rtnActiveBucket) return;
+      _rtnActiveBucket = bucket;
+      tabs.forEach(b => {
+        const isActive = b.dataset.rtnTab === bucket;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+      _rtnRenderJobs();
+    });
+  });
+  _rtnTabsBound = true;
 }
 
 // ---- Actions (global for onclick) ----

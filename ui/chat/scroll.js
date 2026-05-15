@@ -52,8 +52,16 @@ function getGreeting() {
 function showEmptyState() {
   const greeting = getGreeting();
   const nameTag = userName ? `, ${escapeHtml(userName)}` : '';
+  // "What I Can Do" button surfaces a capability/how-to-use modal
+  // (see chat/help-modal.{html,css,js}). New users found the interface
+  // unintuitive; this is the entry point.
   messagesDiv.innerHTML = `
     <div class="empty-state">
+      <button type="button" class="empty-state-help" onclick="playNormalClick(); showHelpModal()" title="See what your AI Chief of Staff can do">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><path d="M12 17h.01"/></g></svg>
+        <span>What I Can Do</span>
+        <span class="empty-state-help-chevron">▾</span>
+      </button>
       <div class="pixel-heart"></div>
       <div class="empty-subtitle">${greeting}${nameTag}</div>
     </div>

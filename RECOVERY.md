@@ -40,6 +40,7 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 
 | Tag | Date | Description |
 |-----|------|-------------|
+| `v0.5-ux-clarity` | May 15, 2026 | **First-round tester feedback pass.** Personalize tabs renamed (Context → **Knowledge Base**, Your World → **About You**). Sidebar Routines → **Scheduled Tasks** (everywhere user-visible — sidebar, panel header, cron window, recipes modal, help copy). New **“What I Can Do”** help modal (7 collapsible sections + numbered “how to make a scheduled task” steps + Browse Recipes CTA) launched from a pill button in the empty-state. Scheduled Tasks list split into **Daily / Weekly / Monthly** cadence tabs with live count badges — bucketing derived from each job's cron string. TSAI-Site landing page updated in parallel: proper macOS Gatekeeper workaround (System Settings → Privacy & Security → Open Anyway) replaces the broken “right-click → Open” step, new amber callout block above the install guide, capability cards renamed to match in-app. Working tag — no new GH Release; `v1.0.0-beta.1` installers still serve from the landing page. |
 | `v1.0.0-beta.1` | May 15, 2026 | **First beta release.** Mac DMGs (arm64 + x64) + Windows NSIS installers (universal + per-arch) published as a public prerelease on GitHub. Landing page wired to these downloads. Includes everything below + Context tab (5 sub-tabs with drag-drop .txt/.md/.docx/.pdf extraction), Routine Recipes modal (8 templates), Recipes scroll fix. |
 | `v0.4-context-tab` | May 15, 2026 | Personalize → Context tab shipped (brand book / style guide / business / refs / custom instructions). Drag-drop extraction wired through `webUtils.getPathForFile` + main-process mammoth/pdfjs-dist IPC. |
 | `v0.3-rebrand-themed` | May 15, 2026 | TSAI navy/silver theme set as default (`tsai` skin). "Who made me?" + Docs sidebar buttons hidden. General mode (personal assistant) replaces Coder as the default — agent identifies as "AI Chief of Staff" instead of "GG Coder by Ken Kai". |
@@ -49,7 +50,7 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 To roll back:
 
 ```bash
-git checkout v1.0.0-beta.1   # detached HEAD — branch off if you intend to work
+git checkout v0.5-ux-clarity   # detached HEAD — branch off if you intend to work
 ```
 
 ---
@@ -219,6 +220,20 @@ Mac builds sometimes hang on lingering Electron processes. When the app refuses 
 ---
 
 ## Past sessions
+
+### May 15, 2026 (evening) — First-round tester feedback pass (`v0.5-ux-clarity`)
+
+Testers reported the interface felt unintuitive + the macOS Gatekeeper dialog scared them off on first launch. Worked through their feedback live:
+
+1. **Personalize tabs renamed for clarity.** `Context` → **Knowledge Base** (it's the GPT-Project-style brain dump tab, name now matches mental model). `Your World` → **About You** (it's the personal context tab; simpler).
+2. **Sidebar `Routines` → `Scheduled Tasks`.** Renamed in every user-visible location — sidebar button + label + tooltip, panel header (`<h1>`), cron editor window title + window header + section description + toast (“Scheduled task created!”), recipes modal title + intro + footer button (“Open Task Editor”), help-modal section. Code-internal identifiers (`routines-panel.{js,css}`, `#routines-view`, `showRoutinesPanel()`, `sidebar-routines-btn`, `[Routines]` log prefixes, `create_routine` agent tool name + agent-facing strings, system-guidelines.ts “Routines vs Reminders”) intentionally left as-is per the rebrand pattern.
+3. **New “What I Can Do” help modal.** Added `ui/chat/help-modal.{html,css,js}`. Trigger is a rounded pill button injected at the top of the chat empty-state (in `scroll.js showEmptyState()`) — only visible on fresh / zero-message sessions, disappears once the user starts typing. Modal has 7 collapsible `<details>` sections (Just talk to me / Knowledge Base / Scheduled Tasks / Documents / Browser / Telegram / Privacy) + a numbered “how to make a scheduled task” 5-step guide + a “Browse Recipes” CTA in the footer that closes Help and opens the existing Recipes modal. Reuses the shared `.modal-overlay.show` toggle from `overlays.css`. **Gotcha:** first cut had `overflow: hidden` on `.help-section` which clipped expanded `<details>` bodies in Chromium — fix is to drop that line + use a `border-bottom` on `[open] > summary` for the visual separator.
+4. **Scheduled Tasks split into Daily / Weekly / Monthly tabs.** Added a tab row above the jobs list in `chat.html`, styled in `routines-panel.css` (transparent tabs with accent-colored underline + count badge). Refactored `_rtnLoadJobs` in `routines-panel.js` into two functions — `_rtnLoadJobs` caches the fetched recurring jobs into `_rtnAllJobs`, and `_rtnRenderJobs` filters + renders based on `_rtnActiveBucket`. Bucketing helper `_rtnBucketJob(job)` reads the cron string: `day-of-month ≠ '*'` → monthly, `day-of-week ≠ '*'` → weekly, else daily. `every` interval jobs bucket by interval (≥28d monthly, ≥7d weekly, else daily). `at` jobs are filtered out at fetch time — they're one-shot reminders, not recurring routines.
+5. **TSAI-Site landing page updated in parallel** to address the Gatekeeper feedback. The old install step said *“right-click the app then Open”* which doesn't work for the Gatekeeper variant on modern macOS (Sequoia+) — that dialog only has an OK button. Replaced with the actual working flow: dismiss the dialog with OK, then System Settings → Privacy & Security → scroll to Security section → “Open Anyway.” Added a dedicated amber callout block above the Quick Install Guide so testers see the workaround **before** they hit the dialog. Hero subtitle no longer says “first-launch warnings are normal” — now points to the install guide. Capability cards renamed to match in-app terminology (“Your Context, Always On” → “Knowledge Base, Always On”; “Routine Recipes” → “Ready-Made Recipes”). Built + committed + pushed (`TSAI-Site@430185f`) + redeployed via `vercel --prod`. Verified live on `www.totalsuccessai.com`.
+
+End state: tag `v0.5-ux-clarity` represents the snapshot before any new build/release. v1.0.0-beta.1 installers still serve from the landing page — we haven't shipped new DMG/EXE yet (deferred until Apple Developer ID enrollment so the next release lands signed).
+
+**Next session pickup:** Apple Developer Program enrollment ($99/yr) → macOS signing & notarization wired through `build/afterPack.cjs` and `electron-builder` config → cut `v1.0.0-beta.2` with signed Mac builds (no more Gatekeeper dialog) and the UX improvements above → push installers to GH Release → bump `RELEASE_TAG` in TSAI-Site and redeploy.
 
 ### May 15, 2026 — Bootstrap → first beta release (single day)
 

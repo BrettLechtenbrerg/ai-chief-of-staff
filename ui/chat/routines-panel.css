@@ -42,6 +42,60 @@
 
 /* Header buttons inherit the cinamon-pill look from shared/buttons.css. */
 
+/* Cadence tabs — Daily / Weekly / Monthly */
+#routines-view .rtn-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#routines-view .rtn-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* overlap the container border */
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+#routines-view .rtn-tab:hover {
+  color: var(--text-primary);
+}
+
+#routines-view .rtn-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+#routines-view .rtn-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+#routines-view .rtn-tab.active .rtn-tab-count {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
 /* Content */
 /* Content spans the full panel width so items align edge-to-edge with the header. */
 #routines-view .routines-content {

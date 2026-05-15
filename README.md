@@ -37,7 +37,7 @@ Schedule daily, weekly, or monthly reminders that go out reliably via desktop no
 ### File & document access
 Reads and edits files on your Mac or PC, runs scripts, and works directly in your real folders.
 
-### Custom routines
+### Scheduled tasks
 Build any scheduled task you can describe — research, reports, follow-ups. It just runs.
 
 ### Persistent memory
@@ -82,7 +82,7 @@ Available to Total Success AI clients from the [private download page](https://w
 3. Click the menu-bar icon, paste your Anthropic API key (get one at [console.anthropic.com](https://console.anthropic.com)).
 4. Start chatting.
 
-### First routine
+### First scheduled task
 
 Tell it: *"Set up a daily briefing at 6 AM for [your city] that pulls my Google Calendar."* Build from there one capability at a time.
 
