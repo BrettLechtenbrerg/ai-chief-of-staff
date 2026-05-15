@@ -1,6 +1,6 @@
 {
   "name": "ai-chief-of-staff",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "AI Chief of Staff \u2014 a private desktop AI agent by Total Success AI. Persistent memory, scheduled routines, browser automation, and 40+ skill integrations, powered by the Claude Agent SDK.",
   "type": "module",
   "main": "dist/main/index.js",
