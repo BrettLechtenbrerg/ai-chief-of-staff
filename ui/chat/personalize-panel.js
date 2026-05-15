@@ -221,10 +221,19 @@ function _pzWireContextDropTarget(textarea) {
 }
 
 async function _pzExtractAndAppend(textarea, file) {
-  // Electron exposes the host filesystem path on the File object.
-  const filePath = file && file.path;
+  // Electron 32+ deprecated File.path (returns empty); use the preload's
+  // webUtils.getPathForFile bridge instead, with a one-line fallback for
+  // older builds in case anyone runs this on Electron < 32.
+  let filePath = '';
+  try {
+    if (window.pocketAgent.context && window.pocketAgent.context.getPathForFile) {
+      filePath = window.pocketAgent.context.getPathForFile(file);
+    }
+  } catch (_) { /* fall through to legacy file.path */ }
+  if (!filePath && file && file.path) filePath = file.path;
+
   if (!filePath) {
-    _pzShowToast('Could not read dropped file', 'error');
+    _pzShowToast('Could not read dropped file path — try again or paste manually', 'error');
     return;
   }
 

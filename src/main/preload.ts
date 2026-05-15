@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // Expose API to renderer process — organized by domain
 contextBridge.exposeInMainWorld('pocketAgent', {
@@ -133,7 +133,11 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   // ─── Context tab file extraction (drag-drop on Personalize → Context) ──
   // Renderer hands the absolute path; main process reads it and returns
   // plain text. Supports .txt / .md / .docx / .pdf, 10 MB hard cap.
+  // getPathForFile is required because File.path was deprecated in Electron
+  // 32+ and now returns an empty string for security; webUtils is the
+  // sanctioned replacement.
   context: {
+    getPathForFile: (file: File) => webUtils.getPathForFile(file),
     extractText: (filePath: string) => ipcRenderer.invoke('context:extractText', filePath),
   },
 
