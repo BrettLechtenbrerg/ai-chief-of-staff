@@ -140,16 +140,29 @@
 
 /* ─── Routine Recipes modal ───────────────────────────────────────────── */
 
+/* Upstream .modal sets overflow:hidden with no max-height; that worked
+   for the tiny About modal but clips a taller list. Override here so the
+   recipes modal can grow to ~86% of the viewport and let its body flex. */
 .recipes-modal {
   max-width: 720px;
   width: calc(100vw - 40px);
   max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header is fixed-height; body fills remaining space; list scrolls inside. */
+.modal.recipes-modal .modal-header {
+  flex-shrink: 0;
 }
 
 .recipes-body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  flex: 1 1 auto;
+  min-height: 0; /* required so flex child can shrink + scroll */
   overflow: hidden;
 }
 
