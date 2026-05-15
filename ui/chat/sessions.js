@@ -34,6 +34,9 @@ function renderTabs() {
     tab.dataset.sessionId = session.id;
     tab.dataset.index = index;
     tab.draggable = true;
+    // Native tooltip on hover — makes the rename gesture discoverable
+    // (upstream wired double-click but never surfaced it in the UI).
+    tab.title = 'Double-click to rename — drag to reorder';
 
     tab.onclick = (e) => {
       if (!e.target.closest('.sidebar-session-close') && !e.target.closest('.tab-name-input')) {
