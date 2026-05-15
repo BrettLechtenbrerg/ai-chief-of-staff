@@ -1,7 +1,7 @@
 {
-  "name": "pocket-agent",
-  "version": "6.4.3",
-  "description": "Desktop AI agent with persistent memory powered by Claude Agent SDK",
+  "name": "ai-chief-of-staff",
+  "version": "1.0.0",
+  "description": "AI Chief of Staff — a private desktop AI agent by Total Success AI. Persistent memory, scheduled routines, browser automation, and 40+ skill integrations, powered by the Claude Agent SDK.",
   "type": "module",
   "main": "dist/main/index.js",
   "scripts": {
@@ -32,18 +32,18 @@
     "dist:win:local": "npm run build && electron-builder --win --config.win.forceCodeSigning=false"
   },
   "build": {
-    "appId": "com.unstablemind.pocket-agent",
-    "productName": "Pocket Agent",
+    "appId": "com.totalsuccessai.ai-chief-of-staff",
+    "productName": "AI Chief of Staff",
     "directories": {
       "output": "release"
     },
     "publish": {
       "provider": "github",
-      "owner": "KenKaiii",
-      "repo": "pocket-agent"
+      "owner": "BrettLechtenbrerg",
+      "repo": "ai-chief-of-staff"
     },
     "mac": {
-      "artifactName": "Pocket-Agent-${version}-${arch}-mac.${ext}",
+      "artifactName": "AI-Chief-of-Staff-${version}-${arch}-mac.${ext}",
       "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
       "target": [
@@ -69,7 +69,7 @@
       "notarize": true
     },
     "win": {
-      "artifactName": "Pocket-Agent-${version}-${arch}-win.${ext}",
+      "artifactName": "AI-Chief-of-Staff-${version}-${arch}-win.${ext}",
       "icon": "build/icon.ico",
       "target": [
         {
@@ -93,12 +93,12 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,
-      "artifactName": "Pocket-Agent-${version}-${arch}-setup.${ext}",
-      "shortcutName": "Pocket Agent",
-      "uninstallDisplayName": "Pocket Agent"
+      "artifactName": "AI-Chief-of-Staff-${version}-${arch}-setup.${ext}",
+      "shortcutName": "AI Chief of Staff",
+      "uninstallDisplayName": "AI Chief of Staff"
     },
     "dmg": {
-      "artifactName": "Pocket-Agent-${version}-${arch}.${ext}",
+      "artifactName": "AI-Chief-of-Staff-${version}-${arch}.${ext}",
       "background": "build/background.png",
       "icon": "build/icon.icns",
       "iconSize": 80,
@@ -139,7 +139,7 @@
       }
     ]
   },
-  "author": "",
+  "author": "Total Success AI — Brett Lechtenberg",
   "license": "MIT",
   "overrides": {
     "better-sqlite3": "^12.6.2"
