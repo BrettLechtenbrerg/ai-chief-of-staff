@@ -1,0 +1,127 @@
+/* Personalize Panel — scoped under #personalize-view */
+
+#personalize-view { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+#personalize-view.active { display: flex; }
+
+/* Header */
+#personalize-view .pz-header { background: var(--bg-secondary); padding: 10px 16px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+#personalize-view .pz-header h1 { font-family: 'Cal Sans', sans-serif; font-size: 14px; font-weight: 700; margin: 0; }
+#personalize-view .pz-header h1 span { color: var(--text-primary); }
+#personalize-view .pz-header-actions { display: flex; gap: 8px; }
+/* Header buttons inherit pill aesthetics from shared/buttons.css.
+   Naked <button> -> cinamon pill. .reboot starts dim (cinamon disabled),
+   gains a pulsing glow when .active. */
+#personalize-view .pz-header-actions button.reboot.active {
+  animation: pzRebootGlow 2s ease-in-out infinite;
+}
+@keyframes pzRebootGlow {
+  0%, 100% {
+    box-shadow:
+      0 3px 0 0 var(--accent-shadow),
+      0 0 12px rgba(217, 58, 99, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 3px 0 0 var(--accent-shadow),
+      0 0 18px rgba(217, 58, 99, 0.65);
+  }
+}
+
+/* Container (sidebar + content) */
+#personalize-view .pz-container { flex: 1; display: flex; overflow: hidden; }
+
+/* Nav sidebar */
+#personalize-view .pz-sidebar { width: 180px; margin: 8px 8px 8px 0; background: var(--bg-secondary); border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 2px; padding: 4px 8px 8px; flex-shrink: 0; overflow-y: auto; }
+/* .pz-nav-item visuals come from shared/nav.css. */
+
+/* Content */
+#personalize-view .pz-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 8px 0 32px; }
+
+/* Tab content */
+#personalize-view .pz-tab { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+#personalize-view .pz-tab.active { display: flex; }
+
+#personalize-view .pz-section-header { margin-bottom: 16px; }
+#personalize-view .pz-section-header h2 { font-family: 'Cal Sans', sans-serif; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+#personalize-view .pz-section-header p { font-size: 13px; color: var(--text-secondary); }
+
+/* Editor */
+/* Editor container + textarea blend into the page — the textarea
+   inherits the shell-cream form-input look from shared/forms.css. */
+#personalize-view .pz-editor-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#personalize-view textarea.pz-editor { flex: 1; width: 100%; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; border-radius: var(--radius); }
+#personalize-view textarea.pz-editor::-webkit-scrollbar { width: 8px; }
+#personalize-view textarea.pz-editor::-webkit-scrollbar-track { background: var(--bg-secondary); }
+#personalize-view textarea.pz-editor::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Read-only display */
+/* Read-only display blends into the page (no card chrome). */
+#personalize-view .pz-readonly-display { flex: 1; overflow-y: auto; padding: 16px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; }
+#personalize-view .pz-readonly-display::-webkit-scrollbar { width: 8px; }
+#personalize-view .pz-readonly-display::-webkit-scrollbar-track { background: var(--bg-secondary); }
+#personalize-view .pz-readonly-display::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+/* .pz-readonly-badge visuals come from shared/badges.css (subtle variant). */
+#personalize-view .pz-readonly-badge { margin-bottom: 12px; }
+#personalize-view .pz-readonly-badge svg { width: 12px; height: 12px; }
+
+/* Name input */
+#personalize-view .pz-name-input-container { margin-bottom: 20px; }
+/* .pz-name-input inherits the shell-cream look from shared/forms.css. */
+#personalize-view .pz-name-input { width: 100%; font-size: 14px; font-weight: 500; }
+
+/* Action bar */
+#personalize-view .pz-action-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 16px 0 6px; }
+#personalize-view .pz-action-bar .info { font-size: 12px; color: var(--text-muted); }
+#personalize-view .pz-action-bar .buttons { display: flex; gap: 8px; }
+/* Save buttons inside .pz-action-bar inherit the cinamon-pill look from shared/buttons.css. */
+
+/* Form fields for profile */
+#personalize-view .pz-form-section { padding: 0; margin-bottom: 16px; }
+#personalize-view .pz-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+#personalize-view .pz-form-group { display: flex; flex-direction: column; gap: 6px; }
+#personalize-view .pz-form-group.full-width { grid-column: 1 / -1; }
+#personalize-view .pz-form-group label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+#personalize-view .pz-form-group input,
+/* .pz-form-group textarea inherits the shell-cream look from shared/forms.css. */
+#personalize-view .pz-form-group textarea { font-size: 14px; }
+#personalize-view .pz-form-group input:focus,
+/* Focus styling comes from shared/forms.css. */
+#personalize-view .pz-form-group input::placeholder,
+/* Placeholder styling comes from shared/forms.css. */
+#personalize-view .pz-form-group .hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+#personalize-view .pz-form-group select { padding: 8px 30px 8px 12px; background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'Roboto', sans-serif; font-size: 14px; outline: none; cursor: pointer; width: 100%; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a6' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; }
+#personalize-view .pz-form-group select:focus { border-color: var(--accent); }
+#personalize-view .pz-form-group select option { background: var(--bg-secondary); color: var(--text-primary); }
+
+/* Autocomplete */
+#personalize-view .pz-autocomplete-wrapper { position: relative; width: 100%; }
+#personalize-view .pz-autocomplete-wrapper input { width: 100%; }
+#personalize-view .pz-autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-secondary); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); max-height: 200px; overflow-y: auto; z-index: 100; display: none; }
+#personalize-view .pz-autocomplete-dropdown.show { display: block; }
+#personalize-view .pz-autocomplete-item { padding: 10px 12px; cursor: pointer; font-size: 13px; transition: background 0.1s ease; }
+#personalize-view .pz-autocomplete-item:last-child { border-bottom: none; }
+#personalize-view .pz-autocomplete-item:hover { background: var(--bg-tertiary); }
+#personalize-view .pz-autocomplete-item .city { color: var(--text-primary); font-weight: 500; }
+#personalize-view .pz-autocomplete-item .details { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+
+/* Birthday picker */
+#personalize-view .pz-birthday-picker { display: flex; gap: 8px; }
+#personalize-view .pz-birthday-picker select { flex: 1; }
+#personalize-view .pz-birthday-picker select:first-child { flex: 1.5; }
+
+/* Profile scrollable content */
+#personalize-view .pz-profile-content { flex: 1; overflow-y: auto; padding-right: 16px; }
+#personalize-view .pz-profile-content::-webkit-scrollbar { width: 6px; }
+#personalize-view .pz-profile-content::-webkit-scrollbar-track { background: transparent; }
+#personalize-view .pz-profile-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Mode sub-tabs for System Prompt */
+#personalize-view .pz-mode-tabs { display: flex; gap: 4px; margin-bottom: 12px; padding: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; }
+#personalize-view .pz-mode-tab { padding: 6px 14px; background: transparent; color: var(--text-muted); border: none; border-radius: 7px; cursor: pointer; font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 500; white-space: nowrap; transition: all 0.15s ease; }
+#personalize-view .pz-mode-tab:hover { color: var(--text-secondary); background: var(--bg-tertiary); }
+#personalize-view .pz-mode-tab.active { color: var(--text-primary); background: var(--bg-tertiary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+
+/* World tab content */
+#personalize-view .pz-world-tab-content { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* World-tab textarea inherits the shell-cream look from shared/forms.css. */
+#personalize-view .pz-world-tab-content textarea { flex: 1; width: 100%; resize: none; padding: 12px 14px; font-size: 14px; box-sizing: border-box; }

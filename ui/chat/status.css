@@ -1,0 +1,369 @@
+/* Status Indicator */
+.status-indicator {
+  align-self: flex-start;
+  padding: 12px 16px;
+  background: var(--assistant-bubble);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-bottom-left-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: messageIn 0.3s ease-out;
+  max-width: 80%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.status-spinner {
+  width: 24px;
+  height: 18px;
+  background: transparent;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-spinner::before {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  top: 0;
+  left: 0;
+  animation: pixelcat 1.5s steps(1) infinite;
+  image-rendering: pixelated;
+}
+
+@keyframes pixelcat {
+  /* Frame 1: Cat walking - legs apart */
+  0%, 25% {
+    box-shadow:
+      /* Ears */
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      /* Head */
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      /* Eyes */
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      /* Body */
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      /* Tail up */
+      18px 6px 0 var(--accent), 21px 3px 0 var(--accent),
+      /* Legs - apart */
+      3px 15px 0 var(--accent), 12px 15px 0 var(--accent);
+  }
+  /* Frame 2: Cat walking - legs together */
+  25.01%, 50% {
+    box-shadow:
+      /* Ears */
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      /* Head */
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      /* Eyes */
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      /* Body */
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      /* Tail middle */
+      18px 9px 0 var(--accent), 21px 6px 0 var(--accent),
+      /* Legs - together */
+      6px 15px 0 var(--accent), 9px 15px 0 var(--accent);
+  }
+  /* Frame 3: Cat walking - legs crossed */
+  50.01%, 75% {
+    box-shadow:
+      /* Ears */
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      /* Head */
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      /* Eyes */
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      /* Body */
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      /* Tail down */
+      18px 12px 0 var(--accent), 21px 9px 0 var(--accent),
+      /* Legs - reversed */
+      12px 15px 0 var(--accent), 3px 15px 0 var(--accent);
+  }
+  /* Frame 4: Cat walking - legs wide */
+  75.01%, 100% {
+    box-shadow:
+      /* Ears */
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      /* Head */
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      /* Eyes */
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      /* Body */
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      /* Tail up */
+      18px 6px 0 var(--accent), 21px 3px 0 var(--accent),
+      /* Legs - wide */
+      0 15px 0 var(--accent), 15px 15px 0 var(--accent);
+  }
+}
+
+.status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.status-preview {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-secondary, #888);
+  max-height: 32px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: none;
+  opacity: 0.7;
+}
+
+.status-action {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  background: linear-gradient(
+    90deg,
+    var(--text-primary) 0%,
+    var(--accent) 20%,
+    var(--accent-secondary) 40%,
+    var(--accent) 60%,
+    var(--text-primary) 80%,
+    var(--accent) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Subagent active state - purple/pink vibe */
+.status-indicator.subagent-active {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(217, 58, 99, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+}
+
+.status-indicator.subagent-active .status-spinner {
+  /* Pixel cat already uses --accent which is purple */
+}
+
+.status-indicator.subagent-active .status-action {
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--accent-secondary) 25%,
+    var(--accent) 50%,
+    var(--accent-secondary) 75%,
+    var(--accent) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Tool blocked state - red/orange warning vibe */
+.status-indicator.tool-blocked {
+  border-color: var(--error);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(249, 115, 22, 0.15) 100%);
+  animation: blocked-pulse 0.5s ease-in-out 2;
+}
+
+.status-indicator.tool-blocked .status-action {
+  background: linear-gradient(
+    90deg,
+    #ef4444 0%,
+    #f97316 50%,
+    #ef4444 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1s ease-in-out infinite;
+}
+
+.status-indicator.tool-blocked .status-detail {
+  color: var(--orange);
+}
+
+@keyframes blocked-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* Pocket CLI active state - green/cyan vibe */
+.status-indicator.pocket-cli-active {
+  border-color: var(--success);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(103, 232, 249, 0.1) 100%);
+}
+
+.status-indicator.pocket-cli-active .status-action {
+  background: linear-gradient(
+    90deg,
+    #22c55e 0%,
+    #67e8f9 25%,
+    #22c55e 50%,
+    #67e8f9 75%,
+    #22c55e 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.status-indicator.pocket-cli-active .status-detail {
+  color: var(--success);
+}
+
+/* Agent Teams active state - blue/cyan vibe */
+.status-indicator.team-active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+}
+
+.status-indicator.team-active .status-action {
+  background: linear-gradient(
+    90deg,
+    #3b82f6 0%,
+    #06b6d4 25%,
+    #3b82f6 50%,
+    #06b6d4 75%,
+    #3b82f6 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.status-indicator.team-active .status-detail {
+  color: #06b6d4;
+}
+
+.status-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.status-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Simple typing dots fallback */
+.typing {
+  align-self: flex-start;
+  padding: 14px 18px;
+  background: var(--assistant-bubble);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-bottom-left-radius: 6px;
+  display: flex;
+  gap: 6px;
+  animation: messageIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: typingBounce 1.4s infinite ease-in-out both;
+  will-change: transform;
+}
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; background: var(--accent); }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%); }
+.typing-dot:nth-child(3) { animation-delay: 0s; background: var(--accent-secondary); }
+
+@keyframes typingBounce {
+  0%, 80%, 100% {
+    transform: scale(0.7) translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1.1) translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* Plan mode status indicator */
+.status-indicator.plan-mode-active {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(217, 58, 99, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
+}
+
+.status-indicator.plan-mode-active .status-action {
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    #8b5cf6 50%,
+    var(--accent) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Memory compacting active state - amber/gold vibe */
+.status-indicator.memory-compacting-active {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(234, 179, 8, 0.1) 100%);
+}
+
+.status-indicator.memory-compacting-active .status-action {
+  background: linear-gradient(
+    90deg,
+    #f59e0b 0%,
+    #eab308 25%,
+    #f59e0b 50%,
+    #eab308 75%,
+    #f59e0b 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.status-indicator.memory-compacting-active .status-detail {
+  color: #f59e0b;
+}

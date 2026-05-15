@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- gg-pixel: auto-wired by ggcoder pixel install -->
+  <script src="gg-pixel.browser.iife.js"></script>
+  <script>
+    if (window.GGPixel) GGPixel.initPixel({ projectKey: "pk_live_481c64dc8ca30105cb960479fe4f2791", ingestUrl: "https://gg-pixel-server.buzzbeamaustralia.workers.dev" });
+  </script>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; img-src 'self' data:; connect-src 'self' https://gg-pixel-server.buzzbeamaustralia.workers.dev;">
+  <title>My Approach</title>
+
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+  <link rel="stylesheet" href="shared/variables.css">
+  <link rel="stylesheet" href="shared/notyf-theme.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <style>
+    header {
+      background: var(--bg-secondary);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'Cal Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    header h1 span {
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .aspect-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Header buttons inherit the cinamon-pill look from shared/buttons.css. */
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 32px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .content::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .aspect-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .aspect-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px rgba(217, 58, 99, 0.1);
+    }
+
+    .aspect-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .aspect-name {
+      font-size: 14px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .aspect-content {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .aspect-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    /* .delete-btn visuals come from shared/icon-buttons.css. */
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    .empty-state .hint {
+      font-size: 12px;
+      margin-top: 8px;
+      opacity: 0.7;
+    }
+
+    /* Toast - Premium glassmorphism design */
+    /* Utility classes */
+    .hidden { display: none !important; }
+    .flex-row { display: flex; align-items: center; }
+
+    body.animations-paused *,
+    body.animations-paused *::before,
+    body.animations-paused *::after {
+      animation-play-state: paused !important;
+      transition: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+  <script src="shared/theme-loader.js"></script>
+  <script type="module">
+    import autoAnimate from 'https://cdn.jsdelivr.net/npm/@formkit/auto-animate@0.9/+esm';
+    window._autoAnimate = autoAnimate;
+    window.dispatchEvent(new Event('autoAnimateReady'));
+  </script>
+</head>
+<body>
+  <header>
+    <div class="flex-row">
+      <h1><span>My Approach</span></h1>
+      <span class="aspect-count" id="aspect-count"></span>
+    </div>
+    <div class="header-actions">
+      <button onclick="playNormalClick(); window.close()">Done</button>
+      <button onclick="playNormalClick(); loadAspects()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="content" id="content">
+    <!-- Cards will be inserted here -->
+  </div>
+
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
+  <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, select, .aspect-card')) {
+        playNormalClick();
+      }
+    });
+
+    async function loadAspects() {
+      try {
+        const aspects = await window.pocketAgent.soul.listAspects();
+        const content = document.getElementById('content');
+        const countEl = document.getElementById('aspect-count');
+
+        countEl.textContent = `(${aspects.length})`;
+
+        if (aspects.length === 0) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path stroke-width="1.5" d="M12 16v-4.5"/><path stroke-width="1.8" d="M12 8.012v-.01"/></g></svg>
+              <p>No approach notes yet</p>
+              <p class="hint">As we chat, I'll learn how to work best with you</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Sort aspects alphabetically
+        aspects.sort((a, b) => a.aspect.localeCompare(b.aspect));
+
+        content.innerHTML = aspects.map(a => `
+          <div class="aspect-card" data-id="${a.id}">
+            <div class="aspect-header">
+              <span class="aspect-name">${escapeHtml(formatAspectName(a.aspect))}</span>
+              <button class="delete-btn" onclick="playNormalClick(); deleteAspect(${a.id})" title="Remove this">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg>
+              </button>
+            </div>
+            <div class="aspect-content">${escapeHtml(a.content)}</div>
+            <div class="aspect-meta">Updated: ${formatDate(a.updated_at)}</div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading aspects:', error);
+        showToast('Couldn\'t load my notes', 'error');
+      }
+    }
+
+    async function deleteAspect(id) {
+      if (!confirm('Remove this aspect?')) return;
+
+      try {
+        const result = await window.pocketAgent.soul.deleteAspect(id);
+        if (result.success) {
+          const card = document.querySelector(`.aspect-card[data-id="${id}"]`);
+          if (card) {
+            card.remove();
+
+            const countEl = document.getElementById('aspect-count');
+            const match = countEl.textContent.match(/\d+/);
+            const currentCount = match ? parseInt(match[0]) : 0;
+            countEl.textContent = `(${currentCount - 1})`;
+
+            if (currentCount - 1 === 0) {
+              loadAspects();
+            }
+          }
+          showToast('Noted and removed!', 'success');
+        } else {
+          showToast('Couldn\'t remove that', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting aspect:', error);
+        showToast('Couldn\'t remove that', 'error');
+      }
+    }
+
+    function formatAspectName(name) {
+      // Convert snake_case to Title Case
+      return name.split('_').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    const notyf = new Notyf({
+      duration: 3000, position: { x: 'right', y: 'bottom' },
+      dismissible: true,
+      types: [
+        { type: 'success', background: '#4ade80' },
+        { type: 'error', background: '#f87171' }
+      ]
+    });
+    function showToast(message, type = 'success') {
+      notyf[type === 'error' ? 'error' : 'success'](message);
+    }
+
+    // Initialize
+    loadAspects();
+
+    window.addEventListener('autoAnimateReady', () => {
+      const el = document.getElementById('content');
+      if (el && window._autoAnimate) window._autoAnimate(el, { duration: 250 });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      document.body.classList.toggle('animations-paused', document.hidden);
+    });
+    window.addEventListener('blur', () => document.body.classList.add('animations-paused'));
+    window.addEventListener('focus', () => document.body.classList.remove('animations-paused'));
+  </script>
+</body>
+</html>

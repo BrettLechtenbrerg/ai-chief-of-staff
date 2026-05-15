@@ -1,0 +1,208 @@
+/* ecomm-king button aesthetic — single source of truth.
+   Two visual primitives ported from Clensae:
+
+     - cinamon pill : solid cinamon, heading-faced, fully rounded,
+                      chunky 3px dark-red drop-shadow, compresses on press.
+     - shell pill   : cream pill with bean border, inverts on hover.
+
+   Per-page CSS files used to define their own naked-<button> styles
+   (gradient pills with soft purple glow shadows). Those have been
+   removed; this file is now the only source. No !important. */
+
+/* ============================================================
+   CINAMON PILL — primary CTAs.
+   Catches:
+     - any naked <button> (no class) — Save / Submit / Test / Apply / etc.
+     - explicitly tagged primary CTAs across panels.
+   #send-btn (chat send icon) is excluded — it's a 36×36 icon button.
+   ============================================================ */
+button:not([class]):not(#send-btn),
+.header-actions > button.reboot,
+.pz-header-actions > button.reboot,
+.ob-btn.primary,
+.plan-btn.plan-btn-approve,
+.create-btn,
+.oauth-btn,
+.skills-setup-btn,
+.btn-cinamon,
+button.is-cinamon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 26px;
+  padding: 0 12px;
+  border: none;
+  background: var(--accent);
+  background-image: none;
+  color: var(--text-color--text-tertiary);   /* light text on filled accent (skin-agnostic) */
+  font-family: var(--text-color--font-family--heading);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: none;
+  border-radius: 100vw;
+  box-shadow: 0 3px 0 0 var(--accent-shadow);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+button:not([class]):not(#send-btn):hover:not(:disabled),
+.header-actions > button.reboot:hover:not(:disabled),
+.pz-header-actions > button.reboot:hover:not(:disabled),
+.ob-btn.primary:hover:not(:disabled),
+.plan-btn.plan-btn-approve:hover:not(:disabled),
+.create-btn:hover:not(:disabled),
+.oauth-btn:hover:not(:disabled),
+.skills-setup-btn:hover:not(:disabled),
+.btn-cinamon:hover:not(:disabled),
+button.is-cinamon:hover:not(:disabled) {
+  background: var(--accent-hover);
+  background-image: none;
+  box-shadow: 0 3px 0 0 var(--accent-shadow);
+  transform: none;
+}
+
+button:not([class]):not(#send-btn):active:not(:disabled),
+.header-actions > button.reboot:active:not(:disabled),
+.pz-header-actions > button.reboot:active:not(:disabled),
+.ob-btn.primary:active:not(:disabled),
+.plan-btn.plan-btn-approve:active:not(:disabled),
+.create-btn:active:not(:disabled),
+.oauth-btn:active:not(:disabled),
+.skills-setup-btn:active:not(:disabled),
+.btn-cinamon:active:not(:disabled),
+button.is-cinamon:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 var(--accent-shadow);
+}
+
+button:not([class]):not(#send-btn):disabled,
+.header-actions > button.reboot:disabled,
+.pz-header-actions > button.reboot:disabled,
+.ob-btn.primary:disabled,
+.plan-btn.plan-btn-approve:disabled,
+.create-btn:disabled,
+.oauth-btn:disabled,
+.skills-setup-btn:disabled,
+.btn-cinamon:disabled,
+button.is-cinamon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   DANGER PILL — destructive CTAs (Sign out, Delete, Discard …).
+   Same chunky pill primitive as cinamon, but uses --error instead
+   of --accent so destructive actions read as red on every skin.
+   ============================================================ */
+.btn-danger,
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 26px;
+  padding: 0 12px;
+  border: none;
+  background: var(--error);
+  background-image: none;
+  color: var(--text-color--text-tertiary);
+  font-family: var(--text-color--font-family--heading);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: none;
+  border-radius: 100vw;
+  box-shadow: 0 3px 0 0 var(--error-shadow);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.btn-danger:hover:not(:disabled),
+.logout-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error) 80%, #000);
+  box-shadow: 0 3px 0 0 var(--error-shadow);
+}
+
+.btn-danger:active:not(:disabled),
+.logout-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 var(--error-shadow);
+}
+
+.btn-danger:disabled,
+.logout-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   SHELL PILL — secondary / cancel CTAs.
+   ============================================================ */
+.ob-btn.secondary,
+.plan-btn.plan-btn-reject,
+.header-actions > button.secondary,
+.pz-header-actions > button.secondary,
+.btn-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 26px;
+  padding: 0 11px;
+  background: var(--bg-primary);
+  background-image: none;
+  color: var(--text-primary);
+  border: 1px solid var(--text-secondary);
+  border-radius: 100vw;
+  font-family: var(--text-color--font-family--heading);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.ob-btn.secondary:hover:not(:disabled),
+.plan-btn.plan-btn-reject:hover:not(:disabled),
+.header-actions > button.secondary:hover:not(:disabled),
+.pz-header-actions > button.secondary:hover:not(:disabled),
+.btn-shell:hover:not(:disabled) {
+  background: var(--text-secondary);
+  color: var(--bg-primary);
+  transform: none;
+}
+
+.ob-btn.secondary:active:not(:disabled),
+.plan-btn.plan-btn-reject:active:not(:disabled),
+.header-actions > button.secondary:active:not(:disabled),
+.pz-header-actions > button.secondary:active:not(:disabled),
+.btn-shell:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ob-btn.secondary:disabled,
+.plan-btn.plan-btn-reject:disabled,
+.header-actions > button.secondary:disabled,
+.pz-header-actions > button.secondary:disabled,
+.btn-shell:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

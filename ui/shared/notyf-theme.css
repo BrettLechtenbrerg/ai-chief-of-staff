@@ -1,0 +1,59 @@
+/* Notyf toast theme — ecomm-king cream/cocoa.
+   Toasts read as a warm bean card with a shell-cream message,
+   matching the rest of the app. */
+.notyf__toast {
+  background: var(--text-secondary);
+  border: 1px solid color-mix(in srgb, var(--bg-primary) 12%, transparent);
+  border-radius: 14px;
+  padding: 0;
+  font-family: 'Roboto', 'Helveticaneue', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow:
+    0 8px 24px rgba(35, 16, 12, 0.18),
+    0 0 0 1px color-mix(in srgb, var(--bg-primary) 8%, transparent) inset;
+  min-width: 200px;
+  max-width: 360px;
+  overflow: visible;
+}
+.notyf__toast--success {
+  box-shadow:
+    0 8px 24px rgba(90, 127, 58, 0.20),
+    0 0 0 1px rgba(90, 127, 58, 0.30) inset;
+}
+.notyf__toast--error {
+  background: var(--accent-shadow);
+  box-shadow:
+    0 8px 24px rgba(130, 26, 60, 0.25),
+    0 0 0 1px rgba(255, 248, 224, 0.10) inset;
+}
+.notyf__ripple { display: none; }
+.notyf__wrapper {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+}
+.notyf__icon {
+  width: 32px; height: 32px; min-width: 32px;
+  border-radius: 10px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.notyf__toast--success .notyf__icon {
+  background: linear-gradient(135deg, rgba(90,127,58,0.30), rgba(90,127,58,0.15));
+}
+.notyf__toast--error .notyf__icon {
+  background: linear-gradient(135deg, rgba(255,148,172,0.35), rgba(255,148,172,0.18));
+}
+.notyf__message {
+  color: var(--bg-primary);
+  line-height: 1.4;
+}
+.notyf__dismiss { margin-right: 0; }
+.notyf__dismiss-btn {
+  color: var(--bg-primary);
+  opacity: 0.55;
+}
+.notyf__dismiss-btn:hover { opacity: 1; }

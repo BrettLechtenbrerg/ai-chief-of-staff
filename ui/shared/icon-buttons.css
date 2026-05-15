@@ -1,0 +1,78 @@
+/* ecomm-king icon-button primitive — single source of truth.
+
+   A small (28×28) round button with a 1px umber border and cocoa
+   icon, that fills with warm cocoa on hover. Destructive variants
+   (.delete-btn or .danger) shift to dark-red on hover.
+
+   Per-page CSS used to define each of these icon buttons separately
+   (varying radii, slate fills, red glows). Those rules have been
+   gutted; this file is the only source. */
+
+.icon-btn,
+.delete-btn,
+.fact-delete-btn,
+.soul-delete-btn,
+.log-delete-btn,
+.rtn-icon-btn,
+.key-input button.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--text-muted) 28%, transparent);
+  border-radius: 100vw;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.icon-btn:hover:not(:disabled),
+.rtn-icon-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+/* Destructive: .delete-btn (and the brain panel's *-delete-btn variants)
+   is always destructive; .danger is the modifier for neutral icon buttons. */
+.delete-btn:hover:not(:disabled),
+.fact-delete-btn:hover:not(:disabled),
+.soul-delete-btn:hover:not(:disabled),
+.log-delete-btn:hover:not(:disabled),
+.icon-btn.danger:hover:not(:disabled),
+.rtn-icon-btn.danger:hover:not(:disabled),
+.key-input button.delete-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-shadow) 14%, transparent);
+  border-color: var(--accent-shadow);
+  color: var(--accent-shadow);
+}
+
+.icon-btn:disabled,
+.delete-btn:disabled,
+.fact-delete-btn:disabled,
+.soul-delete-btn:disabled,
+.log-delete-btn:disabled,
+.rtn-icon-btn:disabled,
+.key-input button.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* SVG icons inside icon buttons render at 12-14px. */
+.icon-btn svg,
+.delete-btn svg,
+.fact-delete-btn svg,
+.soul-delete-btn svg,
+.log-delete-btn svg,
+.rtn-icon-btn svg,
+.key-input button.delete-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}

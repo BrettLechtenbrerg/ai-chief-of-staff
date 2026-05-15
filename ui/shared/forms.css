@@ -1,0 +1,81 @@
+/* ecomm-king form-input primitive — single source of truth.
+
+   Ported from .form-input-rounded in the Clensae system:
+     shell (cream) body, umber 50% border, body font,
+     bean border on focus with a soft cinamon glow.
+
+   Catches every text-style input across the app (text, password,
+   email, number, tel, url, search, time, date) plus textareas and
+   selects. Per-page CSS can still override layout (width, padding
+   variants, max-width) without re-defining the visual look. */
+
+/* The chat composer (#message-input) and the in-thread search field
+   (#search-input) live inside parent containers that already provide
+   the shell pill chrome — they need to stay transparent and borderless. */
+input[type="text"]:not(#search-input),
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="time"],
+input[type="date"],
+input:not([type]),
+textarea:not(#message-input),
+select {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 45%, transparent);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-family: var(--text-color--font-family--body);
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+input[type="text"]:not(#search-input):focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="time"]:focus,
+input[type="date"]:focus,
+input:not([type]):focus,
+textarea:not(#message-input):focus,
+select:focus {
+  border-color: var(--text-secondary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--text-muted) 70%, transparent);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Pill variant — fully-rounded inline inputs (e.g. quick-set fields). */
+.form-input-pill,
+input.is-pill,
+select.is-pill {
+  border-radius: 100vw;
+  padding: 8px 16px;
+}
+
+/* Selects need a touch more right padding for the chevron. */
+select {
+  padding-right: 28px;
+  cursor: pointer;
+}

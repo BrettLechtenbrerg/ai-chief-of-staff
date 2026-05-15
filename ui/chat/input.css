@@ -1,0 +1,697 @@
+/* Input Area */
+#input-area {
+  padding: 12px calc(max(80px, (100% - 720px) / 2)) 20px;
+  background: var(--bg-primary);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.input-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--text-muted);
+  border-radius: var(--radius);
+  padding: 4px;
+  padding-right: 56px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-top-row {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+}
+
+.input-container:focus-within {
+  border-color: var(--accent);
+}
+
+.input-container:has(.slide-up-panel.open):focus-within {
+  border-color: var(--border);
+}
+
+.attach-btn {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+}
+
+.attach-btn:hover {
+  background: var(--border);
+  color: var(--accent);
+  transform: scale(1.1) rotate(-10deg);
+}
+
+.attach-btn:active {
+  transform: scale(0.95) rotate(0deg);
+}
+
+.attach-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+#message-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
+  resize: none;
+  min-height: 79px;
+  max-height: 150px;
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+#message-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* When toolbar is hidden (global chat mode), increase textarea to match normal height */
+.input-container:has(.input-toolbar-btns.hidden) #message-input {
+  min-height: 115px;
+}
+
+#message-input.has-suggestion::placeholder {
+  color: transparent;
+}
+
+.textarea-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+#ghost-suggestion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  color: var(--text-muted);
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  opacity: 0.6;
+}
+
+#ghost-suggestion .tab-hint {
+  color: var(--accent);
+  opacity: 0.7;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* Send button — round cinamon pill with the chunky ecomm-king drop-shadow.
+   Compresses on press like every other primary CTA. */
+#send-btn {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--text-color--text-tertiary);
+  border: none;
+  border-radius: 100vw;
+  box-shadow: 0 3px 0 0 var(--accent-shadow);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+#send-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+#send-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 var(--accent-shadow);
+}
+
+#send-btn:disabled {
+  background: color-mix(in srgb, var(--text-muted) 24%, transparent);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+#send-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 150ms ease;
+}
+
+#send-btn.stop-btn {
+  background: var(--accent-shadow);
+  box-shadow: 0 3px 0 0 #4d0e23;
+}
+
+#send-btn.stop-btn:hover {
+  background: #6b1733;
+}
+
+/* Search Area */
+#search-area {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+}
+
+.search-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  height: 30px;
+  box-sizing: border-box;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-primary));
+}
+
+.search-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+#search-area.searching .search-toggle {
+  display: none;
+}
+
+#search-expanded {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+#search-area.searching #search-expanded {
+  display: flex;
+}
+
+#search-expanded .search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+#search-input {
+  flex: 1;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+
+#search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-results-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.search-results-count.has-results {
+  color: var(--accent);
+}
+
+.search-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.search-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 100vw;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-nav-btn:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+}
+
+.search-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.search-nav-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.search-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 100vw;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-close-btn:hover {
+  background: color-mix(in srgb, var(--accent-shadow) 14%, transparent);
+  color: var(--accent-shadow);
+}
+
+.search-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Mode Select (inside input container) */
+.mode-select {
+  margin-left: auto;
+  height: 32px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1px solid var(--text-muted);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 0 24px 0 10px;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%237a4432' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.mode-select:hover {
+  border-color: var(--accent);
+}
+
+/* Focus/active state intentionally inherits the default border (no extra ring).
+   Re-asserting border-radius prevents native macOS WebKit from squaring the
+   corners while the <select> is focused/open. */
+.mode-select:focus,
+.mode-select:focus-visible,
+.mode-select:active {
+  border-color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  outline: none;
+}
+
+.mode-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.mode-select.locked {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Toolbar row (hidden, kept in DOM for mention list / reply banner insertion) */
+#toolbar-row {
+  display: none;
+}
+
+/* Input toolbar buttons (bottom-left of input-container) */
+.input-toolbar-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 2px;
+}
+
+.input-toolbar-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 100vw;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+  padding: 0;
+  position: relative;
+}
+
+.input-toolbar-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+  border-color: color-mix(in srgb, var(--text-muted) 35%, transparent);
+  color: var(--text-secondary);
+}
+
+.input-toolbar-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-color--text-tertiary);
+}
+
+.input-toolbar-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.input-toolbar-btn .chat-unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+}
+
+/* Slide-up panel */
+.slide-up-panel {
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  right: -1px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius) var(--radius) 0 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.slide-up-panel.open {
+  max-height: 250px;
+  box-shadow: inset 0 0 0 1px var(--border);
+  pointer-events: auto;
+}
+
+.slide-up-panel.open:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.input-container:has(.slide-up-panel.open) {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.slide-panel-content {
+  padding: 10px;
+}
+
+.slide-panel-content.hidden {
+  display: none;
+}
+
+/* Search panel inside slide-up */
+#search-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#search-panel.hidden {
+  display: none;
+}
+
+/* Workflows panel inside slide-up */
+#workflows-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+#workflows-panel.hidden {
+  display: none;
+}
+
+/* Attachments panel inside slide-up */
+#attachments-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+#attachments-panel.hidden {
+  display: none;
+}
+
+/* Reply panel inside slide-up */
+#reply-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#reply-panel.hidden {
+  display: none;
+}
+
+.gchat-reply-panel-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.gchat-reply-panel-close {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gchat-reply-panel-close:hover {
+  background: color-mix(in srgb, var(--accent-shadow) 14%, transparent);
+  color: var(--accent-shadow);
+}
+
+.gchat-reply-panel-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Workflows Area */
+#workflows-area {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+}
+
+#workflows-area.active {
+  width: 100%;
+}
+
+.workflows-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  height: 30px;
+  box-sizing: border-box;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.workflows-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-primary));
+}
+
+.workflows-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+#workflows-area.active .workflows-toggle {
+  display: none;
+}
+
+#workflows-expanded {
+  display: none;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  overflow: hidden;
+}
+
+#workflows-area.active #workflows-expanded {
+  display: flex;
+}
+
+#workflows-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+#workflows-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.workflow-btn {
+  padding: 5px 13px;
+  background: var(--bg-primary);
+  border: 1px solid var(--text-secondary);
+  border-radius: 100vw;
+  color: var(--text-secondary);
+  font-family: var(--text-color--font-family--heading);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-btn:hover {
+  background: var(--text-secondary);
+  border-color: var(--text-secondary);
+  color: var(--bg-primary);
+}
+
+.workflows-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 100vw;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.workflows-close-btn:hover {
+  background: color-mix(in srgb, var(--accent-shadow) 14%, transparent);
+  color: var(--accent-shadow);
+}
+
+.workflows-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* .workflow-badge visuals come from shared/badges.css (accent variant). */
+.workflow-badge { margin-right: 6px; flex-shrink: 0; }
+
+.workflow-badge-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.workflow-badge-remove:hover {
+  color: var(--error);
+}
+
+.workflow-badge-remove svg {
+  width: 10px;
+  height: 10px;
+}
+
+#workflow-badge-container {
+  display: flex;
+  align-items: center;
+  align-self: center;
+}

@@ -1,0 +1,139 @@
+/* Routines Panel — scoped under #routines-view */
+
+#routines-view {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#routines-view.active {
+  display: flex;
+}
+
+/* Header */
+#routines-view .routines-header {
+  background: var(--bg-secondary);
+  padding: 10px 16px;
+ 
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+#routines-view .routines-header h1 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+#routines-view .routines-header h1 span {
+  color: var(--text-primary);
+}
+
+#routines-view .routines-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Header buttons inherit the cinamon-pill look from shared/buttons.css. */
+
+/* Content */
+/* Content spans the full panel width so items align edge-to-edge with the header. */
+#routines-view .routines-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0 32px;
+}
+
+#routines-view .routines-content::-webkit-scrollbar { width: 6px; }
+#routines-view .routines-content::-webkit-scrollbar-track { background: transparent; }
+#routines-view .routines-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Grid */
+/* Job list — flat, no card chrome, items inset 16px to align with header. */
+#routines-view .rtn-grid {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* Jobs list */
+#routines-view .rtn-jobs-list { display: flex; flex-direction: column; gap: 2px; }
+
+#routines-view .rtn-job-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  transition: background-color 150ms ease;
+}
+
+#routines-view .rtn-job-item:last-child { border-bottom: none; }
+#routines-view .rtn-job-item:hover { background: var(--bg-tertiary); }
+#routines-view .rtn-job-item.disabled { opacity: 0.5; }
+
+#routines-view .rtn-job-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+  box-shadow: 0 0 8px var(--accent);
+  flex-shrink: 0;
+  animation: rtnPulse 2s ease-in-out infinite;
+}
+
+@keyframes rtnPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.9); }
+}
+
+#routines-view .rtn-job-item.disabled .rtn-job-status {
+  background: var(--text-muted);
+  box-shadow: none;
+  animation: none;
+}
+
+#routines-view .rtn-job-info { flex: 1; min-width: 0; }
+
+#routines-view .rtn-job-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* .rtn-job-session-badge visuals come from shared/badges.css (subtle variant). */
+
+#routines-view .rtn-job-schedule { font-size: 11px; color: var(--accent); font-weight: 500; }
+
+#routines-view .rtn-job-prompt {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#routines-view .rtn-job-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* .rtn-icon-btn visuals come from shared/icon-buttons.css. */
+
+/* Empty state */
+#routines-view .rtn-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+}
+
+#routines-view .rtn-empty svg { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5; }
+#routines-view .rtn-empty p { font-size: 12px; }

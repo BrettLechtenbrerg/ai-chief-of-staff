@@ -1,0 +1,103 @@
+/* ecomm-king badge primitive — single source of truth.
+
+   Ported from src/renderer/src/components/ui/Badge.tsx in ecomm-king:
+   pill shape, 1px border, heading face, 10px / 700 / wide tracking.
+
+   All badges live in the warm cream/cocoa palette so they read as part
+   of the app's aesthetic — never status-tinted (no green/red/orange
+   washes that clash with the page). Two visual variants:
+
+     - subtle  : shell bg / bean text / umber-tinted border  (default)
+     - default : bean bg  / shell text / shell-tinted border (emphasis)
+
+   Semantic status is conveyed by *border colour* and *text colour*
+   only — the body stays cream so the chip belongs to the page. */
+
+/* ---------- BASE: shared layout, typography, subtle look ---------- */
+.badge,
+.chat-username-badge,
+.pz-readonly-badge,
+.readonly-badge,
+.job-session-badge,
+.rtn-job-session-badge,
+.workflow-badge,
+.today-badge,
+.now-badge,
+.ob-auth-badge,
+.auth-badge,
+.risk-badge,
+.badge-required {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100vw;
+  border: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  color: var(--text-secondary);
+  font-family: var(--text-color--font-family--heading);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* ---------- VARIANT: default / emphasis (filled bean pill) ----------
+   High-signal chips: connected, today/now, current state, required. */
+.badge.is-default,
+.today-badge,
+.now-badge,
+.workflow-badge,
+.badge-required,
+.ob-auth-badge,
+.auth-badge.oauth,
+.auth-badge.api-key {
+  background: color-mix(in srgb, var(--text-secondary) 88%, transparent);
+  color: var(--bg-primary);
+  border-color: color-mix(in srgb, var(--bg-primary) 22%, transparent);
+}
+
+/* ---------- STATUS: warning (at-risk) ----------
+   Cream body, umber text + border — soft caution that stays in palette. */
+.badge.is-warning,
+.risk-badge,
+.ob-auth-badge.risk {
+  border-color: color-mix(in srgb, var(--text-muted) 55%, transparent);
+  color: var(--text-muted);
+  cursor: help;
+  position: relative;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.risk-badge:hover,
+.ob-auth-badge.risk:hover {
+  border-color: var(--text-muted);
+}
+
+/* ---------- STATUS: error / not connected ----------
+   Cream body, dark-red text + border tint. */
+.badge.is-error,
+.auth-badge.none {
+  color: var(--accent-shadow);
+  border-color: color-mix(in srgb, var(--accent-shadow) 45%, transparent);
+}
+
+/* ---------- STATUS: loading / muted ---------- */
+.auth-badge.loading {
+  color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--text-muted) 22%, transparent);
+  opacity: 0.85;
+}
+
+/* Username chip is interactive */
+.chat-username-badge {
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+.chat-username-badge:hover {
+  border-color: var(--text-muted);
+}

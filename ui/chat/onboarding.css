@@ -1,0 +1,888 @@
+/* Onboarding — embedded inside chat.html main-content */
+
+.onboarding-container {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* `safe center` keeps content centered when it fits in the viewport but
+     falls back to top-aligned scrolling when the step is taller than the
+     window. Without this (plain `center`), a tall expanded section gets
+     clipped at the top with no way to scroll up. The plain `center`
+     declaration above is a fallback — engines that don't understand the
+     `safe` keyword drop the second line and keep the first. */
+  justify-content: center;
+  justify-content: safe center;
+  padding: 32px 36px 40px 36px;
+  overflow-y: auto;
+  opacity: 1;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.onboarding-container.hiding {
+  opacity: 0;
+  transform: scale(0.97) translateY(-10px);
+  pointer-events: none;
+}
+
+/* Hide sidebar + chat until we know whether onboarding is needed.
+   The .app-ready class is added by init.js once the check completes. */
+body:not(.app-ready) .sidebar,
+body:not(.app-ready) #chat-view {
+  opacity: 0;
+}
+
+/* Hide sidebar during onboarding */
+body.onboarding-active .sidebar {
+  width: 0;
+  min-width: 0;
+  border-right: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar reveal animation */
+body:not(.onboarding-active) .sidebar {
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              min-width 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+
+/* Hide chat content and floating buttons during onboarding */
+body.onboarding-active #chat-view {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.onboarding-active .floating-fresh-btn,
+body.onboarding-active .floating-toggle-btn,
+body.onboarding-active .floating-admin-clear-btn {
+  display: none !important;
+}
+
+body:not(.onboarding-active) #chat-view {
+  animation: chatReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+@keyframes chatReveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo */
+.ob-logo {
+  width: 72px;
+  height: 54px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+  animation: obLogoIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.ob-logo::before {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  top: 0;
+  left: 0;
+  transform: scale(3);
+  transform-origin: top left;
+  animation: obPixelcat 0.6s steps(1) infinite;
+  image-rendering: pixelated;
+}
+
+@keyframes obLogoIn {
+  from { opacity: 0; transform: scale(0.8) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes obPixelcat {
+  0%, 25% {
+    box-shadow:
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      18px 6px 0 var(--accent), 21px 3px 0 var(--accent),
+      3px 15px 0 var(--accent), 12px 15px 0 var(--accent);
+  }
+  25.01%, 50% {
+    box-shadow:
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      18px 9px 0 var(--accent), 21px 6px 0 var(--accent),
+      6px 15px 0 var(--accent), 9px 15px 0 var(--accent);
+  }
+  50.01%, 75% {
+    box-shadow:
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      18px 12px 0 var(--accent), 21px 9px 0 var(--accent),
+      12px 15px 0 var(--accent), 3px 15px 0 var(--accent);
+  }
+  75.01%, 100% {
+    box-shadow:
+      3px 0 0 var(--accent), 9px 0 0 var(--accent),
+      3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
+      0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
+      3px 6px 0 #fff, 9px 6px 0 #fff,
+      3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
+      3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
+      18px 6px 0 var(--accent), 21px 3px 0 var(--accent),
+      0 15px 0 var(--accent), 15px 15px 0 var(--accent);
+  }
+}
+
+.onboarding-container h1 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 6px;
+  text-align: center;
+  animation: obTextIn 0.5s ease 0.1s both;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.ob-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 28px;
+  animation: obTextIn 0.5s ease 0.15s both;
+}
+
+@keyframes obTextIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Steps */
+.ob-step {
+  display: none;
+  width: 100%;
+  max-width: 560px;
+  animation: obStepIn 0.3s ease;
+}
+
+.ob-step.active {
+  display: block;
+}
+
+@keyframes obStepIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Auth Options */
+.ob-auth-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.ob-auth-option {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ob-auth-option:hover {
+  border-color: var(--accent);
+  background: var(--bg-tertiary);
+}
+
+.ob-auth-option.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-primary));
+}
+
+.ob-auth-option-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ob-auth-option-icon.api {
+  background: linear-gradient(135deg, var(--success), #059669);
+}
+
+.ob-auth-option-icon.oauth {
+  background: linear-gradient(135deg, var(--orange), #ea580c);
+}
+
+.ob-auth-option-icon svg {
+  width: 24px;
+  height: 24px;
+  color: white;
+}
+
+.ob-auth-option-text h3 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ob-auth-option-text p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.ob-auth-option-badges {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* .ob-auth-badge / .ob-auth-badge.risk visuals come from shared/badges.css. */
+
+.ob-auth-badge.risk .risk-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.ob-risk-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  z-index: 10;
+  white-space: normal;
+}
+
+.ob-auth-badge.risk:hover .ob-risk-tooltip {
+  display: block;
+}
+
+/* Form */
+.ob-form-group {
+  margin-bottom: 16px;
+}
+
+.ob-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+
+/* .ob-form-group inputs inherit the shell-cream look from shared/forms.css. */
+.ob-form-group input { width: 100%; padding: 12px 14px; font-size: 14px; }
+.ob-form-group input[type="password"] { font-family: monospace; letter-spacing: 1px; }
+
+.ob-form-group .ob-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.ob-form-group .ob-hint a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.ob-form-group .ob-hint a:hover {
+  text-decoration: underline;
+}
+
+/* Status messages */
+.ob-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+.ob-status svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ob-status span {
+  flex: 1;
+}
+
+.ob-status.success {
+  background: color-mix(in srgb, var(--success) 12%, var(--bg-primary));
+  color: var(--success);
+}
+
+.ob-status.error {
+  background: color-mix(in srgb, var(--accent-shadow) 12%, var(--bg-primary));
+  color: var(--accent-shadow);
+}
+
+.ob-status.info {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-primary));
+  color: var(--accent);
+}
+
+/* Buttons */
+.ob-button-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  margin-bottom: 16px;
+}
+
+.ob-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-height: 46px;
+  font-family: inherit;
+}
+
+/* .ob-btn.primary -> cinamon pill, .ob-btn.secondary -> shell pill,
+   inherited from shared/buttons.css. */
+
+.ob-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ob-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ob-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: obSpin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes obSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Permission items */
+.ob-perm-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.ob-perm-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ob-perm-icon.granted {
+  background: color-mix(in srgb, var(--success) 18%, var(--bg-primary));
+  color: var(--success);
+}
+
+.ob-perm-icon.missing {
+  background: color-mix(in srgb, var(--warning) 18%, var(--bg-primary));
+  color: var(--text-muted);
+}
+
+.ob-perm-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ob-perm-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ob-perm-text h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.ob-perm-text p {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ob-perm-action .ob-btn {
+  flex: none;
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Progress bar (thin line below titlebar) */
+.ob-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--border);
+  z-index: 10;
+}
+
+.ob-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Top nav (back left, skip right) — pinned to top of container */
+.ob-top-nav {
+  position: absolute;
+  top: 12px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  -webkit-app-region: no-drag;
+}
+
+.ob-top-nav a {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.ob-top-nav a:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.ob-top-nav .ob-nav-spacer {
+  flex: 1;
+}
+
+/* Skip link (legacy, kept for compatibility) */
+.ob-skip-link {
+  margin-top: 20px;
+  text-align: center;
+  display: none;
+}
+
+.ob-skip-link a {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ob-skip-link a:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+/* Skip links container (skip-all at bottom) */
+.ob-skip-links {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.ob-skip-links a {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ob-skip-links a:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.ob-skip-links .ob-skip-all {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.ob-skip-links .ob-skip-all:hover {
+  opacity: 1;
+}
+
+/* Progress dots */
+.ob-progress {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 24px;
+  animation: obTextIn 0.5s ease 0.2s both;
+}
+
+.ob-progress-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s ease;
+}
+
+.ob-progress-dot.active {
+  background: var(--accent);
+  transform: scale(1.3);
+}
+
+.ob-progress-dot.done {
+  background: var(--text-muted);
+}
+
+/* Textarea in form groups inherits shell-cream look from shared/forms.css. */
+.ob-form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Focus / placeholder styling comes from shared/forms.css. */
+
+/* Location autocomplete (onboarding) */
+.ob-autocomplete-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ob-autocomplete-wrapper input {
+  width: 100%;
+}
+
+.ob-autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+
+.ob-autocomplete-dropdown.show {
+  display: block;
+}
+
+.ob-autocomplete-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s ease;
+}
+
+.ob-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.ob-autocomplete-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.ob-autocomplete-item .city {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.ob-autocomplete-item .details {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* Birthday selects */
+.ob-birthday-row {
+  display: flex;
+  gap: 12px;
+}
+
+.ob-birthday-row select {
+  flex: 1;
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23888' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.ob-birthday-row select:focus {
+  border-color: var(--accent);
+}
+
+/* CLI install info */
+/* Welcome text + step descriptions (same clean style) */
+.ob-welcome-text,
+.ob-step-desc,
+.ob-step-label {
+  font-size: 20px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  text-align: center;
+  max-width: 100%;
+  margin: 0 auto 24px;
+  animation: obTextIn 0.3s ease both;
+}
+
+.ob-welcome-text {
+  animation: obTextIn 0.5s ease 0.2s both;
+}
+
+/* Auth options simple (stacked buttons) */
+.ob-auth-options-simple {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ob-auth-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 16px;
+  line-height: 1.6;
+}
+
+/* Success */
+.ob-success-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, rgba(217, 58, 99, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  animation: obSuccessPop 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes obSuccessPop {
+  from { opacity: 0; transform: scale(0.5); }
+  50% { transform: scale(1.1); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.ob-success-icon svg {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+
+.ob-success-text {
+  text-align: center;
+}
+
+.ob-success-text h2 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.ob-success-text p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Side-by-side OAuth buttons (Claude + OpenAI Codex) on the auth step. */
+.ob-oauth-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ob-oauth-row .ob-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Tiny intro line inside the collapsible "Or connect a different provider" */
+.ob-section-hint {
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Optional section */
+.ob-optional-section {
+  margin-top: 16px;
+  margin-bottom: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.ob-optional-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.ob-optional-header h4 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.ob-optional-header svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.ob-optional-header.expanded svg {
+  transform: rotate(180deg);
+}
+
+.ob-optional-content {
+  display: none;
+}
+
+.ob-optional-content.show {
+  display: block;
+  animation: obSlideDown 0.2s ease;
+}
+
+@keyframes obSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Divider */
+.ob-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ob-divider::before,
+.ob-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.hidden { display: none !important; }
+
+/* Pause animations when window is hidden */
+body.animations-paused .onboarding-container *,
+body.animations-paused .onboarding-container *::before,
+body.animations-paused .onboarding-container *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}

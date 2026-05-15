@@ -1,0 +1,385 @@
+/**
+ * Telegram command handlers
+ * /start, /help, /status, /model, /new, /facts, /workflow, /link, /unlink, /mychatid
+ */
+
+import { Context, Bot } from 'grammy';
+import { AgentManager } from '../../../agent';
+import { SessionLinkCallback } from '../types';
+import { loadWorkflowCommands } from '../../../config/commands-loader';
+import { getAvailableModels } from '../../../main/ipc/settings-ipc';
+import { sanitizeSessionName } from '../../../utils/session-name';
+
+export interface CommandHandlerDeps {
+  bot: Bot;
+  onSessionLinkCallback: SessionLinkCallback | null;
+  sendResponse: (ctx: Context, text: string) => Promise<void>;
+}
+
+/**
+ * Register all command handlers on the bot
+ */
+export function registerCommandHandlers(deps: CommandHandlerDeps): void {
+  const { bot, sendResponse } = deps;
+
+  // /start command
+  bot.command('start', async (ctx) => {
+    const userId = ctx.from?.id;
+    const chatType = ctx.chat?.type;
+    const isGroup = chatType === 'group' || chatType === 'supergroup';
+
+    await ctx.reply(
+      `Welcome to Pocket Agent!\n\n` +
+        `I'm your personal AI assistant with persistent memory. ` +
+        `I remember our conversations across sessions.\n\n` +
+        `Your user ID: ${userId}\n\n` +
+        `Commands:\n` +
+        `/help - How to use Pocket Agent\n` +
+        `/new - Fresh start (keeps facts & reminders)\n` +
+        `/model - List or switch AI models\n` +
+        `/status - Show agent status\n` +
+        `/facts [query] - Search stored facts\n` +
+        `/workflow - List available workflows` +
+        (isGroup
+          ? `\n/link <session> - Link this group to a session\n/unlink - Unlink this group`
+          : '')
+    );
+  });
+
+  // /help command
+  bot.command('help', async (ctx) => {
+    const helpText = `<b>Pocket Agent</b>
+
+Your AI assistant with persistent memory. I remember our conversations and learn about you over time.
+
+<b>Commands</b>
+/new - Clear chat history (fresh start)
+/model - View or switch AI models
+/status - See stats and memory usage
+/facts - Browse what I remember about you
+/workflow - List available workflows
+
+<b>Workflows</b>
+Workflows are reusable command templates. Use /workflow to see what's available, then run them directly (e.g. /create-workflow).
+
+<b>Tips</b>
+* Send text, photos, or voice messages
+* I remember context across sessions
+* Use /new to reset without losing memories`;
+
+    await ctx.reply(helpText, { parse_mode: 'HTML' });
+  });
+
+  // /status command
+  bot.command('status', async (ctx) => {
+    const stats = AgentManager.getStats();
+    if (!stats) {
+      await ctx.reply('Agent not initialized');
+      return;
+    }
+
+    const memoryMB = process.memoryUsage().heapUsed / 1024 / 1024;
+
+    await ctx.reply(
+      `Agent Status\n` +
+        `--------------------\n` +
+        `Messages: ${stats.messageCount}\n` +
+        `Facts: ${stats.factCount}\n` +
+        `Cron Jobs: ${stats.cronJobCount}\n` +
+        `Summaries: ${stats.summaryCount}\n` +
+        `Est. Tokens: ${stats.estimatedTokens.toLocaleString()}\n` +
+        `Memory: ${memoryMB.toFixed(1)} MB`
+    );
+  });
+
+  // /mychatid command
+  bot.command('mychatid', async (ctx) => {
+    const chatId = ctx.chat?.id;
+    const userId = ctx.from?.id;
+    await ctx.reply(
+      `Your IDs for cron job configuration:\n\n` +
+        `Chat ID: ${chatId}\n` +
+        `User ID: ${userId}\n\n` +
+        `Use the Chat ID when scheduling tasks that should message you.`
+    );
+  });
+
+  // /new command (fresh start - session-aware)
+  bot.command('new', async (ctx) => {
+    const chatId = ctx.chat?.id;
+    const memory = AgentManager.getMemory();
+    const sessionId = chatId && memory ? memory.getSessionForChat(chatId) || 'default' : 'default';
+
+    AgentManager.clearConversation(sessionId);
+    await ctx.reply(
+      "Fresh start! Conversation cleared.\nDon't worry - I still remember everything about you."
+    );
+  });
+
+  // /facts command
+  bot.command('facts', async (ctx) => {
+    const query = ctx.message?.text?.replace('/facts', '').trim();
+
+    if (!query) {
+      // List all facts grouped by category
+      const facts = AgentManager.getAllFacts();
+      if (facts.length === 0) {
+        await ctx.reply(
+          'No facts stored yet.\n\nI learn facts when you tell me things about yourself, or when I use the remember tool.'
+        );
+        return;
+      }
+
+      // Group by category
+      const byCategory = new Map<string, typeof facts>();
+      for (const fact of facts) {
+        const list = byCategory.get(fact.category) || [];
+        list.push(fact);
+        byCategory.set(fact.category, list);
+      }
+
+      const lines: string[] = [`Known Facts (${facts.length} total)`];
+      for (const [category, categoryFacts] of byCategory) {
+        lines.push(`\n${category}`);
+        for (const fact of categoryFacts) {
+          lines.push(`  * ${fact.subject}: ${fact.content}`);
+        }
+      }
+
+      await sendResponse(ctx, lines.join('\n'));
+      return;
+    }
+
+    const facts = AgentManager.searchFacts(query);
+    if (facts.length === 0) {
+      await ctx.reply(`No facts found for "${query}"`);
+      return;
+    }
+
+    const response = facts
+      .slice(0, 15)
+      .map((f) => `[${f.category}] ${f.subject}: ${f.content}`)
+      .join('\n');
+
+    await ctx.reply(`Found ${facts.length} fact(s):\n\n${response}`);
+  });
+
+  // /workflow command - list available workflows
+  bot.command('workflow', async (ctx) => {
+    const commands = loadWorkflowCommands();
+
+    if (commands.length === 0) {
+      await ctx.reply(
+        'No workflows available.\n\nWorkflows are command files in .claude/commands/'
+      );
+      return;
+    }
+
+    const list = commands
+      .map((c) => `/${c.name} - ${c.description || 'No description'}`)
+      .join('\n');
+
+    await ctx.reply(
+      `<b>Available Workflows</b>\n\n${list}\n\n` +
+        `Run a workflow by typing its command, e.g. /${commands[0].name}`,
+      { parse_mode: 'HTML' }
+    );
+  });
+
+  // /model command
+  bot.command('model', async (ctx) => {
+    const args = ctx.message?.text?.split(/\s+/).slice(1) || [];
+    const subcommand = args[0]?.toLowerCase();
+
+    // Single source of truth — same list the chat UI / settings use
+    const availableModels = getAvailableModels();
+
+    const currentModel = AgentManager.getModel();
+
+    // /model or /model list - show available models
+    if (!subcommand || subcommand === 'list') {
+      if (availableModels.length === 0) {
+        await ctx.reply('No models available. Please configure API keys in Settings.');
+        return;
+      }
+
+      const modelList = availableModels
+        .map((m) => {
+          const isCurrent = m.id === currentModel ? ' [x]' : '';
+          return `* ${m.name}${isCurrent}`;
+        })
+        .join('\n');
+
+      await ctx.reply(
+        `Available models:\n\n${modelList}\n\n` +
+          `Use /model <name> to switch.\n` +
+          `Example: /model sonnet`
+      );
+      return;
+    }
+
+    // /model <name> - switch to that model
+    const searchTerm = subcommand;
+    const matchedModel = availableModels.find(
+      (m) => m.id.toLowerCase().includes(searchTerm) || m.name.toLowerCase().includes(searchTerm)
+    );
+
+    if (!matchedModel) {
+      await ctx.reply(
+        `Model "${searchTerm}" not found.\n\n` +
+          `Available: ${availableModels.map((m) => m.name).join(', ')}`
+      );
+      return;
+    }
+
+    if (matchedModel.id === currentModel) {
+      await ctx.reply(`Already using ${matchedModel.name}.`);
+      return;
+    }
+
+    AgentManager.setModel(matchedModel.id);
+    await ctx.reply(`Switched to ${matchedModel.name}.`);
+  });
+}
+
+/**
+ * Register session linking handlers
+ */
+export function registerSessionHandlers(deps: CommandHandlerDeps): void {
+  const { bot } = deps;
+
+  // Handle bot being added to a group - auto-link to session
+  bot.on('my_chat_member', async (ctx) => {
+    const chatId = ctx.chat?.id;
+    const newStatus = ctx.myChatMember?.new_chat_member?.status;
+    const chatType = ctx.chat?.type;
+
+    // Only handle when bot is added to a group (not kicked/left)
+    if (!chatId || !['member', 'administrator'].includes(newStatus || '')) {
+      return;
+    }
+
+    // Only handle group chats (not private chats)
+    if (chatType !== 'group' && chatType !== 'supergroup') {
+      return;
+    }
+
+    const rawGroupName = ctx.chat?.title || '';
+    // Normalise the group title the same way session names are normalised so
+    // a group called "My Chat " matches a session stored as "My Chat".
+    const groupName = rawGroupName ? sanitizeSessionName(rawGroupName) : '';
+    console.log(`[Telegram] Bot added to group "${groupName}" (chatId: ${chatId})`);
+
+    // Try to match group name to a session
+    const memory = AgentManager.getMemory();
+    if (!memory) {
+      await ctx.reply('Memory not initialized. Please try again later.');
+      return;
+    }
+
+    const session = memory.getSessionByName(groupName);
+    if (session) {
+      // Link the chat to the session
+      memory.linkTelegramChat(chatId, session.id, groupName);
+      await ctx.reply(
+        `Linked to session "${session.name}"\n\n` +
+          `Messages in this group will now sync with the "${session.name}" session in the desktop app.\n\n` +
+          `Note: To see all messages (not just commands), either:\n` +
+          `* Make me an admin in this group, OR\n` +
+          `* Disable Privacy Mode via @BotFather (/setprivacy -> Disable)`
+      );
+      console.log(
+        `[Telegram] Linked group "${groupName}" (chatId: ${chatId}) to session "${session.id}"`
+      );
+      deps.onSessionLinkCallback?.({ sessionId: session.id, linked: true });
+    } else {
+      // List available sessions
+      const sessions = memory.getSessions();
+      const sessionNames = sessions.map((s) => `* ${s.name}`).join('\n');
+      await ctx.reply(
+        `No session found with name "${groupName}"\n\n` +
+          `Available sessions:\n${sessionNames}\n\n` +
+          `To link this group, rename it to match one of the session names above, or use /link <session-name>.`
+      );
+    }
+  });
+
+  // Handle /link command for manual linking
+  bot.command('link', async (ctx) => {
+    const chatId = ctx.chat?.id;
+    const chatType = ctx.chat?.type;
+    const rawSessionName = ctx.message?.text?.replace('/link', '').trim();
+    // Apply the same normalisation we use when names are created via the UI
+    // so `/link  My  Chat ` matches a session stored as "My Chat".
+    const sessionName = rawSessionName ? sanitizeSessionName(rawSessionName) : '';
+
+    if (!chatId) return;
+
+    // Only allow linking in groups
+    if (chatType !== 'group' && chatType !== 'supergroup') {
+      await ctx.reply(
+        'The /link command only works in group chats. Create a group and add me to it first.'
+      );
+      return;
+    }
+
+    if (!sessionName) {
+      const memory = AgentManager.getMemory();
+      const sessions = memory?.getSessions() || [];
+      const sessionNames = sessions.map((s) => `* ${s.name}`).join('\n');
+      await ctx.reply(`Usage: /link <session-name>\n\n` + `Available sessions:\n${sessionNames}`);
+      return;
+    }
+
+    const memory = AgentManager.getMemory();
+    if (!memory) {
+      await ctx.reply('Memory not initialized. Please try again later.');
+      return;
+    }
+
+    const session = memory.getSessionByName(sessionName);
+    if (!session) {
+      const sessions = memory.getSessions();
+      const sessionNames = sessions.map((s) => `* ${s.name}`).join('\n');
+      await ctx.reply(
+        `No session found with name "${sessionName}"\n\n` + `Available sessions:\n${sessionNames}`
+      );
+      return;
+    }
+
+    // Link the chat to the session
+    memory.linkTelegramChat(chatId, session.id, ctx.chat?.title || undefined);
+    await ctx.reply(
+      `Linked to session "${session.name}"\n\n` +
+        `Messages in this group will now sync with the "${session.name}" session.\n\n` +
+        `Note: To see all messages (not just commands), either:\n` +
+        `* Make me an admin in this group, OR\n` +
+        `* Disable Privacy Mode via @BotFather (/setprivacy -> Disable)`
+    );
+    console.log(`[Telegram] Manually linked chat ${chatId} to session "${session.id}"`);
+    deps.onSessionLinkCallback?.({ sessionId: session.id, linked: true });
+  });
+
+  // Handle /unlink command
+  bot.command('unlink', async (ctx) => {
+    const chatId = ctx.chat?.id;
+    if (!chatId) return;
+
+    const memory = AgentManager.getMemory();
+    if (!memory) {
+      await ctx.reply('Memory not initialized.');
+      return;
+    }
+
+    const currentSessionId = memory.getSessionForChat(chatId);
+    if (!currentSessionId) {
+      await ctx.reply('This chat is not linked to any session.');
+      return;
+    }
+
+    memory.unlinkTelegramChat(chatId);
+    await ctx.reply('Chat unlinked. Messages will now go to the default session.');
+    console.log(`[Telegram] Unlinked chat ${chatId}`);
+    deps.onSessionLinkCallback?.({ sessionId: currentSessionId, linked: false });
+  });
+}

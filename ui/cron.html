@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- gg-pixel: auto-wired by ggcoder pixel install -->
+  <script src="gg-pixel.browser.iife.js"></script>
+  <script>
+    if (window.GGPixel) GGPixel.initPixel({ projectKey: "pk_live_481c64dc8ca30105cb960479fe4f2791", ingestUrl: "https://gg-pixel-server.buzzbeamaustralia.workers.dev" });
+  </script>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; connect-src 'self' https://gg-pixel-server.buzzbeamaustralia.workers.dev;">
+  <title>Routines</title>
+
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+  <link rel="stylesheet" href="shared/variables.css">
+  <link rel="stylesheet" href="shared/notyf-theme.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <style>
+    header {
+      background: var(--bg-secondary);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-family: 'Cal Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    header h1 span {
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Header buttons inherit the cinamon-pill look from shared/buttons.css. */
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 32px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-family: 'Cal Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* Settings Grid - matching settings.html */
+    .settings-grid {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      gap: 12px;
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-row:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .setting-row label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    /* Inline inputs/selects/textareas inherit shell-cream look from
+       shared/forms.css. Only size/layout live here. */
+    .setting-row input,
+    .setting-row select,
+    .setting-row textarea {
+      flex: 1;
+      max-width: 280px;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .setting-row select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12' fill='%237a4432'%3E%3Cpath d='M6 8L2 4h8L6 8z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 24px;
+    }
+
+    .setting-row textarea {
+      min-height: 60px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    /* Name + Session row */
+    .name-session-row {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      max-width: 280px;
+    }
+
+    .name-session-row input {
+      flex: 1;
+      max-width: none;
+    }
+
+    .name-session-row select {
+      width: 110px;
+      flex-shrink: 0;
+      max-width: none;
+    }
+
+    /* Schedule tabs */
+    .schedule-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .schedule-tab {
+      padding: 5px 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .schedule-tab:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .schedule-tab.active {
+      background: linear-gradient(135deg, rgba(217, 58, 99, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%);
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    /* Time picker */
+    .time-picker {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .time-picker select {
+      width: 54px;
+      text-align: center;
+      padding: 6px 4px;
+    }
+
+    .time-picker .separator {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    /* Day selector */
+    .day-selector {
+      display: flex;
+      gap: 4px;
+    }
+
+    /* Day selector chips — shell pills that flip to cinamon when selected. */
+    .day-btn {
+      width: 36px;
+      height: 28px;
+      border: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+      border-radius: 100vw;
+      background: var(--bg-primary);
+      color: var(--text-muted);
+      font-family: var(--text-color--font-family--heading);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease;
+    }
+
+    .day-btn:hover {
+      background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+      border-color: var(--text-muted);
+      color: var(--text-secondary);
+    }
+
+    .day-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    /* Interval input */
+    .interval-input {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .interval-input select {
+      width: 60px;
+      text-align: center;
+    }
+
+    .interval-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+
+    /* Schedule options container */
+    .schedule-options {
+      display: none;
+    }
+
+    .schedule-options.active {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* .create-btn inherits the cinamon-pill look from shared/buttons.css. */
+    .create-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Jobs list */
+    .jobs-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .job-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      transition: all 0.15s ease;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .job-item:last-child {
+      border-bottom: none;
+    }
+
+    .job-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .job-item.disabled {
+      opacity: 0.5;
+    }
+
+    .job-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      box-shadow: 0 0 8px var(--accent);
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.9); }
+    }
+
+    .job-item.disabled .job-status {
+      background: var(--text-muted);
+      box-shadow: none;
+      animation: none;
+    }
+
+    .job-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .job-name {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* .job-session-badge visuals come from shared/badges.css (subtle variant). */
+
+    .job-schedule {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .job-prompt {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .job-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    /* .icon-btn / .icon-btn.danger visuals come from shared/icon-buttons.css. */
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      width: 32px;
+      height: 32px;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 12px;
+    }
+
+    /* Toast - Premium glassmorphism design */
+    /* Full width row for prompt */
+    .setting-row.full-width {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    .setting-row.full-width textarea {
+      max-width: none;
+    }
+
+    /* Schedule row with nested elements */
+    .setting-row.schedule-row {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .setting-row.schedule-row > label {
+      width: 100%;
+      margin-bottom: -4px;
+    }
+
+    /* Utility classes */
+    .hidden { display: none !important; }
+
+    /* Pause animations when window is hidden/unfocused */
+    body.animations-paused *,
+    body.animations-paused *::before,
+    body.animations-paused *::after {
+      animation-play-state: paused !important;
+      transition: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+  <script src="shared/theme-loader.js"></script>
+  <script type="module">
+    import autoAnimate from 'https://cdn.jsdelivr.net/npm/@formkit/auto-animate@0.9/+esm';
+    window._autoAnimate = autoAnimate;
+    window.dispatchEvent(new Event('autoAnimateReady'));
+  </script>
+</head>
+<body>
+  <header>
+    <h1><span>Routines</span></h1>
+    <div class="header-actions">
+      <button onclick="playNormalClick(); window.close()">Done</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="section">
+      <div class="settings-grid">
+        <div class="setting-row">
+          <label>Job Name</label>
+          <div class="name-session-row">
+            <input type="text" id="job-name" placeholder="morning-vibes" />
+            <select id="job-session">
+              <option value="default">Default</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row schedule-row">
+          <label>When</label>
+          <div class="schedule-tabs">
+            <div class="schedule-tab active" data-type="daily">Daily</div>
+            <div class="schedule-tab" data-type="weekdays">Weekdays</div>
+            <div class="schedule-tab" data-type="interval">Every...</div>
+            <div class="schedule-tab" data-type="custom">Specific Days</div>
+          </div>
+
+          <div class="schedule-options active" id="options-daily">
+            <div class="time-picker">
+              <select id="hour-daily"></select>
+              <span class="separator">:</span>
+              <select id="minute-daily"></select>
+              <select id="ampm-daily">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="schedule-options" id="options-weekdays">
+            <div class="time-picker">
+              <select id="hour-weekdays"></select>
+              <span class="separator">:</span>
+              <select id="minute-weekdays"></select>
+              <select id="ampm-weekdays">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="schedule-options" id="options-interval">
+            <div class="interval-input">
+              <select id="interval-hours">
+                <option value="0" selected>0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+                <option value="24">24</option>
+              </select>
+              <span class="interval-label">hrs</span>
+              <select id="interval-minutes">
+                <option value="0">0</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="30" selected>30</option>
+                <option value="45">45</option>
+              </select>
+              <span class="interval-label">min</span>
+            </div>
+          </div>
+
+          <div class="schedule-options" id="options-custom">
+            <div class="day-selector">
+              <button type="button" class="day-btn" data-day="0">Sun</button>
+              <button type="button" class="day-btn" data-day="1">Mon</button>
+              <button type="button" class="day-btn" data-day="2">Tue</button>
+              <button type="button" class="day-btn" data-day="3">Wed</button>
+              <button type="button" class="day-btn" data-day="4">Thu</button>
+              <button type="button" class="day-btn" data-day="5">Fri</button>
+              <button type="button" class="day-btn" data-day="6">Sat</button>
+            </div>
+            <div class="time-picker">
+              <select id="hour-custom"></select>
+              <span class="separator">:</span>
+              <select id="minute-custom"></select>
+              <select id="ampm-custom">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label>Source</label>
+          <select id="prompt-source" onchange="handlePromptSourceChange()">
+            <option value="custom">Custom prompt</option>
+          </select>
+        </div>
+
+        <div class="setting-row full-width" id="prompt-row">
+          <label>Prompt</label>
+          <textarea id="job-prompt" placeholder="What should I do when this kicks off?"></textarea>
+        </div>
+
+        <div class="setting-row">
+          <label></label>
+          <button class="create-btn" onclick="playNormalClick(); createJob()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12.001 5v14.002m7.001-7H5"/></svg>
+            Let's Go!
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Running on Autopilot</h2>
+      <p class="section-desc">Your scheduled routines.</p>
+
+      <div class="settings-grid">
+        <div id="jobs-list" class="jobs-list">
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
+  <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, .day-btn, select, .routine-item')) {
+        playNormalClick();
+      }
+    });
+
+    // Generate hour options (1-12)
+    function generateHourOptions() {
+      let html = '';
+      for (let i = 1; i <= 12; i++) {
+        const selected = i === 9 ? 'selected' : '';
+        html += `<option value="${i}" ${selected}>${i}</option>`;
+      }
+      return html;
+    }
+
+    // Generate minute options (00, 15, 30, 45)
+    function generateMinuteOptions() {
+      return `
+        <option value="0">00</option>
+        <option value="15">15</option>
+        <option value="30">30</option>
+        <option value="45">45</option>
+      `;
+    }
+
+    // Insert generated options
+    document.querySelectorAll('select[id^="hour-"]').forEach(el => {
+      el.innerHTML = generateHourOptions();
+    });
+    document.querySelectorAll('select[id^="minute-"]').forEach(el => {
+      el.innerHTML = generateMinuteOptions();
+    });
+
+    // Schedule type tabs
+    let currentScheduleType = 'daily';
+    const selectedDays = new Set();
+
+    document.querySelectorAll('.schedule-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.schedule-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.schedule-options').forEach(o => o.classList.remove('active'));
+
+        tab.classList.add('active');
+        currentScheduleType = tab.dataset.type;
+        document.getElementById(`options-${currentScheduleType}`).classList.add('active');
+      });
+    });
+
+    // Day selector buttons
+    document.querySelectorAll('.day-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const day = btn.dataset.day;
+        if (selectedDays.has(day)) {
+          selectedDays.delete(day);
+          btn.classList.remove('selected');
+        } else {
+          selectedDays.add(day);
+          btn.classList.add('selected');
+        }
+      });
+    });
+
+    // Convert 12h to 24h
+    function to24Hour(hour, minute, ampm) {
+      let h = parseInt(hour);
+      if (ampm === 'PM' && h !== 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      return { hour: h, minute: parseInt(minute) };
+    }
+
+    // Build cron expression from UI
+    function buildCronExpression() {
+      if (currentScheduleType === 'interval') {
+        const hours = parseInt(document.getElementById('interval-hours').value);
+        const minutes = parseInt(document.getElementById('interval-minutes').value);
+
+        // Convert to total minutes for the cron expression
+        const totalMinutes = (hours * 60) + minutes;
+
+        if (totalMinutes === 0) {
+          // Default to 30 minutes if nothing selected
+          return `*/30 * * * *`;
+        } else if (hours > 0 && minutes === 0) {
+          // Pure hours interval
+          return `0 */${hours} * * *`;
+        } else if (hours === 0) {
+          // Pure minutes interval
+          return `*/${minutes} * * * *`;
+        } else {
+          // Mixed hours and minutes - use total minutes
+          return `*/${totalMinutes} * * * *`;
+        }
+      }
+
+      const suffix = currentScheduleType === 'weekdays' ? 'weekdays' :
+                     currentScheduleType === 'custom' ? 'custom' : 'daily';
+
+      const hour = document.getElementById(`hour-${suffix}`).value;
+      const minute = document.getElementById(`minute-${suffix}`).value;
+      const ampm = document.getElementById(`ampm-${suffix}`).value;
+      const time = to24Hour(hour, minute, ampm);
+
+      if (currentScheduleType === 'daily') {
+        return `${time.minute} ${time.hour} * * *`;
+      } else if (currentScheduleType === 'weekdays') {
+        return `${time.minute} ${time.hour} * * 1-5`;
+      } else if (currentScheduleType === 'custom') {
+        if (selectedDays.size === 0) {
+          return `${time.minute} ${time.hour} * * *`;
+        }
+        const days = Array.from(selectedDays).sort().join(',');
+        return `${time.minute} ${time.hour} * * ${days}`;
+      }
+    }
+
+    // Parse timestamp from database (SQLite stores UTC without 'Z' suffix)
+    function parseDbTimestamp(timestamp) {
+      if (!timestamp) return new Date();
+      // Check if timestamp has an explicit timezone indicator
+      const hasTimezone = /Z$|[+-]\d{2}:?\d{2}$/.test(timestamp);
+      if (hasTimezone) {
+        return new Date(timestamp);
+      }
+      // No timezone - all DB timestamps are UTC, so add 'Z'
+      const normalized = timestamp.replace(' ', 'T');
+      return new Date(normalized + 'Z');
+    }
+
+    // Convert job schedule to human-readable
+    function scheduleToHuman(job) {
+      const scheduleType = job.schedule_type || 'cron';
+
+      // Handle 'at' type (one-time scheduled)
+      if (scheduleType === 'at' && job.run_at) {
+        const runAt = parseDbTimestamp(job.run_at);
+        const now = new Date();
+        const isToday = runAt.toDateString() === now.toDateString();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const isTomorrow = runAt.toDateString() === tomorrow.toDateString();
+
+        const h = runAt.getHours();
+        const m = runAt.getMinutes();
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        const displayMinute = m.toString().padStart(2, '0');
+        const timeStr = `${displayHour}:${displayMinute} ${ampm}`;
+
+        if (isToday) return `Today at ${timeStr}`;
+        if (isTomorrow) return `Tomorrow at ${timeStr}`;
+        return `${runAt.toLocaleDateString()} at ${timeStr}`;
+      }
+
+      // Handle 'every' type (interval-based)
+      if (scheduleType === 'every' && job.interval_ms) {
+        const ms = job.interval_ms;
+        if (ms < 60000) return `Every ${Math.round(ms / 1000)} seconds`;
+        if (ms < 3600000) return `Every ${Math.round(ms / 60000)} minutes`;
+        if (ms < 86400000) {
+          const hrs = Math.round(ms / 3600000);
+          return `Every ${hrs} hour${hrs === 1 ? '' : 's'}`;
+        }
+        const days = Math.round(ms / 86400000);
+        return `Every ${days} day${days === 1 ? '' : 's'}`;
+      }
+
+      // Handle 'cron' type
+      const cron = job.schedule;
+      if (!cron) return 'Unknown schedule';
+
+      const parts = cron.split(' ');
+      if (parts.length !== 5) return cron;
+
+      const [minute, hour, dom, month, dow] = parts;
+
+      // Interval patterns in cron
+      if (minute.startsWith('*/')) {
+        const mins = minute.slice(2);
+        return `Every ${mins} minutes`;
+      }
+      if (hour.startsWith('*/')) {
+        const hrs = hour.slice(2);
+        return `Every ${hrs} hour${hrs === '1' ? '' : 's'}`;
+      }
+
+      // Time-based patterns
+      const h = parseInt(hour);
+      const m = parseInt(minute);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const displayMinute = m.toString().padStart(2, '0');
+      const timeStr = `${displayHour}:${displayMinute} ${ampm}`;
+
+      // Day patterns
+      if (dow === '*' && dom === '*') {
+        return `${timeStr} daily`;
+      }
+      if (dow === '1-5') {
+        return `${timeStr} weekdays`;
+      }
+      if (dow === '0,6') {
+        return `${timeStr} weekends`;
+      }
+      if (dow !== '*') {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = dow.split(',').map(d => dayNames[parseInt(d)]).join(', ');
+        return `${timeStr} on ${days}`;
+      }
+
+      return `${timeStr} daily`;
+    }
+
+    const jobsList = document.getElementById('jobs-list');
+    let sessionsMap = {}; // Map session_id to session name
+
+    let workflowCommands = [];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadSessions();
+      await loadWorkflows();
+      await loadJobs();
+    });
+
+    window.addEventListener('autoAnimateReady', () => {
+      const el = document.getElementById('jobs-list');
+      if (el && window._autoAnimate) window._autoAnimate(el, { duration: 250 });
+    });
+
+    async function loadWorkflows() {
+      try {
+        workflowCommands = await window.pocketAgent.commands.list();
+        const sourceSelect = document.getElementById('prompt-source');
+        workflowCommands.forEach(cmd => {
+          const opt = document.createElement('option');
+          opt.value = cmd.name;
+          opt.textContent = cmd.name;
+          sourceSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Failed to load workflows:', err);
+      }
+    }
+
+    function handlePromptSourceChange() {
+      const source = document.getElementById('prompt-source').value;
+      const promptRow = document.getElementById('prompt-row');
+      const promptTextarea = document.getElementById('job-prompt');
+
+      if (source === 'custom') {
+        promptRow.classList.remove('hidden');
+        promptTextarea.value = '';
+        promptTextarea.readOnly = false;
+        promptTextarea.placeholder = "what should i do when this kicks off? ✨";
+      } else {
+        const cmd = workflowCommands.find(c => c.name === source);
+        if (cmd) {
+          promptRow.classList.add('hidden');
+          promptTextarea.value = `[Workflow: ${cmd.name}]\n${cmd.content}\n[/Workflow]`;
+        }
+      }
+    }
+
+    async function loadSessions() {
+      try {
+        const sessions = await window.pocketAgent.sessions.list();
+        const sessionSelect = document.getElementById('job-session');
+        sessionsMap = {};
+
+        sessionSelect.innerHTML = sessions.map(s => {
+          sessionsMap[s.id] = s.name;
+          const isDefault = s.id === 'default';
+          return `<option value="${escapeAttr(s.id)}"${isDefault ? ' selected' : ''}>${escapeHtml(s.name)}</option>`;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load sessions:', err);
+      }
+    }
+
+    async function loadJobs() {
+      try {
+        const allJobs = await window.pocketAgent.cron.list();
+        // Filter to only show recurring jobs (cron and every types), not one-time 'at' jobs
+        const jobs = allJobs.filter(job => {
+          const scheduleType = job.schedule_type || 'cron';
+          return scheduleType !== 'at';
+        });
+
+        if (jobs.length === 0) {
+          jobsList.innerHTML = `
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <p>Nothing scheduled yet</p>
+            </div>
+          `;
+          return;
+        }
+
+        jobsList.innerHTML = jobs.map((job, i) => {
+          const sessionName = sessionsMap[job.session_id] || job.session_id || 'Default';
+          return `
+          <div class="job-item ${job.enabled ? '' : 'disabled'}" style="animation-delay: ${i * 50}ms">
+            <div class="job-status"></div>
+            <div class="job-info">
+              <div class="job-name">${escapeHtml(job.name)}<span class="job-session-badge">${escapeHtml(sessionName)}</span></div>
+              <div class="job-schedule">${scheduleToHuman(job)}</div>
+              <div class="job-prompt">${job.prompt.startsWith('[Workflow: ') ? '⚡ ' + escapeHtml(job.prompt.substring(11, job.prompt.indexOf(']'))) : escapeHtml(job.prompt)}</div>
+            </div>
+            <div class="job-actions">
+              <button class="icon-btn" onclick="playNormalClick(); toggleJob('${escapeAttr(job.name)}', ${!job.enabled})" title="${job.enabled ? 'Pause' : 'Resume'}">
+                ${job.enabled
+                  ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 7c0-1.414 0-2.121.44-2.56C4.878 4 5.585 4 7 4s2.121 0 2.56.44C10 4.878 10 5.585 10 7v10c0 1.414 0 2.121-.44 2.56C9.122 20 8.415 20 7 20s-2.121 0-2.56-.44C4 19.122 4 18.415 4 17zm10 0c0-1.414 0-2.121.44-2.56C14.878 4 15.585 4 17 4s2.121 0 2.56.44C20 4.878 20 5.585 20 7v10c0 1.414 0 2.121-.44 2.56c-.439.44-1.146.44-2.56.44s-2.121 0-2.56-.44C14 19.122 14 18.415 14 17z"/></svg>'
+                  : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M18.89 12.846c-.353 1.343-2.023 2.292-5.364 4.19c-3.23 1.835-4.845 2.752-6.146 2.384a3.25 3.25 0 0 1-1.424-.841C5 17.614 5 15.743 5 12s0-5.614.956-6.579a3.25 3.25 0 0 1 1.424-.84c1.301-.37 2.916.548 6.146 2.383c3.34 1.898 5.011 2.847 5.365 4.19a3.3 3.3 0 0 1 0 1.692Z"/></svg>'
+                }
+              </button>
+              <button class="icon-btn" onclick="playNormalClick(); runJob('${escapeAttr(job.name)}')" title="Test run">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M8.628 12.674H8.17c-1.484 0-2.225 0-2.542-.49c-.316-.489-.015-1.17.588-2.533l1.812-4.098c.548-1.239.822-1.859 1.353-2.206S10.586 3 11.935 3h2.09c1.638 0 2.458 0 2.767.535c.309.536-.098 1.25-.91 2.681l-1.073 1.886c-.404.711-.606 1.066-.603 1.358c.003.378.205.726.53.917c.25.147.657.147 1.471.147c1.03 0 1.545 0 1.813.178c.349.232.531.646.467 1.061c-.049.32-.395.703-1.088 1.469l-5.535 6.12c-1.087 1.203-1.63 1.804-1.996 1.613c-.365-.19-.19-.983.16-2.569l.688-3.106c.267-1.208.4-1.812.08-2.214c-.322-.402-.937-.402-2.168-.402Z"/></svg>
+              </button>
+              <button class="icon-btn danger" onclick="playNormalClick(); deleteJob('${escapeAttr(job.name)}')" title="Delete">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg>
+              </button>
+            </div>
+          </div>
+        `}).join('');
+      } catch (err) {
+        jobsList.innerHTML = `<div class="empty-state"><p>Error: ${escapeHtml(err.message)}</p></div>`;
+      }
+    }
+
+    async function createJob() {
+      const name = document.getElementById('job-name').value.trim();
+      const source = document.getElementById('prompt-source').value;
+      const prompt = document.getElementById('job-prompt').value.trim();
+      const sessionId = document.getElementById('job-session').value;
+
+      if (!name) {
+        showToast('Need a name!', 'error');
+        return;
+      }
+
+      if (source === 'custom' && !prompt) {
+        showToast('Need a prompt!', 'error');
+        return;
+      }
+
+      const schedule = buildCronExpression();
+
+      try {
+        const result = await window.pocketAgent.cron.create(name, schedule, prompt, 'default', sessionId);
+        if (result.success) {
+          document.getElementById('job-name').value = '';
+          document.getElementById('job-prompt').value = '';
+          document.getElementById('prompt-source').value = 'custom';
+          handlePromptSourceChange();
+          showToast('Routine created! 🎉', 'success');
+          loadJobs();
+        } else {
+          showToast('Couldn\'t create that', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function toggleJob(name, enabled) {
+      try {
+        await window.pocketAgent.cron.toggle(name, enabled);
+        showToast(enabled ? 'Back at it!' : 'Taking a break', 'success');
+        loadJobs();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function runJob(name) {
+      showToast('On it!', 'success');
+      try {
+        await window.pocketAgent.cron.run(name);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function deleteJob(name) {
+      if (!confirm(`Delete "${name}"?`)) return;
+
+      try {
+        await window.pocketAgent.cron.delete(name);
+        showToast('Poof! Gone.', 'success');
+        loadJobs();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    const notyf = new Notyf({
+      duration: 3000, position: { x: 'right', y: 'bottom' },
+      dismissible: true,
+      types: [
+        { type: 'success', background: '#4ade80' },
+        { type: 'error', background: '#f87171' }
+      ]
+    });
+    function showToast(message, type = 'success') {
+      notyf[type === 'error' ? 'error' : 'success'](message);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function escapeAttr(text) {
+      return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      document.body.classList.toggle('animations-paused', document.hidden);
+    });
+    window.addEventListener('blur', () => document.body.classList.add('animations-paused'));
+    window.addEventListener('focus', () => document.body.classList.remove('animations-paused'));
+  </script>
+</body>
+</html>

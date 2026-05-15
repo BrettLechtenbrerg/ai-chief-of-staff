@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- gg-pixel: auto-wired by ggcoder pixel install -->
+  <script src="gg-pixel.browser.iife.js"></script>
+  <script>
+    if (window.GGPixel) GGPixel.initPixel({ projectKey: "pk_live_481c64dc8ca30105cb960479fe4f2791", ingestUrl: "https://gg-pixel-server.buzzbeamaustralia.workers.dev" });
+  </script>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; img-src 'self' data:; connect-src 'self' https://gg-pixel-server.buzzbeamaustralia.workers.dev;">
+  <title>Daily Logs</title>
+
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+  <link rel="stylesheet" href="shared/variables.css">
+  <link rel="stylesheet" href="shared/notyf-theme.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <style>
+    header {
+      background: var(--bg-secondary);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'Cal Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    header h1 span {
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .log-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Header buttons inherit the cinamon-pill look from shared/buttons.css. */
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 32px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .content::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .logs-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .logs-table th,
+    .logs-table td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    .logs-table th {
+      background: var(--bg-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logs-table td {
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    .logs-table tbody tr {
+      transition: background 0.1s ease;
+    }
+
+    .logs-table tbody tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    .logs-table .date-cell {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 500;
+      white-space: nowrap;
+      width: 120px;
+    }
+
+    .logs-table .content-cell {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    /* .today-badge visuals come from shared/badges.css (accent variant). */
+    .today-badge { margin-left: 8px; }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    .empty-state .hint {
+      font-size: 12px;
+      margin-top: 8px;
+      opacity: 0.7;
+    }
+
+    /* Toast - Premium glassmorphism design */
+    /* Utility classes */
+    .hidden { display: none !important; }
+    .flex-row { display: flex; align-items: center; }
+
+    body.animations-paused *,
+    body.animations-paused *::before,
+    body.animations-paused *::after {
+      animation-play-state: paused !important;
+      transition: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+  <script src="shared/theme-loader.js"></script>
+</head>
+<body>
+  <header>
+    <div class="flex-row">
+      <h1><span>Daily Logs</span></h1>
+      <span class="log-count" id="log-count"></span>
+    </div>
+    <div class="header-actions">
+      <button onclick="playNormalClick(); window.close()">Done</button>
+      <button onclick="playNormalClick(); loadLogs()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="content" id="content">
+    <!-- Table will be inserted here -->
+  </div>
+
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
+  <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, select')) {
+        playNormalClick();
+      }
+    });
+
+    function getTodayDate() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function formatDate(dateStr) {
+      const today = getTodayDate();
+      if (dateStr === today) return 'Today';
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (dateStr === yesterday.toISOString().split('T')[0]) return 'Yesterday';
+
+      const date = new Date(dateStr + 'T00:00:00');
+      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    async function loadLogs() {
+      try {
+        const logs = await window.pocketAgent.dailyLogs.list();
+        const content = document.getElementById('content');
+        const countEl = document.getElementById('log-count');
+
+        countEl.textContent = `(${logs.length})`;
+
+        if (logs.length === 0) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M16 2v4M8 2v4m5-2h-2C7.229 4 5.343 4 4.172 5.172S3 8.229 3 12v2c0 3.771 0 5.657 1.172 6.828S7.229 22 11 22h2c3.771 0 5.657 0 6.828-1.172S21 17.771 21 14v-2c0-3.771 0-5.657-1.172-6.828S16.771 4 13 4M3 10h18"/><path d="M10 18.5v-4.653c0-.191-.137-.347-.305-.347H9m5 4.998l1.486-4.606a.3.3 0 0 0-.286-.392H13"/></g></svg>
+              <p>No daily logs yet</p>
+              <p class="hint">I'll start journaling as we chat</p>
+            </div>
+          `;
+          return;
+        }
+
+        const today = getTodayDate();
+
+        content.innerHTML = `
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Entries</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${logs.map(log => `
+                <tr>
+                  <td class="date-cell">
+                    ${escapeHtml(formatDate(log.date))}${log.date === today ? '<span class="today-badge">now</span>' : ''}
+                  </td>
+                  <td class="content-cell">${escapeHtml(log.content)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (error) {
+        console.error('Error loading daily logs:', error);
+        showToast('Couldn\'t load daily logs', 'error');
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    const notyf = new Notyf({
+      duration: 3000, position: { x: 'right', y: 'bottom' },
+      dismissible: true,
+      types: [
+        { type: 'success', background: '#4ade80' },
+        { type: 'error', background: '#f87171' }
+      ]
+    });
+    function showToast(message, type = 'error') {
+      notyf[type === 'error' ? 'error' : 'success'](message);
+    }
+
+    // Initialize
+    loadLogs();
+
+    document.addEventListener('visibilitychange', () => {
+      document.body.classList.toggle('animations-paused', document.hidden);
+    });
+    window.addEventListener('blur', () => document.body.classList.add('animations-paused'));
+    window.addEventListener('focus', () => document.body.classList.remove('animations-paused'));
+  </script>
+</body>
+</html>

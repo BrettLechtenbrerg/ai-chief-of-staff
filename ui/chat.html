@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- gg-pixel: auto-wired by ggcoder pixel install -->
+  <script src="gg-pixel.browser.iife.js"></script>
+  <script>
+    if (window.GGPixel) GGPixel.initPixel({ projectKey: "pk_live_481c64dc8ca30105cb960479fe4f2791", ingestUrl: "https://gg-pixel-server.buzzbeamaustralia.workers.dev" });
+  </script>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; img-src 'self' data: https:; connect-src 'self' wss://pocket-agent-chat-production.up.railway.app https://pocket-agent-chat-production.up.railway.app https://cdn.jsdelivr.net https://gg-pixel-server.buzzbeamaustralia.workers.dev;">
+  <title>Pocket Agent</title>
+
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
+  <link rel="stylesheet" href="shared/variables.css">
+  <link rel="stylesheet" href="shared/notyf-theme.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="chat/base.css">
+  <link rel="stylesheet" href="chat/layout.css">
+  <link rel="stylesheet" href="chat/messages.css">
+  <link rel="stylesheet" href="chat/markdown.css">
+  <link rel="stylesheet" href="chat/status.css">
+  <link rel="stylesheet" href="chat/input.css">
+  <link rel="stylesheet" href="chat/global-chat.css">
+  <link rel="stylesheet" href="chat/overlays.css">
+  <link rel="stylesheet" href="chat/attachments.css">
+  <link rel="stylesheet" href="chat/sidebar.css">
+  <link rel="stylesheet" href="chat/settings-panel.css">
+  <link rel="stylesheet" href="chat/brain-panel.css">
+  <link rel="stylesheet" href="chat/routines-panel.css">
+  <link rel="stylesheet" href="chat/personalize-panel.css">
+  <link rel="stylesheet" href="chat/onboarding.css">
+  <script src="shared/theme-loader.js"></script>
+  <script type="module">
+    import autoAnimate from 'https://cdn.jsdelivr.net/npm/@formkit/auto-animate@0.9/+esm';
+    window._autoAnimate = autoAnimate;
+    window.dispatchEvent(new Event('autoAnimateReady'));
+  </script>
+</head>
+<body>
+  <div class="app-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="sidebar-toggle" id="sidebar-toggle-btn" title="Toggle sidebar">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12c0-3.69 0-5.534.814-6.841a4.8 4.8 0 0 1 1.105-1.243C5.08 3 6.72 3 10 3h4c3.28 0 4.919 0 6.081.916c.43.338.804.759 1.105 1.243C22 6.466 22 8.31 22 12s0 5.534-.814 6.841a4.8 4.8 0 0 1-1.105 1.243C18.92 21 17.28 21 14 21h-4c-3.28 0-4.919 0-6.081-.916a4.8 4.8 0 0 1-1.105-1.243C2 17.534 2 15.69 2 12Z"/><path stroke-linejoin="round" d="M9.5 3v18"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 7h1m-1 3h1"/></g></svg>
+      </button>
+      <span class="sidebar-logo">Pocket Agent</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-btn" id="sidebar-new-chat" title="New chat">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12.001 5v14.002m7.001-7H5"/></svg>
+        <span class="sidebar-btn-label">New Chat</span>
+      </button>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-sessions" id="sidebar-sessions">
+        <!-- Session items rendered by sessions.js -->
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-btn" id="sidebar-personalize-btn" title="Personalize">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="m15.214 5.982l1.402-1.401a1.982 1.982 0 0 1 2.803 2.803l-1.401 1.402m-2.804-2.804L6.98 14.216c-1.045 1.046-1.568 1.568-1.924 2.205S4.342 18.561 4 20c1.438-.342 2.942-.7 3.579-1.056s1.16-.879 2.205-1.924l8.234-8.234m-2.804-2.804l2.804 2.804"/><path d="M11 20h6"/></g></svg>
+        <span class="sidebar-btn-label">Personalize</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-routines-btn" title="Routines">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg>
+        <span class="sidebar-btn-label">Routines</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-brain-btn" title="The Brain">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M16.998 7.127Q17.48 7 18 7a4 4 0 1 1-1.027 7.867m.025-7.74L17 7a4 4 0 0 0-7.91-.85m7.908.977A4 4 0 0 1 16.465 9m.508 5.867q.027-.18.027-.367a2.5 2.5 0 0 0-2-2.45m1.973 2.817A2.5 2.5 0 0 1 14.5 17H14a4 4 0 0 0-4 4M9.09 6.15a4 4 0 0 0-4.932 4.97M9.09 6.15A4 4 0 0 1 11.465 8m-7.306 3.12A3.001 3.001 0 0 0 5 17a3 3 0 0 0 2.83-2m-3.671-3.88q.136.467.376.88"/><path d="M11.836 11.744c-.51.491-1.383.576-2.129.157c-.746-.42-1.127-1.21-.972-1.901"/></g></svg>
+        <span class="sidebar-btn-label">The Brain</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-docs-btn" title="Docs">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h8m-8 4h4m1 10.5V21c0-2.828 0-4.243.879-5.121C14.757 15 16.172 15 19 15h.5m.5-1.657V10c0-3.771 0-5.657-1.172-6.828S15.771 2 12 2S6.343 2 5.172 3.172S4 6.229 4 10v4.544c0 3.245 0 4.868.886 5.967a4 4 0 0 0 .603.603C6.59 22 8.211 22 11.456 22c.705 0 1.058 0 1.381-.114q.1-.036.197-.082c.31-.148.559-.397 1.058-.896l4.736-4.736c.579-.578.867-.867 1.02-1.235c.152-.368.152-.776.152-1.594"/></svg>
+        <span class="sidebar-btn-label">Docs</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-settings-btn" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" d="m21.318 7.141l-.494-.856c-.373-.648-.56-.972-.878-1.101c-.317-.13-.676-.027-1.395.176l-1.22.344c-.459.106-.94.046-1.358-.17l-.337-.194a2 2 0 0 1-.788-.967l-.334-.998c-.22-.66-.33-.99-.591-1.178c-.261-.19-.609-.19-1.303-.19h-1.115c-.694 0-1.041 0-1.303.19c-.261.188-.37.518-.59 1.178l-.334.998a2 2 0 0 1-.789.967l-.337.195c-.418.215-.9.275-1.358.17l-1.22-.345c-.719-.203-1.078-.305-1.395-.176c-.318.129-.505.453-.878 1.1l-.493.857c-.35.608-.525.911-.491 1.234c.034.324.268.584.736 1.105l1.031 1.153c.252.319.431.875.431 1.375s-.179 1.056-.43 1.375l-1.032 1.152c-.468.521-.702.782-.736 1.105s.14.627.49 1.234l.494.857c.373.647.56.971.878 1.1s.676.028 1.395-.176l1.22-.344a2 2 0 0 1 1.359.17l.336.194c.36.23.636.57.788.968l.334.997c.22.66.33.99.591 1.18c.262.188.609.188 1.303.188h1.115c.694 0 1.042 0 1.303-.189s.371-.519.59-1.179l.335-.997c.152-.399.428-.738.788-.968l.336-.194c.42-.215.9-.276 1.36-.17l1.22.344c.718.204 1.077.306 1.394.177c.318-.13.505-.454.878-1.101l.493-.857c.35-.607.525-.91.491-1.234s-.268-.584-.736-1.105l-1.031-1.152c-.252-.32-.431-.875-.431-1.375s.179-1.056.43-1.375l1.032-1.153c.468-.52.702-.781.736-1.105s-.14-.626-.49-1.234Z"/><path d="M15.52 12a3.5 3.5 0 1 1-7 0a3.5 3.5 0 0 1 7 0Z"/></g></svg>
+        <span class="sidebar-btn-label">Settings</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-about-btn" title="Who made me?">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path stroke-width="1.5" d="M9.5 9.5a2.5 2.5 0 1 1 3.912 2.064C12.728 12.032 12 12.672 12 13.5"/><path stroke-width="1.8" d="M12 17h.009"/></g></svg>
+        <span class="sidebar-btn-label">Who made me?</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content" style="position: relative;">
+
+  <!-- Onboarding (shown on first run, removed after completion) -->
+  <div class="onboarding-container hidden" id="onboarding-container">
+    <!-- Progress bar (thin line below titlebar) -->
+    <div class="ob-progress-bar" id="ob-progress-bar"><div class="ob-progress-fill" id="ob-progress-fill"></div></div>
+    <!-- Top nav (back left, skip right) -->
+    <div class="ob-top-nav" id="ob-top-nav"><a id="ob-nav-back" class="hidden">Back</a><span class="ob-nav-spacer"></span><a id="ob-nav-skip" class="hidden">Skip</a></div>
+
+    <div class="ob-logo"></div>
+
+    <h1>Pocket Agent</h1>
+    <p class="ob-subtitle">I'm Frankie, your new 24/7 assistant</p>
+
+    <!-- Step: Welcome -->
+    <div class="ob-step active" id="ob-step-welcome">
+      <p class="ob-welcome-text">Let's get you set up. It only takes a minute. We'll secure your keys, connect an AI provider, and personalize your experience.</p>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obShowStep('ob-step-keychain')">
+          Begin Setup
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Keychain -->
+    <div class="ob-step" id="ob-step-keychain">
+      <p class="ob-step-desc" id="ob-keychain-info-text">Pocket Agent uses your system's secure storage to protect API keys.</p>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" id="ob-keychain-btn" onclick="obInitKeychain()">
+          Secure My Keys
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: macOS Permissions -->
+    <div class="ob-step" id="ob-step-permissions">
+      <p class="ob-step-desc">These optional permissions help me work better on your Mac. You can always change them later in System Settings.</p>
+      <div id="ob-permissions-list"></div>
+      <div class="ob-button-row">
+        <button class="ob-btn secondary" id="ob-perm-refresh-btn" onclick="obRefreshPermissions()">
+          Refresh
+        </button>
+        <button class="ob-btn primary" onclick="obShowStep('ob-step-auth')">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Choose Auth Method -->
+    <!--
+      Two OAuth options up top (Claude Pro/Max + OpenAI Codex), each its own
+      first-class button. Below them, a collapsible "Or connect a different
+      provider" section reveals API key inputs for all 7 supported providers.
+      The model is auto-selected by resolveAndPersistModel() once any key is
+      saved — no manual model choice needed during onboarding.
+    -->
+    <div class="ob-step" id="ob-step-auth">
+      <p class="ob-step-desc">How would you like to connect?</p>
+      <div class="ob-oauth-row">
+        <button class="ob-btn primary" id="ob-claude-oauth-btn" onclick="obStartClaudeOAuth()">
+          Sign in with Claude
+        </button>
+        <button class="ob-btn primary" id="ob-openai-oauth-btn" onclick="obStartOpenAIOAuth()">
+          Sign in with OpenAI
+        </button>
+      </div>
+      <p class="ob-auth-hint">Claude sign-in uses your Pro or Max subscription. OpenAI sign-in uses your ChatGPT Plus/Pro account.</p>
+
+      <div class="ob-optional-section">
+        <div class="ob-optional-header" onclick="obToggleOptional(this)">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9s-4.419 6-6 6s-6-6-6-6"/></svg>
+          <h4>Or connect a different provider</h4>
+        </div>
+        <div class="ob-optional-content">
+          <p class="ob-hint ob-section-hint">Add an API key for any of the providers below. You can add more later in Settings.</p>
+          <div class="ob-form-group">
+            <label>Anthropic API Key</label>
+            <input type="password" id="ob-anthropic-key" placeholder="sk-ant-...">
+            <p class="ob-hint">Get from <a href="#" onclick="window.pocketAgent.app.openExternal('https://console.anthropic.com/settings/keys'); return false;">console.anthropic.com</a></p>
+          </div>
+          <div class="ob-form-group">
+            <label>Kimi (Moonshot) API Key</label>
+            <input type="password" id="ob-kimi-key-api" placeholder="sk-...">
+            <p class="ob-hint">Get from <a href="#" onclick="window.pocketAgent.app.openExternal('https://platform.moonshot.ai/'); return false;">platform.moonshot.ai</a></p>
+          </div>
+          <div class="ob-form-group">
+            <label>GLM (Z.AI) API Key</label>
+            <input type="password" id="ob-glm-key-api" placeholder="...">
+            <p class="ob-hint">Get from <a href="#" onclick="window.pocketAgent.app.openExternal('https://z.ai/manage-apikey/apikey-list'); return false;">z.ai</a></p>
+          </div>
+          <div class="ob-form-group">
+            <label>Xiaomi (MiMo) API Key</label>
+            <input type="password" id="ob-xiaomi-key-api" placeholder="...">
+            <p class="ob-hint">Get from <a href="#" onclick="window.pocketAgent.app.openExternal('https://api.xiaomi.com/'); return false;">api.xiaomi.com</a></p>
+          </div>
+          <div class="ob-form-group">
+            <label>MiniMax API Key</label>
+            <input type="password" id="ob-minimax-key-api" placeholder="...">
+            <p class="ob-hint">Get from <a href="#" onclick="window.pocketAgent.app.openExternal('https://api.minimax.io/'); return false;">api.minimax.io</a></p>
+          </div>
+          <div class="ob-form-group">
+            <label>DeepSeek API Key</label>
+            <input type="password" id="ob-deepseek-key-api" placeholder="sk-...">
+            <p class="ob-hint">Get from <a href="#" onclick="window.pocketAgent.app.openExternal('https://platform.deepseek.com/'); return false;">platform.deepseek.com</a></p>
+          </div>
+          <div class="ob-button-row">
+            <button class="ob-btn primary" id="ob-api-btn" onclick="obValidateAndSave()">
+              Save &amp; Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--
+      Step: Claude OAuth Code Entry. Anthropic's OAuth uses a paste-the-code
+      flow (unlike OpenAI's PKCE auto-callback), so we still need this step
+      after the user clicks "Sign in with Claude" above.
+    -->
+    <div class="ob-step" id="ob-step-oauth-code">
+      <p class="ob-step-desc">Paste the authorization code from your browser</p>
+      <div class="ob-form-group">
+        <label>Authorization Code</label>
+        <input type="text" id="ob-oauth-code" placeholder="Paste the authorization code">
+        <p class="ob-hint">After signing in, you'll see a code. Copy and paste it above.</p>
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn secondary" onclick="obCancelOAuth()">Cancel</button>
+        <button class="ob-btn primary" id="ob-oauth-complete-btn" onclick="obCompleteOAuth()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Your Name -->
+    <div class="ob-step" id="ob-step-name">
+      <div class="ob-step-label">What should I call you?</div>
+      <div class="ob-form-group">
+        <input type="text" id="ob-name-input" placeholder="Your name">
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveName()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Your Location -->
+    <div class="ob-step" id="ob-step-location">
+      <div class="ob-step-label">Where are you based?</div>
+      <div class="ob-form-group">
+        <div class="ob-autocomplete-wrapper">
+          <input type="text" id="ob-location-input" placeholder="Type a city name…" autocomplete="off">
+          <div class="ob-autocomplete-dropdown" id="ob-location-dropdown"></div>
+        </div>
+      </div>
+      <input type="hidden" id="ob-timezone-value">
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveLocation()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Your Occupation -->
+    <div class="ob-step" id="ob-step-occupation">
+      <div class="ob-step-label">What do you do?</div>
+      <div class="ob-form-group">
+        <input type="text" id="ob-occupation-input" placeholder="Developer, designer, student…">
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveOccupation()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Your Birthday -->
+    <div class="ob-step" id="ob-step-birthday">
+      <div class="ob-step-label">When's your birthday?</div>
+      <div class="ob-form-group">
+        <div class="ob-birthday-row">
+          <select id="ob-birthday-month">
+            <option value="">Month</option>
+            <option value="January">January</option>
+            <option value="February">February</option>
+            <option value="March">March</option>
+            <option value="April">April</option>
+            <option value="May">May</option>
+            <option value="June">June</option>
+            <option value="July">July</option>
+            <option value="August">August</option>
+            <option value="September">September</option>
+            <option value="October">October</option>
+            <option value="November">November</option>
+            <option value="December">December</option>
+          </select>
+          <select id="ob-birthday-day">
+            <option value="">Day</option>
+          </select>
+        </div>
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveBirthday()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Agent Name -->
+    <div class="ob-step" id="ob-step-agent-name">
+      <div class="ob-step-label">What would you like to call me?</div>
+      <div class="ob-form-group">
+        <input type="text" id="ob-agent-name-input" placeholder="Franky" value="Franky">
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveAgentName()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Your Goals -->
+    <div class="ob-step" id="ob-step-goals">
+      <div class="ob-step-label">What are you working toward?</div>
+      <div class="ob-form-group">
+        <textarea id="ob-goals-input" rows="4" placeholder="Launch my startup, learn piano…"></textarea>
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveGoals()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Your Struggles -->
+    <div class="ob-step" id="ob-step-struggles">
+      <div class="ob-step-label">What are your biggest struggles?</div>
+      <div class="ob-form-group">
+        <textarea id="ob-struggles-input" rows="4" placeholder="Time management, staying focused…"></textarea>
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveStruggles()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Fun Facts -->
+    <div class="ob-step" id="ob-step-funfacts">
+      <div class="ob-step-label">Anything else I should know?</div>
+      <div class="ob-form-group">
+        <textarea id="ob-funfacts-input" rows="4" placeholder="I have a dog named Max, I'm vegetarian…"></textarea>
+      </div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obSaveFunFacts()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Pocket CLI -->
+    <div class="ob-step" id="ob-step-cli">
+      <div class="ob-step-desc">Pocket CLI lets your agent interact with real services like Twitter, YouTube, Hacker News, and more.</div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" id="ob-cli-install-btn" onclick="obInstallCli()">
+          Install Pocket CLI
+        </button>
+      </div>
+    </div>
+
+    <!-- Step: Success -->
+    <div class="ob-step" id="ob-step-success">
+      <div class="ob-step-desc">You're all set! Everything's configured — let's start chatting</div>
+      <div class="ob-button-row">
+        <button class="ob-btn primary" onclick="obFinishSetup()">
+          Let's Chat!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="chat-view">
+  <!-- Hidden elements used by global chat -->
+  <div class="hidden" id="stats"></div>
+  <span class="chat-username-badge hidden" id="chat-username-badge"></span>
+  <div class="stats hidden" id="chat-online-stats">0 online · 0 in chat</div>
+
+  <!-- Plan Approval Overlay -->
+  <div class="plan-approval-overlay" id="plan-approval-overlay">
+    <div class="plan-approval-panel">
+      <div class="plan-approval-header">Plan ready for review</div>
+      <div class="plan-approval-body" id="plan-approval-body"></div>
+      <div class="plan-approval-actions">
+        <textarea class="plan-feedback-input hidden" id="plan-feedback-input" placeholder="Feedback…" rows="2"></textarea>
+        <div class="button-row-right">
+          <button class="plan-btn plan-btn-reject" id="plan-reject-btn">Revise</button>
+          <button class="plan-btn plan-btn-approve" id="plan-approve-btn">Approve</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs moved to sidebar -->
+
+  <!-- Global chat header removed — functionality moved to sidebar/floating buttons/titlebar -->
+
+  <div id="messages"></div>
+  <div id="global-chat-messages" class="hidden"></div>
+
+  <!-- Scroll Buttons -->
+  <button id="scroll-top-btn" class="scroll-btn" title="Scroll to top">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 15s-4.42-6-6-6s-6 6-6 6"/></svg>
+  </button>
+  <button id="scroll-bottom-btn" class="scroll-btn" title="Scroll to bottom">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9s-4.419 6-6 6s-6-6-6-6"/></svg>
+  </button>
+
+  <!-- Global Chat Scroll Buttons -->
+  <button id="gchat-scroll-top-btn" class="scroll-btn gchat-scroll-btn hidden" title="Scroll to top">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 15s-4.42-6-6-6s-6 6-6 6"/></svg>
+  </button>
+  <button id="gchat-scroll-bottom-btn" class="scroll-btn gchat-scroll-btn hidden" title="Scroll to bottom">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9s-4.419 6-6 6s-6-6-6-6"/></svg>
+  </button>
+
+  <!-- Toolbar Row (hidden, kept in DOM for mention list / reply banner insertion) -->
+  <div id="toolbar-row"></div>
+
+
+  <div id="gchat-typing-indicator" class="hidden">
+    <span class="gchat-typing-text"></span>
+    <span class="gchat-typing-dots">
+      <span class="gchat-typing-dot"></span>
+      <span class="gchat-typing-dot"></span>
+      <span class="gchat-typing-dot"></span>
+    </span>
+  </div>
+
+  <div id="input-area">
+    <div class="input-container">
+      <div id="slide-up-panel" class="slide-up-panel">
+        <div id="search-panel" class="slide-panel-content hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="search-icon"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 17l4 4m-2-10a8 8 0 1 0-16 0a8 8 0 0 0 16 0"/></svg>
+          <input type="text" id="search-input" placeholder="Search in chat...">
+          <span id="search-results-count" class="search-results-count"></span>
+          <div class="search-nav">
+            <button class="search-nav-btn" id="search-prev-btn" title="Previous" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 15s-4.42-6-6-6s-6 6-6 6"/></svg>
+            </button>
+            <button class="search-nav-btn" id="search-next-btn" title="Next" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9s-4.419 6-6 6s-6-6-6-6"/></svg>
+            </button>
+          </div>
+          <button class="search-close-btn" id="search-close-btn" title="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 6L6 18m12 0L6 6"/></svg>
+          </button>
+        </div>
+        <div id="workflows-panel" class="slide-panel-content hidden">
+          <div id="workflows-grid"></div>
+          <button class="workflows-close-btn" id="workflows-close-btn" title="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 6L6 18m12 0L6 6"/></svg>
+          </button>
+        </div>
+        <div id="attachments-panel" class="slide-panel-content hidden">
+          <div id="attachments-grid" class="attachments-grid"></div>
+        </div>
+        <div id="reply-panel" class="slide-panel-content hidden">
+          <div id="reply-panel-content" class="gchat-reply-panel-content"></div>
+          <button id="reply-panel-close" class="gchat-reply-panel-close" title="Cancel reply">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 6L6 18m12 0L6 6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="input-top-row">
+        <span id="workflow-badge-container"></span>
+        <div class="textarea-wrapper">
+          <div id="ghost-suggestion"></div>
+          <div id="mention-highlight"></div>
+          <textarea
+            id="message-input"
+            placeholder="What's on your mind?"
+            rows="1"
+          ></textarea>
+        </div>
+      </div>
+      <div class="input-toolbar-btns">
+        <button class="input-toolbar-btn" id="attach-btn" title="Drop a file">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.823 12L4.28 10.456a4.367 4.367 0 1 1 6.177-6.177l9.265 9.265a4.368 4.368 0 0 1-6.177 6.177l-3.474-3.475a2.73 2.73 0 0 1 3.86-3.86l1.93 1.93"/></svg>
+        </button>
+        <button class="input-toolbar-btn" id="search-toolbar-btn" title="Search">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 17l4 4m-2-10a8 8 0 1 0-16 0a8 8 0 0 0 16 0"/></svg>
+        </button>
+        <button class="input-toolbar-btn" id="workflows-toolbar-btn" title="Workflows">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 8l1.84 1.85c.773.778 1.16 1.167 1.16 1.65s-.387.872-1.16 1.65L17 15M7 8L5.16 9.85C4.387 10.628 4 11.017 4 11.5s.387.872 1.16 1.65L7 15m7.5-11l-5 16"/></svg>
+        </button>
+        <div id="background-tasks-area" class="hidden">
+          <button class="background-tasks-toggle" id="bg-tasks-toggle-btn">
+            <span class="bg-task-pulse"></span>
+            <span class="bg-task-count">0</span>
+            <span>Background</span>
+          </button>
+          <div id="background-tasks-dropdown">
+            <div class="bg-dropdown-header">
+              <button class="bg-dropdown-back" id="bg-dropdown-back-btn" title="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 6s-6 4.419-6 6s6 6 6 6"/></svg>
+              </button>
+              <span class="bg-dropdown-title">Background Tasks</span>
+            </div>
+            <div id="background-tasks-list"></div>
+          </div>
+        </div>
+        <select class="mode-select" id="mode-select">
+          <option value="general">General</option>
+          <option value="coder" selected>Coder</option>
+          <option value="researcher">Researcher</option>
+          <option value="writer">Writer</option>
+          <option value="therapist">Therapist</option>
+        </select>
+        <select id="model-badge" class="model-badge"></select>
+      </div>
+      <button id="send-btn" title="Pounce! 🐾">
+        <svg class="send-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <!-- Paw pad (main) -->
+          <ellipse cx="12" cy="14" rx="5" ry="4.5"/>
+          <!-- Toe beans -->
+          <ellipse cx="7" cy="8" rx="2" ry="2.5"/>
+          <ellipse cx="17" cy="8" rx="2" ry="2.5"/>
+          <ellipse cx="10" cy="5.5" rx="1.8" ry="2.2"/>
+          <ellipse cx="14" cy="5.5" rx="1.8" ry="2.2"/>
+        </svg>
+        <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 12c0-3.28 0-4.919.814-6.081a4.5 4.5 0 0 1 1.105-1.105C7.08 4 8.72 4 12 4s4.919 0 6.081.814a4.5 4.5 0 0 1 1.105 1.105C20 7.08 20 8.72 20 12s0 4.919-.814 6.081a4.5 4.5 0 0 1-1.105 1.105C16.92 20 15.28 20 12 20s-4.919 0-6.081-.814a4.5 4.5 0 0 1-1.105-1.105C4 16.92 4 15.28 4 12Z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <input type="file" id="file-input" multiple
+    accept=".txt,.md,.json,.csv,.xml,.html,.htm,.css,.js,.ts,.jsx,.tsx,.py,.rb,.go,.rs,.java,.c,.cpp,.h,.hpp,.sh,.yaml,.yml,.toml,.ini,.cfg,.conf,.log,.sql,.graphql,.pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.ico">
+
+  <!-- Click Sounds -->
+  <audio id="click-sound" preload="auto" src="../assets/click.mp3"></audio>
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+  <audio id="reply-sound" preload="auto" src="../assets/reply-to.mp3"></audio>
+
+  <!-- Drag and Drop Overlay -->
+  <div id="drag-overlay" class="drag-overlay">
+    <div class="drag-overlay-content">
+      <svg class="drag-overlay-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 17c0 .93 0 1.395.102 1.776a3 3 0 0 0 2.121 2.122C5.605 21 6.07 21 7 21h10c.93 0 1.395 0 1.776-.102a3 3 0 0 0 2.122-2.122C21 18.396 21 17.93 21 17m-4.5-9.5S13.186 3 12 3S7.5 7.5 7.5 7.5M12 4v12"/></svg>
+      <div class="drag-overlay-text">Drop files here</div>
+      <div class="drag-overlay-hint">Images, PDFs, code, and text files supported</div>
+    </div>
+  </div>
+
+  </div><!-- #chat-view -->
+
+  <!-- Floating buttons (outside chat-view so they're always visible) -->
+  <button id="admin-clear-chat-btn" class="floating-admin-clear-btn hidden" title="Clear Chat">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg>
+  </button>
+  <button id="fresh-start-btn" class="floating-fresh-btn" title="Fresh Start">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m15.167 1l.598 1.118c.404.755.606 1.133.472 1.295c-.133.162-.573.031-1.454-.23A9.8 9.8 0 0 0 12 2.78c-5.247 0-9.5 4.128-9.5 9.22a8.97 8.97 0 0 0 1.27 4.61M8.834 23l-.598-1.118c-.404-.756-.606-1.134-.472-1.295c.133-.162.573-.032 1.454.23c.88.261 1.815.402 2.783.402c5.247 0 9.5-4.128 9.5-9.22a8.97 8.97 0 0 0-1.27-4.609"/></svg>
+  </button>
+  <button id="chat-toggle-btn" class="floating-toggle-btn" title="Global Chat">
+    <svg class="toggle-chat-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7.5 8.5h9m-9 4H13m-11-2c0-.77.013-1.523.04-2.25c.083-2.373.125-3.56 1.09-4.533c.965-.972 2.186-1.024 4.626-1.129A100 100 0 0 1 12 2.5c1.48 0 2.905.03 4.244.088c2.44.105 3.66.157 4.626 1.13c.965.972 1.007 2.159 1.09 4.532a64 64 0 0 1 0 4.5c-.083 2.373-.125 3.56-1.09 4.533c-.965.972-2.186 1.024-4.626 1.129q-1.102.047-2.275.07c-.74.014-1.111.02-1.437.145s-.6.358-1.148.828l-2.179 1.87A.73.73 0 0 1 8 20.77v-2.348l-.244-.01c-2.44-.105-3.66-.157-4.626-1.13c-.965-.972-1.007-2.159-1.09-4.532A64 64 0 0 1 2 10.5"/></svg>
+    <svg class="toggle-agent-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M16.998 7.127Q17.48 7 18 7a4 4 0 1 1-1.027 7.867m.025-7.74L17 7a4 4 0 0 0-7.91-.85m7.908.977A4 4 0 0 1 16.465 9m.508 5.867q.027-.18.027-.367a2.5 2.5 0 0 0-2-2.45m1.973 2.817A2.5 2.5 0 0 1 14.5 17H14a4 4 0 0 0-4 4M9.09 6.15a4 4 0 0 0-4.932 4.97M9.09 6.15A4 4 0 0 1 11.465 8m-7.306 3.12A3.001 3.001 0 0 0 5 17a3 3 0 0 0 2.83-2m-3.671-3.88q.136.467.376.88"/><path d="M11.836 11.744c-.51.491-1.383.576-2.129.157c-.746-.42-1.127-1.21-.972-1.901"/></g></svg>
+    <span id="chat-toggle-badge" class="chat-unread-badge hidden">0</span>
+  </button>
+
+  <!-- Settings View (inline, replaces chat when active) -->
+  <div id="settings-view">
+    <div class="settings-header">
+      <h1><span>Settings</span></h1>
+      <div class="header-actions">
+        <button onclick="playNormalClick(); hideSettingsPanel()">Back</button>
+        <button id="reboot-btn" class="reboot" onclick="playNormalClick(); stgRestartAgent()" disabled>Reboot</button>
+      </div>
+    </div>
+
+    <div class="settings-container">
+      <nav class="settings-sidebar">
+        <div class="settings-nav-item active" data-section="auth">LLM
+        </div>
+        <div class="settings-nav-item" data-section="telegram">Telegram
+        </div>
+        <div class="settings-nav-item" data-section="browser">Browser
+        </div>
+        <div class="settings-nav-item" data-section="chat">Chat
+        </div>
+        <div class="settings-nav-item" data-section="skins">Skins
+        </div>
+        <div class="settings-nav-item" data-section="pocket_cli">Pocket CLI
+        </div>
+        <div class="settings-nav-item" data-section="updates">Updates
+        </div>
+      </nav>
+
+      <div class="settings-content">
+        <!-- LLM Section -->
+        <section id="auth" class="settings-section active">
+          <h2 class="section-title">LLM</h2>
+          <p class="section-desc">Connect and configure your AI models.</p>
+          <h3 class="subsection-title" style="margin-top: 16px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Anthropic (Claude)</h3>
+          <div class="auth-box">
+            <div class="auth-option">
+              <div class="auth-option-header">
+                <span class="auth-option-title">Login with Claude</span>
+                <div class="flex-row" style="gap: 8px;">
+                  <span class="risk-badge">Use at own risk<span class="risk-tooltip">Anthropic may restrict accounts using unofficial OAuth integrations. This is not an officially supported auth method. Use at your own risk.</span></span>
+                  <span id="auth-status" class="auth-badge loading">Checking…</span>
+                  <button id="oauth-btn" class="oauth-btn" onclick="playNormalClick(); stgHandleAuthAction()">Sign in</button>
+                </div>
+              </div>
+              <div id="oauth-code-section" class="hidden config-section">
+                <div class="key-input">
+                  <input type="text" id="oauth-code" placeholder="Paste authorization code...">
+                  <button onclick="playNormalClick(); stgCompleteOAuth()">Submit</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="keys-table" id="auth-api-key-section">
+            <div class="key-row">
+              <div class="key-info"><span class="key-name">API Key</span><a href="https://console.anthropic.com/settings/keys" target="_blank" class="key-link">console.anthropic.com</a></div>
+              <div class="key-input">
+                <input type="password" id="auth-api-key" placeholder="sk-ant-...">
+                <button class="delete-btn" id="auth-api-key-delete" onclick="playNormalClick(); stgDeleteKey('anthropic.apiKey', 'auth-api-key')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg></button>
+                <button onclick="playNormalClick(); stgSaveApiKey()">Save</button>
+              </div>
+            </div>
+          </div>
+          <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">OpenAI</h3>
+          <div class="auth-box">
+            <div class="auth-option">
+              <div class="auth-option-header">
+                <span class="auth-option-title">Login with OpenAI</span>
+                <div class="flex-row" style="gap: 8px;">
+                  <span id="openai-auth-status" class="auth-badge loading">Checking…</span>
+                  <button id="openai-oauth-btn" class="oauth-btn" onclick="playNormalClick(); stgHandleOpenAIAuth()">Sign in</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Kimi (Moonshot)</h3>
+          <div class="keys-table">
+            <div class="key-row">
+              <div class="key-info"><span class="key-name">API Key</span><a href="https://platform.moonshot.ai/" target="_blank" class="key-link">platform.moonshot.ai</a></div>
+              <div class="key-input">
+                <input type="password" id="moonshot.apiKey" placeholder="sk-...">
+                <button class="delete-btn" id="moonshot.apiKey-delete" onclick="playNormalClick(); stgDeleteKey('moonshot.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg></button>
+                <button onclick="playNormalClick(); stgValidateKey('moonshot')">Test</button>
+              </div>
+            </div>
+          </div>
+          <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">GLM (Z.AI)</h3>
+          <div class="keys-table">
+            <div class="key-row">
+              <div class="key-info"><span class="key-name">API Key</span><a href="https://z.ai/manage-apikey/apikey-list" target="_blank" class="key-link">z.ai</a></div>
+              <div class="key-input">
+                <input type="password" id="glm.apiKey" placeholder="...">
+                <button class="delete-btn" id="glm.apiKey-delete" onclick="playNormalClick(); stgDeleteKey('glm.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg></button>
+                <button onclick="playNormalClick(); stgValidateKey('glm')">Test</button>
+              </div>
+            </div>
+          </div>
+          <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Xiaomi (MiMo)</h3>
+          <div class="keys-table">
+            <div class="key-row">
+              <div class="key-info"><span class="key-name">API Key</span><a href="https://api.xiaomi.com/" target="_blank" class="key-link">api.xiaomi.com</a></div>
+              <div class="key-input">
+                <input type="password" id="xiaomi.apiKey" placeholder="...">
+                <button class="delete-btn" id="xiaomi.apiKey-delete" onclick="playNormalClick(); stgDeleteKey('xiaomi.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg></button>
+                <button onclick="playNormalClick(); stgValidateKey('xiaomi')">Test</button>
+              </div>
+            </div>
+          </div>
+          <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">MiniMax</h3>
+          <div class="keys-table">
+            <div class="key-row">
+              <div class="key-info"><span class="key-name">API Key</span><a href="https://api.minimax.io/" target="_blank" class="key-link">api.minimax.io</a></div>
+              <div class="key-input">
+                <input type="password" id="minimax.apiKey" placeholder="...">
+                <button class="delete-btn" id="minimax.apiKey-delete" onclick="playNormalClick(); stgDeleteKey('minimax.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg></button>
+                <button onclick="playNormalClick(); stgValidateKey('minimax')">Test</button>
+              </div>
+            </div>
+          </div>
+          <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">DeepSeek</h3>
+          <div class="keys-table">
+            <div class="key-row">
+              <div class="key-info"><span class="key-name">API Key</span><a href="https://platform.deepseek.com/" target="_blank" class="key-link">platform.deepseek.com</a></div>
+              <div class="key-input">
+                <input type="password" id="deepseek.apiKey" placeholder="sk-...">
+                <button class="delete-btn" id="deepseek.apiKey-delete" onclick="playNormalClick(); stgDeleteKey('deepseek.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg></button>
+                <button onclick="playNormalClick(); stgValidateKey('deepseek')">Test</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Telegram Section -->
+        <section id="telegram" class="settings-section">
+          <h2 class="section-title">Telegram</h2>
+          <p class="section-desc">Chat with me from anywhere via Telegram!</p>
+          <div class="settings-grid"><div class="setting-row"><label>Enable Telegram</label><div class="toggle" id="telegram.enabled-toggle" onclick="playNormalClick(); stgToggleSetting('telegram.enabled')"></div></div></div>
+          <div class="settings-grid config-section" id="telegram-config">
+            <div class="setting-row setting-row--stacked"><div class="flex-between"><label>Bot Token</label><a href="https://t.me/BotFather" target="_blank" class="key-link">@BotFather</a></div><div class="key-input"><input type="password" id="telegram.botToken" placeholder="123456:ABC-DEF..."><button class="delete-btn" id="telegram.botToken-delete" onclick="playNormalClick(); stgDeleteKey('telegram.botToken')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg></button><button onclick="playNormalClick(); stgValidateKey('telegram')">Test</button></div></div>
+            <div class="setting-row setting-row--stacked"><div class="flex-between"><label style="display:flex;align-items:center;margin:0;">Allowed Users <span class="badge-required">Required</span></label><a href="https://t.me/userinfobot" target="_blank" class="key-link">@userinfobot</a></div><div class="key-input"><input type="text" id="telegram.allowedUserIds" placeholder="e.g. 918273645"><button onclick="playNormalClick(); stgSaveTelegramSetting('telegram.allowedUserIds')">Save</button></div></div>
+            <div class="setting-row setting-row--stacked"><label>Default Chat</label><div class="key-input"><input type="text" id="telegram.defaultChatId" placeholder="e.g. -100123456789"><button onclick="playNormalClick(); stgSaveTelegramSetting('telegram.defaultChatId')">Save</button></div></div>
+          </div>
+        </section>
+
+        <!-- Browser Section -->
+        <section id="browser" class="settings-section">
+          <h2 class="section-title">Browser Magic</h2>
+          <p class="section-desc">Control your browser to browse, click, fill forms, and more!</p>
+          <div class="settings-grid">
+            <div class="setting-row"><label>Enable Browser</label><div class="toggle" id="browser.enabled-toggle" onclick="playNormalClick(); stgToggleSetting('browser.enabled')"></div></div>
+            <div class="setting-row"><label>Use My Browser</label><div class="toggle" id="browser.useMyBrowser-toggle" onclick="playNormalClick(); stgToggleSetting('browser.useMyBrowser')"></div></div>
+          </div>
+          <div class="settings-grid section-spacer" id="browser-config">
+            <div class="setting-row"><label>Browser</label><select id="browser-selector" class="w-140"><option value="">Select browser...</option></select></div>
+            <div class="setting-row"><label>Launch</label><button id="browser-launch-btn" onclick="playNormalClick(); stgLaunchBrowserWithCdp()" class="skills-setup-btn btn-compact w-140">Launch Browser</button></div>
+            <div class="setting-row"><label>Status</label><div id="browser-status" class="status info status-no-margin">Not connected</div></div>
+            <div class="setting-row"><label>Connection</label><button id="browser-test-btn" onclick="playNormalClick(); stgTestBrowserConnection()" class="skills-setup-btn btn-compact w-140">Test Connection</button></div>
+          </div>
+          <details style="margin-top: 16px;">
+            <summary style="cursor: pointer; font-size: 11px; color: var(--text-muted); user-select: none;">Advanced settings</summary>
+            <div class="settings-grid config-section">
+              <div class="setting-row"><label>CDP URL</label><input type="text" id="browser.cdpUrl" placeholder="http://localhost:9222" class="w-180"></div>
+              <div class="setting-row"><label>Port</label><input type="number" id="browser-port" value="9222" min="1024" max="65535" class="w-80"></div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Pocket CLI Section -->
+        <section id="pocket_cli" class="settings-section">
+          <h2 class="section-title">Pocket CLI</h2>
+          <p class="section-desc">Lets your AI interact with real services like Twitter, YouTube, Hacker News, Wikipedia, and more.</p>
+          <div class="settings-grid"><div class="setting-row"><label>Auto-check for updates</label><div class="toggle" id="pocketCli.autoCheck-toggle" onclick="playNormalClick(); stgToggleSetting('pocketCli.autoCheck')"></div></div></div>
+          <div class="settings-grid section-spacer">
+            <div class="setting-row"><label>Current Version</label><span id="pocket-cli-version" class="key-link" style="font-size: 12px;">—</span></div>
+            <div class="setting-row"><label>Status</label><div id="pocket-cli-status" class="status info status-no-margin">Ready</div></div>
+            <div class="setting-row"><label>Actions</label><div class="btn-row"><button id="pocket-cli-check-btn" onclick="playNormalClick(); stgCheckPocketCliUpdates()" class="skills-setup-btn btn-compact">Check Now</button><button id="pocket-cli-install-btn" onclick="playNormalClick(); stgInstallPocketCli()" class="skills-setup-btn btn-compact hidden">Install</button><button id="pocket-cli-update-btn" onclick="playNormalClick(); stgUpdatePocketCli()" class="skills-setup-btn btn-compact btn-accent hidden">Update</button></div></div>
+          </div>
+          <div id="pocket-cli-info" class="info-box section-spacer hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path stroke-width="1.5" d="M12 16v-4.5"/><path stroke-width="1.8" d="M12 8.012v-.01"/></g></svg><span id="pocket-cli-info-text"></span></div>
+        </section>
+
+        <!-- Chat Section -->
+        <section id="chat" class="settings-section">
+          <h2 class="section-title">Global Chat</h2>
+          <p class="section-desc">Configure your global chat identity.</p>
+          <div class="settings-grid">
+            <div class="setting-row setting-row--stacked"><label>Username</label><p style="color: var(--text-muted); font-size: 11px; margin: 0;">Max 15 characters. Letters, numbers, and dashes only.</p><div class="key-input"><input type="text" id="chat.username" placeholder="e.g. ken-moonbeam" maxlength="15"><button onclick="playNormalClick(); stgSaveChatUsername()">Save</button></div></div>
+            <div class="setting-row setting-row--stacked"><label>Admin Key</label><div class="key-input"><input type="password" id="chat.adminKey" placeholder="Leave blank if not admin"><button onclick="playNormalClick(); stgSaveChatAdminKey()">Save</button></div></div>
+          </div>
+        </section>
+
+        <!-- Skins Section -->
+        <section id="skins" class="settings-section">
+          <h2 class="section-title">Skins</h2>
+          <p class="section-desc">Choose a visual theme for your agent.</p>
+          <div class="skin-grid" id="skin-grid"></div>
+        </section>
+
+        <!-- Updates Section -->
+        <section id="updates" class="settings-section">
+          <h2 class="section-title">Updates</h2>
+          <p class="section-desc">Keep your agent fresh with the latest features.</p>
+          <div class="settings-grid"><div class="setting-row"><label>Auto-check for updates</label><div class="toggle" id="updates.autoCheck-toggle" onclick="playNormalClick(); stgToggleSetting('updates.autoCheck')"></div></div></div>
+          <div class="settings-grid section-spacer">
+            <div class="setting-row"><label>Current Version</label><span id="current-version" class="key-link" style="font-size: 12px;">Loading...</span></div>
+            <div class="setting-row"><label>Status</label><div id="update-status" class="status info status-no-margin">Ready</div></div>
+            <div class="setting-row hidden" id="update-progress-row"><label>Progress</label><div class="progress-row"><div class="progress-track"><div id="update-progress-bar" class="progress-fill"></div></div><span id="update-progress-text" class="progress-text">0%</span></div></div>
+            <div class="setting-row"><label>Actions</label><div class="btn-row"><button id="check-updates-btn" onclick="playNormalClick(); stgCheckForUpdates()" class="skills-setup-btn btn-compact">Check Now</button><button id="download-update-btn" onclick="playNormalClick(); stgDownloadUpdate()" class="skills-setup-btn btn-compact hidden">Download</button><button id="install-update-btn" onclick="playNormalClick(); stgInstallUpdate()" class="skills-setup-btn btn-compact btn-accent hidden">Install & Restart</button></div></div>
+          </div>
+          <div id="update-info" class="info-box section-spacer hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path stroke-width="1.5" d="M12 16v-4.5"/><path stroke-width="1.8" d="M12 8.012v-.01"/></g></svg><span id="update-info-text">New version available!</span></div>
+        </section>
+      </div>
+    </div>
+  </div><!-- #settings-view -->
+
+  <!-- Brain View (inline, replaces chat when active) -->
+  <div id="brain-view">
+    <div class="brain-header">
+      <h1><span>The Brain</span> <span class="brain-count" id="brain-active-count"></span></h1>
+      <div class="brain-header-actions">
+        <button onclick="playNormalClick(); hideBrainPanel()">Back</button>
+        <button onclick="playNormalClick(); brainRefresh()">Refresh</button>
+      </div>
+    </div>
+    <div class="brain-container">
+      <nav class="brain-sidebar">
+        <div class="brain-nav-item active" data-tab="facts">My Brain
+        </div>
+        <div class="brain-nav-item" data-tab="soul">My Approach
+        </div>
+        <div class="brain-nav-item" data-tab="logs">Daily Logs
+        </div>
+      </nav>
+      <div class="brain-content">
+      <!-- Facts Section -->
+      <div id="brain-facts" class="brain-section active">
+        <div class="memory-capacity" id="brain-facts-capacity">
+          <span class="memory-capacity-label">Capacity</span>
+          <div class="memory-capacity-bar"><div class="memory-capacity-fill" id="brain-facts-capacity-fill"></div></div>
+          <span class="memory-capacity-text" id="brain-facts-capacity-text">—</span>
+        </div>
+        <table class="facts-table" id="brain-facts-table">
+          <thead><tr><th>Category</th><th>Subject</th><th>Content</th><th></th></tr></thead>
+          <tbody id="brain-facts-tbody"></tbody>
+        </table>
+        <div id="brain-facts-empty" class="brain-empty hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h8m-8 4h4m1 10.5V21c0-2.828 0-4.243.879-5.121C14.757 15 16.172 15 19 15h.5m.5-1.657V10c0-3.771 0-5.657-1.172-6.828S15.771 2 12 2S6.343 2 5.172 3.172S4 6.229 4 10v4.544c0 3.245 0 4.868.886 5.967a4 4 0 0 0 .603.603C6.59 22 8.211 22 11.456 22c.705 0 1.058 0 1.381-.114q.1-.036.197-.082c.31-.148.559-.397 1.058-.896l4.736-4.736c.579-.578.867-.867 1.02-1.235c.152-.368.152-.776.152-1.594"/></svg>
+          <p>Your memory is empty</p>
+          <small>Tell me things about yourself and I'll remember them</small>
+        </div>
+        <span id="brain-facts-count" class="hidden"></span>
+      </div>
+      <!-- Soul Section -->
+      <div id="brain-soul" class="brain-section">
+        <div class="memory-capacity" id="brain-soul-capacity">
+          <span class="memory-capacity-label">Capacity</span>
+          <div class="memory-capacity-bar"><div class="memory-capacity-fill" id="brain-soul-capacity-fill"></div></div>
+          <span class="memory-capacity-text" id="brain-soul-capacity-text">—</span>
+        </div>
+        <div class="soul-cards" id="brain-soul-cards"></div>
+        <div id="brain-soul-empty" class="brain-empty hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path stroke-width="1.5" d="M9.5 9.5a2.5 2.5 0 1 1 3.912 2.064C12.728 12.032 12 12.672 12 13.5"/><path stroke-width="1.8" d="M12 17h.009"/></g></svg>
+          <p>No approach notes yet</p>
+          <small>As we chat, I'll learn how to work best with you</small>
+        </div>
+        <span id="brain-soul-count" class="hidden"></span>
+      </div>
+      <!-- Daily Logs Section -->
+      <div id="brain-logs" class="brain-section">
+        <div class="memory-capacity" id="brain-logs-capacity">
+          <span class="memory-capacity-label">Capacity</span>
+          <div class="memory-capacity-bar"><div class="memory-capacity-fill" id="brain-logs-capacity-fill"></div></div>
+          <span class="memory-capacity-text" id="brain-logs-capacity-text">—</span>
+        </div>
+        <table class="logs-table" id="brain-logs-table">
+          <thead><tr><th>Date</th><th>Entries</th><th></th></tr></thead>
+          <tbody id="brain-logs-tbody"></tbody>
+        </table>
+        <div id="brain-logs-empty" class="brain-empty hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M16 2v4M8 2v4m5-2h-2C7.229 4 5.343 4 4.172 5.172S3 8.229 3 12v2c0 3.771 0 5.657 1.172 6.828S7.229 22 11 22h2c3.771 0 5.657 0 6.828-1.172S21 17.771 21 14v-2c0-3.771 0-5.657-1.172-6.828S16.771 4 13 4M3 10h18"/><path d="M10 18.5v-4.653c0-.191-.137-.347-.305-.347H9m5 4.998l1.486-4.606a.3.3 0 0 0-.286-.392H13"/></g></svg>
+          <p>No daily logs yet</p>
+          <small>I'll start journaling as we chat</small>
+        </div>
+        <span id="brain-logs-count" class="hidden"></span>
+      </div>
+    </div>
+    </div>
+  </div><!-- #brain-view -->
+
+  <!-- Routines View -->
+  <div id="routines-view">
+    <div class="routines-header">
+      <h1><span>Routines</span></h1>
+      <div class="routines-header-actions">
+        <button onclick="playNormalClick(); hideRoutinesPanel()">Back</button>
+      </div>
+    </div>
+    <div class="routines-content">
+      <div class="rtn-grid">
+        <div id="rtn-jobs-list" class="rtn-jobs-list">
+          <div class="rtn-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- #routines-view -->
+
+  <!-- Personalize View -->
+  <div id="personalize-view">
+    <div class="pz-header">
+      <h1><span>Personalize</span></h1>
+      <div class="pz-header-actions">
+        <button onclick="playNormalClick(); hidePersonalizePanel()">Back</button>
+        <button id="pz-reboot-btn" class="reboot" onclick="playNormalClick(); pzRestartAgent()" disabled>Reboot</button>
+      </div>
+    </div>
+    <div class="pz-container">
+      <nav class="pz-sidebar">
+        <div class="pz-nav-item active" data-tab="agent-name">Agent Details
+        </div>
+        <div class="pz-nav-item" data-tab="profile">Your Details
+        </div>
+        <div class="pz-nav-item" data-tab="personality">How I Act
+        </div>
+        <div class="pz-nav-item" data-tab="world">Your World
+        </div>
+        <div class="pz-nav-item" data-tab="system-prompt">System Prompt
+        </div>
+      </nav>
+      <div class="pz-content">
+        <!-- Agent Details Tab -->
+        <div class="pz-tab active" id="pz-tab-agent-name">
+          <div class="pz-section-header"><h2>Agent Details</h2><p>Who am I?</p></div>
+          <div class="pz-form-section">
+            <div class="pz-form-group"><label for="pz-agent-name-input">Agent Name</label><input type="text" class="pz-name-input" id="pz-agent-name-input" placeholder="Frankie"></div>
+          </div>
+          <div class="pz-form-section">
+            <div class="pz-form-group"><label for="pz-agent-description">Brief Description</label><textarea id="pz-agent-description" rows="3" placeholder="Who is this agent? What do they do?" style="resize: vertical;"></textarea><span class="hint">A short intro injected into the system prompt</span></div>
+          </div>
+          <div style="flex: 1;"></div>
+          <div class="pz-action-bar"><span class="info">Reboot me to apply changes!</span><div class="buttons"><button onclick="playNormalClick(); pzSaveAgentName()">Save</button></div></div>
+        </div>
+
+        <!-- Your Details Tab -->
+        <div class="pz-tab" id="pz-tab-profile">
+          <div class="pz-section-header"><h2>Your Details</h2><p>Basic info so I can personalize things for you</p></div>
+          <div class="pz-profile-content">
+            <div class="pz-form-section">
+              <div class="pz-form-grid">
+                <div class="pz-form-group"><label>Your Name</label><input type="text" id="pz-profile-name" placeholder="What should I call you?"></div>
+                <div class="pz-form-group"><label>Occupation</label><input type="text" id="pz-profile-occupation" placeholder="What do you do?"></div>
+                <div class="pz-form-group"><label>Location</label><div class="pz-autocomplete-wrapper"><input type="text" id="pz-profile-location" placeholder="Where are you based?" autocomplete="off"><div class="pz-autocomplete-dropdown" id="pz-location-dropdown"></div></div><span class="hint">Type a city name to search</span></div>
+                <div class="pz-form-group"><label>Timezone</label><select id="pz-profile-timezone"><option value="">Pick a timezone…</option></select><span class="hint">Auto-filled when you select a location</span></div>
+                <div class="pz-form-group"><label>Birthday</label><div class="pz-birthday-picker"><select id="pz-profile-birthday-month"><option value="">Month</option><option value="January">January</option><option value="February">February</option><option value="March">March</option><option value="April">April</option><option value="May">May</option><option value="June">June</option><option value="July">July</option><option value="August">August</option><option value="September">September</option><option value="October">October</option><option value="November">November</option><option value="December">December</option></select><select id="pz-profile-birthday-day"><option value="">Day</option></select></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="pz-action-bar"><span class="info" id="pz-profile-status">I'll remember this!</span><div class="buttons"><button onclick="playNormalClick(); pzSaveProfile()">Save</button></div></div>
+        </div>
+
+        <!-- How I Act Tab -->
+        <div class="pz-tab" id="pz-tab-personality">
+          <div class="pz-section-header"><h2>How I Act</h2><p>My personality, communication style, and vibes</p></div>
+          <div class="pz-editor-container"><textarea class="pz-editor" id="pz-personality-editor" placeholder="Waking up…"></textarea></div>
+          <div class="pz-action-bar"><span class="info">Reboot me to apply changes!</span><div class="buttons"><button onclick="playNormalClick(); pzSavePersonality()">Save</button></div></div>
+        </div>
+
+        <!-- Your World Tab -->
+        <div class="pz-tab" id="pz-tab-world">
+          <div class="pz-section-header"><h2>Your World</h2><p>Help me understand what matters to you</p></div>
+          <div class="pz-mode-tabs" id="pz-world-mode-tabs">
+            <button class="pz-mode-tab active" data-world-tab="goals">Goals</button>
+            <button class="pz-mode-tab" data-world-tab="struggles">Struggles</button>
+            <button class="pz-mode-tab" data-world-tab="funfacts">Fun Facts</button>
+          </div>
+          <div class="pz-world-tab-content" data-world-panel="goals">
+            <textarea id="pz-world-goals" rows="10" placeholder="What are you working toward?&#10;&#10;e.g. launch my startup, get fit, learn piano"></textarea>
+          </div>
+          <div class="pz-world-tab-content" data-world-panel="struggles" style="display:none;">
+            <textarea id="pz-world-struggles" rows="10" placeholder="What are you dealing with?&#10;&#10;e.g. time management, staying focused, burnout"></textarea>
+          </div>
+          <div class="pz-world-tab-content" data-world-panel="funfacts" style="display:none;">
+            <textarea id="pz-world-funfacts" rows="10" placeholder="Interests, hobbies, people in your life&#10;&#10;e.g. I have a golden retriever named Max&#10;my partner's name is Sarah&#10;I'm vegetarian, oat milk latte lover"></textarea>
+          </div>
+          <div class="pz-action-bar"><span class="info">Reboot me to apply changes!</span><div class="buttons"><button onclick="playNormalClick(); pzSaveWorld()">Save</button></div></div>
+        </div>
+
+        <!-- System Prompt Tab -->
+        <div class="pz-tab" id="pz-tab-system-prompt">
+          <div class="pz-section-header"><h2>System Prompt</h2><p>Core guidelines and agent mode prompts — managed by the developer</p></div>
+          <div class="pz-mode-tabs" id="pz-prompt-mode-tabs"><button class="pz-mode-tab active" data-prompt-mode="system">System Guidelines</button></div>
+          <div class="pz-readonly-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2s10 4.477 10 10Z"/><path stroke-linecap="round" d="M12 13a2 2 0 1 0 0-4a2 2 0 0 0 0 4Zm0 0v3"/></g></svg> Read-only - managed by developer</div>
+          <div class="pz-readonly-display" id="pz-system-prompt-display"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- #personalize-view -->
+
+  </div><!-- .main-content -->
+
+  <!-- About Modal (outside main-content so it overlays all views) -->
+  <div class="modal-overlay" id="about-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-icon pixel-cat"></div>
+        <div class="modal-title">
+          <h2>Who made me?</h2>
+          <p>The human behind Frankie</p>
+        </div>
+        <button class="modal-close" id="about-close-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 6L6 18m12 0L6 6"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="about-content">
+          <p>I was built by <strong>Ken Kai</strong> — he's been obsessed with AI and AI development for over 10 years now.</p>
+          <p>He runs a YouTube channel where he shares everything he learns, and teaches on Skool too.</p>
+          <p>If you want to learn more about AI dev, agents, and building cool stuff like me, check him out:</p>
+        </div>
+        <div class="about-links">
+          <a class="about-link" id="about-link-youtube">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <span>@kenkaidoesai</span>
+            <small>YouTube</small>
+          </a>
+          <a class="about-link" id="about-link-skool">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+            <span>skool.com/kenkai</span>
+            <small>Learn AI Dev</small>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- .app-layout -->
+
+  <!-- Chat JavaScript (extracted from inline script) -->
+  <script src="chat/onboarding.js"></script>
+  <script src="chat/sidebar.js"></script>
+  <script src="chat/state.js"></script>
+  <script src="chat/message-renderer.js"></script>
+  <script src="chat/scroll.js"></script>
+  <script src="chat/sessions.js"></script>
+  <script src="chat/external-messages.js"></script>
+  <script src="chat/history.js"></script>
+  <script src="chat/messaging.js"></script>
+  <script src="chat/global-chat.js"></script>
+  <script src="chat/agent-mode.js"></script>
+  <script src="chat/search.js"></script>
+  <script src="chat/input-handler.js"></script>
+  <script src="chat/attachments.js"></script>
+  <script src="chat/ui-chrome.js"></script>
+  <script src="chat/plan-approval.js"></script>
+  <script src="chat/settings-panel.js"></script>
+  <script src="chat/brain-panel.js"></script>
+  <script src="chat/routines-panel.js"></script>
+  <script src="chat/personalize-panel.js"></script>
+  <script src="chat/event-bindings.js"></script>
+  <script src="chat/init.js"></script>
+
+</body>
+</html>

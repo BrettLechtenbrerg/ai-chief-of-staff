@@ -1,0 +1,143 @@
+@import './ui.css';
+@import './buttons.css';
+@import './icon-buttons.css';
+@import './badges.css';
+@import './forms.css';
+@import './nav.css';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--text-color--font-family--body);
+  background: var(--background-color--background-primary);
+  color: var(--text-color--text-primary);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Headings adopt the brand heading face by default. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--text-color--font-family--heading);
+  color: var(--text-color--text-secondary);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* ---------- Brand heading face for UI chrome ----------
+   Only leaf-ish chrome elements (buttons, menu items, tabs, labels,
+   explicit *-title elements). Container classes like `-header` are
+   intentionally excluded so descriptions/<p> inside them keep the body
+   face — e.g. a section-header with <h2>Title</h2><p>subtitle</p>
+   keeps the title heading-faced (via h1-h6 above) and the subtitle
+   body-faced. */
+button,
+select,
+label,
+legend,
+[role="menuitem"],
+[role="tab"],
+[role="button"],
+[class*="-btn"],
+[class*="btn-"],
+[class*="nav-item"],
+[class*="menu-item"],
+[class$="-tab"],
+[class*="-tab "],
+[class*="-tab-button"],
+[class$="-title"],
+[class*="-title "],
+[class*="section-title"],
+[class*="modal-title"],
+[class*="panel-title"],
+th {
+  font-family: var(--text-color--font-family--heading) !important;
+}
+
+/* Table data cells always use body font (data values, not labels). */
+td {
+  font-family: var(--text-color--font-family--body) !important;
+}
+
+/* Body-font wins for descriptions/subtitles inside any *-header container.
+   A header is a container that holds a title (heading-faced via h1–h6)
+   and a description (<p>) — the description must always be body-faced. */
+[class*="-header"] p,
+[class$="-header"] p,
+[class*="-header"] .description,
+[class*="-header"] .subtitle,
+[class*="-header"] .hint,
+.section-header p,
+.pz-section-header p {
+  font-family: var(--text-color--font-family--body) !important;
+  font-weight: 400;
+}
+
+/* ---------- Themed scrollbars (warm cocoa on champagne) ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) var(--bg-secondary);
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+  background-color: var(--bg-secondary);
+}
+
+*::-webkit-scrollbar-track {
+  background-color: var(--bg-secondary);
+  border-left: 1px solid color-mix(in srgb, var(--text-muted) 18%, transparent);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+  border: 3px solid var(--bg-secondary);
+  border-radius: 100vw;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--text-secondary);
+}
+
+*::-webkit-scrollbar-corner {
+  background-color: var(--bg-secondary);
+}
+
+/* Opt-in for scrollable regions on dark (bean) surfaces. */
+.scrollbar-on-dark {
+  scrollbar-color: color-mix(in srgb, var(--bg-primary) 35%, transparent)
+    var(--text-secondary);
+}
+
+.scrollbar-on-dark::-webkit-scrollbar,
+.scrollbar-on-dark::-webkit-scrollbar-track,
+.scrollbar-on-dark::-webkit-scrollbar-corner {
+  background-color: var(--text-secondary);
+}
+
+.scrollbar-on-dark::-webkit-scrollbar-track {
+  border-left-color: color-mix(in srgb, var(--bg-primary) 18%, transparent);
+}
+
+.scrollbar-on-dark::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--bg-primary) 35%, transparent);
+  border-color: var(--text-secondary);
+}

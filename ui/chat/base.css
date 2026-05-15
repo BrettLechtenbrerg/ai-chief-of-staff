@@ -1,0 +1,40 @@
+/* Chat-specific utility classes and overrides */
+.hidden { display: none !important; }
+.badge-attachment { background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%); }
+.button-row-right { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+#send-btn .send-icon,
+#send-btn .stop-icon { display: block; }
+
+/* Pause animations when window is hidden/unfocused */
+body.animations-paused *,
+body.animations-paused *::before,
+body.animations-paused *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
+/* Accessibility: respect OS-level reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Keyboard focus indicators for accessibility */
+button:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+textarea:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}

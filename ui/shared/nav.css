@@ -1,0 +1,59 @@
+/* Nav item primitive — single source of truth for left-rail navigation
+   in side panels (settings, brain, personalize, routines, etc.).
+
+   Matches the chat sidebar's .sidebar-btn treatment: a rounded pill row
+   that fills with bg-tertiary on hover and uses the accent on active.
+   No left-bar accent strip — the rounded fill is the only chrome. */
+
+.nav-item,
+.settings-nav-item,
+.brain-nav-item,
+.pz-nav-item,
+.routines-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--text-color--font-family--heading);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  border: none;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.nav-item:hover,
+.settings-nav-item:hover,
+.brain-nav-item:hover,
+.pz-nav-item:hover,
+.routines-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.nav-item.active,
+.settings-nav-item.active,
+.brain-nav-item.active,
+.pz-nav-item.active,
+.routines-nav-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-primary));
+  color: var(--accent);
+}
+
+/* Icons inside nav items (kept for any future use; the in-page menus
+   were stripped of icons earlier — only the chat sidebar uses them). */
+.nav-item svg,
+.settings-nav-item svg,
+.brain-nav-item svg,
+.pz-nav-item svg,
+.routines-nav-item svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}

@@ -1,0 +1,51 @@
+/* Pocket Agent variables — original Dracula baseline.
+   The skin loader (theme-loader.js) overrides the canonical vars below
+   when a non-null skin is active. Fresh installs default to the
+   "cream" skin (see src/settings/themes.ts), which provides the
+   ecomm-king light palette as an override layer. */
+
+@import './tokens.css';
+
+:root {
+  color-scheme: dark;
+
+  /* ---------- Dracula palette (default baseline) ----------
+     --bg-primary feeds the main chat / page surface.
+     --bg-secondary feeds the sidebar / chrome surface. */
+  --bg-primary: #21222c;       /* darker — main page surface */
+  --bg-secondary: #282a36;     /* lighter — sidebar / chrome */
+  --bg-tertiary: #44475a;
+  --bg-hover: var(--bg-tertiary);
+  --border: #44475a;
+  --text-primary: #f8f8f2;
+  --text-secondary: #bfc7d5;
+  --text-muted: #6272a4;
+  --accent: #bd93f9;
+  --accent-secondary: #ff79c6;
+  --accent-hover: #caa9fa;
+
+  /* Drop-shadow for pill buttons. Derived from --accent so it tracks
+     whichever skin is active (60% accent + black = a darker shade). */
+  --accent-shadow: color-mix(in srgb, var(--accent) 60%, #000);
+  --accent-color: var(--accent);
+
+  /* Chat bubbles */
+  --user-bubble: #6272a4;
+  --user-bubble-solid: #6272a4;
+  --assistant-bubble: #44475a;
+
+  /* Status */
+  --error: #ff5555;
+  --error-shadow: color-mix(in srgb, var(--error) 60%, #000);
+  --success: #50fa7b;
+  --warning: #f1fa8c;
+  --orange: #ffb86c;
+  --link: #8be9fd;
+  --link-hover: #a4f0ff;
+  --telegram: #229ed9;
+  --cyan: #8be9fd;
+
+  /* Radii */
+  --radius: 16px;
+  --radius-sm: 10px;
+}

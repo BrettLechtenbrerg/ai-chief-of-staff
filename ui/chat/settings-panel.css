@@ -1,0 +1,561 @@
+/* Settings Panel — scoped under #settings-view */
+
+#settings-view {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#settings-view.active {
+  display: flex;
+}
+
+/* Settings Header */
+#settings-view .settings-header {
+  background: var(--bg-secondary);
+  padding: 10px 16px;
+ 
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+#settings-view .settings-header h1 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+#settings-view .settings-header h1 span {
+  color: var(--text-primary);
+}
+
+#settings-view .header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Header buttons inherit pill aesthetics from shared/buttons.css.
+   Naked <button> -> cinamon pill, .secondary (Back) -> shell pill,
+   .reboot -> cinamon pill (dim/disabled by default; pulsing glow when .active). */
+
+#settings-view .header-actions button.reboot.active {
+  animation: stgRebootGlow 2s ease-in-out infinite;
+}
+
+@keyframes stgRebootGlow {
+  0%, 100% {
+    box-shadow:
+      0 3px 0 0 var(--accent-shadow),
+      0 0 12px rgba(217, 58, 99, 0.45),
+      0 0 24px rgba(217, 58, 99, 0.20);
+  }
+  50% {
+    box-shadow:
+      0 3px 0 0 var(--accent-shadow),
+      0 0 18px rgba(217, 58, 99, 0.65),
+      0 0 32px rgba(217, 58, 99, 0.30);
+  }
+}
+
+/* Settings Container (sidebar + content) */
+#settings-view .settings-container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Settings Sidebar Nav */
+#settings-view .settings-sidebar {
+  width: 180px;
+  margin: 8px 8px 8px 0;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px 8px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+/* .settings-nav-item visuals come from shared/nav.css. */
+
+/* Settings Content Area */
+#settings-view .settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0 32px;
+}
+
+#settings-view .settings-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+#settings-view .settings-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#settings-view .settings-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Settings Sections */
+#settings-view .settings-section {
+  display: none;
+  animation: stgFadeIn 0.2s ease;
+}
+
+#settings-view .settings-section.active {
+  display: block;
+}
+
+@keyframes stgFadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#settings-view .section-title {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+
+#settings-view .section-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* Form Groups */
+#settings-view .form-group {
+  margin-bottom: 14px;
+}
+
+#settings-view .form-group:last-child {
+  margin-bottom: 0;
+}
+
+#settings-view .form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+
+#settings-view .form-group .description {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* Form inputs inherit the rounded shell-cream look from shared/forms.css. */
+#settings-view .form-group input,
+#settings-view .form-group select,
+#settings-view .form-group textarea {
+  width: 100%;
+}
+
+#settings-view .form-group input[type="password"] {
+  font-family: monospace;
+  letter-spacing: 2px;
+}
+
+#settings-view .form-group select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='%23636366'%3E%3Cpath d='M6 8L2 4h8L6 8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+/* Toggle Switch */
+#settings-view .toggle-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+}
+
+#settings-view .toggle-info {
+  flex: 1;
+}
+
+#settings-view .toggle-info .toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 1px;
+}
+
+#settings-view .toggle-info .toggle-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+#settings-view .toggle {
+  width: 40px;
+  height: 22px;
+  background: var(--border);
+  border-radius: 11px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+#settings-view .toggle.active {
+  background: var(--accent);
+}
+
+#settings-view .toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+#settings-view .toggle.active::after {
+  transform: translateX(18px);
+}
+
+/* Input with Button */
+#settings-view .input-with-btn {
+  display: flex;
+  gap: 6px;
+}
+
+#settings-view .input-with-btn input {
+  flex: 1;
+}
+
+/* Buttons inside .input-with-btn inherit the cinamon-pill look from
+   shared/buttons.css. Only layout-specific tweaks live here. */
+#settings-view .input-with-btn button {
+  white-space: nowrap;
+}
+
+#settings-view .input-with-btn button.validating {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Status indicators */
+/* Inline status chips (“Up to date” / “Failed” / etc.) — cream pill
+   with status-tinted text and border, matching shared/badges.css. */
+#settings-view .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  color: var(--text-secondary);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-radius: 100vw;
+  font-family: var(--text-color--font-family--heading);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+#settings-view .status.success {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
+}
+#settings-view .status.error {
+  color: var(--accent-shadow);
+  border-color: color-mix(in srgb, var(--accent-shadow) 45%, transparent);
+}
+#settings-view .status.warning {
+  color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+#settings-view .status.info {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+#settings-view .status svg { width: 12px; height: 12px; }
+
+/* Auth */
+#settings-view .auth-status { display: flex; align-items: center; gap: 10px; }
+
+/* .auth-badge / .badge-required visuals come from shared/badges.css. */
+#settings-view .badge-required { margin-left: 6px; }
+
+/* .oauth-btn inherits the cinamon-pill look from shared/buttons.css. */
+
+/* .risk-badge visuals come from shared/badges.css (warning variant). */
+
+/* .risk-info "i" indicator retired — the tooltip is enough. */
+
+#settings-view .risk-badge .risk-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  white-space: normal;
+}
+
+#settings-view .risk-badge:hover .risk-tooltip { display: block; }
+
+/* .logout-btn (shown when signed in) inherits the shell-pill look
+   from shared/buttons.css. Destructive intent is conveyed by the
+   confirm dialog rather than a red hover. */
+
+#settings-view .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: stgSpin 0.8s linear infinite;
+}
+
+@keyframes stgSpin { to { transform: rotate(360deg); } }
+
+/* Card */
+#settings-view .card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+#settings-view .card:last-child { margin-bottom: 0; }
+
+#settings-view .card-title {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#settings-view .card-title svg { width: 14px; height: 14px; color: var(--accent); }
+
+/* Info box */
+#settings-view .info-box {
+  background: var(--bg-secondary);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+#settings-view .info-box svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+/* .skills-setup-btn (and .btn-accent variant) inherit pill aesthetics
+   from shared/buttons.css. */
+#settings-view .skills-setup-btn { margin-top: 8px; }
+
+/* Compact API Keys Table */
+#settings-view .keys-table {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+#settings-view .key-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+#settings-view .key-row:last-child { border-bottom: none; }
+#settings-view .key-row:hover { }
+
+#settings-view .key-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#settings-view .key-name { font-size: 12px; font-weight: 500; color: var(--text-primary); white-space: nowrap; }
+
+#settings-view .key-link {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#settings-view .key-link:hover { color: var(--accent); }
+
+#settings-view .key-input { display: flex; gap: 4px; min-width: 0; }
+
+/* .key-input inputs inherit shell-cream look from shared/forms.css. */
+#settings-view .key-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: 'SF Mono', monospace;
+}
+#settings-view .key-input input::placeholder { font-family: inherit; }
+
+/* Buttons inside .key-input inherit the cinamon-pill look from
+   shared/buttons.css. Only layout-specific tweaks live here. */
+#settings-view .key-input button {
+  white-space: nowrap;
+}
+
+/* .delete-btn visuals come from shared/icon-buttons.css.
+   Keep the show/hide behavior unique to settings keys. */
+#settings-view .key-input button.delete-btn { display: none; }
+#settings-view .key-input button.delete-btn.visible { display: inline-flex; }
+
+/* Compact Auth Boxes */
+#settings-view .auth-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+#settings-view .auth-box:last-child { margin-bottom: 0; }
+#settings-view .auth-current { display: flex; align-items: center; justify-content: space-between; }
+#settings-view .auth-label { font-size: 12px; color: var(--text-muted); }
+#settings-view .auth-option-header { display: flex; align-items: center; justify-content: space-between; }
+#settings-view .auth-option-title { font-family: 'Cal Sans', sans-serif; font-size: 13px; font-weight: 500; }
+
+/* Compact Settings Grid */
+#settings-view .settings-grid {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+#settings-view .setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+#settings-view .setting-row:last-child { border-bottom: none; }
+#settings-view .setting-row:hover { }
+
+#settings-view .setting-row label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Compact setting-row inputs inherit shell-cream rounded look from
+   shared/forms.css. Only width / size / select chevron live here. */
+#settings-view .setting-row input,
+#settings-view .setting-row select {
+  width: 140px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+#settings-view .setting-row select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12' fill='%237a4432'%3E%3Cpath d='M6 8L2 4h8L6 8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+
+/* Skin picker */
+#settings-view .skin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+#settings-view .skin-card {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#settings-view .skin-card:hover { border-color: var(--text-muted); transform: translateY(-2px); }
+#settings-view .skin-card.active { border-color: var(--accent); box-shadow: 0 0 16px rgba(217, 58, 99, 0.3); }
+
+#settings-view .skin-card .skin-preview {
+  display: flex;
+  gap: 4px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+#settings-view .skin-card .skin-preview .swatch { flex: 1; }
+#settings-view .skin-card .skin-name { font-family: 'Cal Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+#settings-view .skin-card .skin-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* Utility classes scoped to settings */
+#settings-view .flex-between { display: flex; justify-content: space-between; align-items: center; }
+#settings-view .flex-row { display: flex; align-items: center; }
+#settings-view .setting-row--stacked { flex-direction: column; align-items: stretch; gap: 6px; }
+#settings-view .card-box { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px; text-align: center; }
+#settings-view .code-display { font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; letter-spacing: 8px; padding: 8px 0; cursor: pointer; transition: all 0.2s ease; user-select: all; }
+/* .btn-accent visuals come from shared/buttons.css cinamon-pill rules. */
+#settings-view .btn-accent { margin: 0; }
+#settings-view .btn-row { display: flex; gap: 6px; }
+#settings-view .btn-compact { margin: 0; }
+#settings-view .helper-text { color: var(--text-muted); font-size: 11px; margin: 0; }
+#settings-view .config-section { margin-top: 10px; }
+#settings-view .section-spacer { margin-top: 12px; }
+#settings-view .section-spacer-lg { margin-top: 16px; }
+#settings-view .progress-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+#settings-view .progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
+#settings-view .progress-row { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 200px; }
+#settings-view .progress-text { font-size: 11px; color: var(--text-muted); }
+#settings-view .info-box--warning {
+  background: color-mix(in srgb, var(--warning) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+  color: var(--text-secondary);
+}
+#settings-view .disabled-section { opacity: 0.5; }
+#settings-view .enabled-section { opacity: 1; }
+#settings-view .status-no-margin { margin: 0; }
+#settings-view .w-140 { width: 140px; }
+#settings-view .w-180 { width: 180px; }
+#settings-view .w-80 { width: 80px; }
+#settings-view .subsection-title { margin: 0; }

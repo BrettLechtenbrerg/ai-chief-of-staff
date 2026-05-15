@@ -1,0 +1,390 @@
+/* Sidebar — floats with rounded corners and a small margin so it sits
+   inset from the window edges. The main-content area mirrors the same
+   margin treatment so both feel like floating panels. */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  margin: 8px 4px 8px 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease;
+  overflow: hidden;
+}
+
+.sidebar.collapsed {
+  width: 48px;
+  min-width: 48px;
+}
+
+/* Sidebar header (toggle + logo) */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar.collapsed .sidebar-logo {
+  opacity: 0;
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.sidebar.collapsed .sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* Sidebar nav */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.sidebar-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.sidebar-btn-label {
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar.collapsed .sidebar-btn-label {
+  opacity: 0;
+}
+
+.sidebar-btn.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-primary));
+}
+
+/* Sidebar bottom (pinned) */
+.sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 4px 8px 8px;
+}
+
+/* Sidebar divider */
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+  flex-shrink: 0;
+}
+
+/* Session list */
+.sidebar-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-sessions::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-sessions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-sessions::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Session item */
+.sidebar-session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  color: var(--text-secondary);
+}
+
+.sidebar-session:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.sidebar-session.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  background: var(--accent);
+  color: white;
+}
+
+.sidebar-session.loading .sidebar-session-name {
+  background: linear-gradient(
+    90deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 40%,
+    #60a5fa 50%,
+    var(--text-primary) 60%,
+    var(--text-primary) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: sidebar-text-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes sidebar-text-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* .sidebar-session-icon — only visible when the sidebar is collapsed.
+   Hidden when expanded so sessions render as text-only labels. */
+.sidebar-session-icon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+}
+.sidebar-session-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.sidebar.collapsed .sidebar-session-icon {
+  display: inline-flex;
+}
+.sidebar.collapsed .sidebar-session.active .sidebar-session-icon {
+  color: var(--accent);
+}
+
+.sidebar-session-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Match the rest of the sidebar (buttons, labels) — body font, regular
+     weight. Cal Sans was rendering visibly heavier than its neighbours. */
+  font-family: var(--text-color--font-family--body);
+  font-size: 12px;
+  font-weight: 400;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar.collapsed .sidebar-session-name {
+  opacity: 0;
+}
+
+.sidebar-session-telegram {
+  display: flex;
+  align-items: center;
+  color: var(--telegram);
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-session-telegram {
+  display: none;
+}
+
+.sidebar-session-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.sidebar-session:hover .sidebar-session-close {
+  opacity: 1;
+}
+
+.sidebar-session-close:hover {
+  background: var(--error);
+  color: white;
+}
+
+.sidebar.collapsed .sidebar-session-close {
+  display: none;
+}
+
+/* Rename input inside sidebar session — visually identical to
+   .sidebar-session-name so the row geometry does NOT change when entering
+   rename mode. Edit affordance is the accent text colour + caret, not a box.
+
+   IMPORTANT: shared/forms.css (imported via shared/base.css) applies a global
+   form-input look to every `input[type="text"]:not(#search-input)`. That
+   selector includes `:not(#search-input)` which contributes ID-level (1,0,0)
+   specificity, giving it 1,1,1 — higher than any class-only override we can
+   write here without also reaching for an ID. We match that with our own
+   `:not(#some-id-that-doesn't-exist)` trick to bump specificity to 1,3,1
+   without changing what the selector matches. */
+.sidebar-session .tab-name-input:not(#__never__),
+.sidebar-session .tab-name-input:not(#__never__):focus {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  box-sizing: border-box;
+  /* Match .sidebar-session-name typography exactly */
+  font-family: var(--text-color--font-family--body);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: inherit;
+  /* Strip every box-affecting property the global form-input rule adds */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  height: auto;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  color: var(--accent);
+  caret-color: var(--accent);
+}
+
+.sidebar-session .tab-name-input:not(#__never__)::placeholder {
+  font-family: var(--text-color--font-family--body);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* Chat view wrapper */
+#chat-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+#chat-view.hidden {
+  display: none;
+}
+
+/* App layout wrapper */
+.app-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 8px 8px 8px 4px;
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Active session — placed last for specificity */
+.sidebar-session.active {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-primary));
+  color: var(--text-primary);
+}
+
+
+.sidebar-session.active .sidebar-session-name {
+  color: var(--text-primary);
+  /* No weight bump — active state is conveyed by the tinted background
+     and brighter text colour, not by going bold. */
+  font-weight: 400;
+}
