@@ -437,6 +437,57 @@ Talk like texting a close friend. Chill, casual, real.
     description: 'Interests, hobbies, people in your life',
     type: 'textarea',
   },
+
+  // ---- Context bundle (like a GPT Project or Claude system prompt) ----
+  // Five long-form fields that get injected into every conversation's
+  // system prompt, so clients can paste their existing brand book, style
+  // guide, business overview, reference URLs, and rules from other tools.
+  {
+    key: 'personalize.brandStyle',
+    defaultValue: '',
+    encrypted: false,
+    category: 'personalize',
+    label: 'Brand & Style',
+    description: 'Brand voice, tone, do/don\'t guidelines, target audience',
+    type: 'textarea',
+  },
+  {
+    key: 'personalize.writingRules',
+    defaultValue: '',
+    encrypted: false,
+    category: 'personalize',
+    label: 'Writing Rules',
+    description: 'Grammar, format, length, punctuation, sign-offs',
+    type: 'textarea',
+  },
+  {
+    key: 'personalize.business',
+    defaultValue: '',
+    encrypted: false,
+    category: 'personalize',
+    label: 'About My Business',
+    description: 'Products, services, audience, market, positioning',
+    type: 'textarea',
+  },
+  {
+    key: 'personalize.references',
+    defaultValue: '',
+    encrypted: false,
+    category: 'personalize',
+    label: 'Documents & References',
+    description: 'Important URLs, doc links, asset paths, key references',
+    type: 'textarea',
+  },
+  {
+    key: 'personalize.customInstructions',
+    defaultValue: '',
+    encrypted: false,
+    category: 'personalize',
+    label: 'Custom Instructions',
+    description: 'Always-do / never-do rules, response templates, safety guardrails',
+    type: 'textarea',
+  },
+
   {
     key: 'personalize._migrated',
     defaultValue: '',

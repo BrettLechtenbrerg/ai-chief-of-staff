@@ -63,6 +63,7 @@ function _pzInit() {
   _pzLoadAgentName();
   _pzLoadPersonality();
   _pzLoadWorld();
+  _pzLoadContext();
   _pzLoadSystemPrompt();
   _pzSetupBirthdayPicker();
   _pzLoadTimezones().then(() => _pzLoadProfile());
@@ -147,6 +148,51 @@ async function pzSaveWorld() {
     _pzShowToast('Saved! Reboot to apply', 'success');
     _pzActivateReboot();
   } catch (e) { _pzShowToast('Couldn\'t save world', 'error'); }
+}
+
+// ---- Context (brand book / style / business / refs / custom instructions) ----
+
+// Field IDs map 1:1 to settings keys: pz-context-<key>  <=>  personalize.<key>
+const _pzContextFields = ['brandStyle', 'writingRules', 'business', 'references', 'customInstructions'];
+
+function _pzInitContextTabs() {
+  const tabs = document.getElementById('pz-context-mode-tabs');
+  if (!tabs) return;
+  tabs.querySelectorAll('.pz-mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.querySelectorAll('.pz-mode-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.contextTab;
+      document.querySelectorAll('[data-context-panel]').forEach(p => {
+        p.style.display = p.dataset.contextPanel === target ? '' : 'none';
+      });
+    });
+  });
+}
+
+async function _pzLoadContext() {
+  _pzInitContextTabs();
+  try {
+    for (const field of _pzContextFields) {
+      const input = document.getElementById(`pz-context-${field}`);
+      if (input) {
+        input.value = (await window.pocketAgent.settings.get(`personalize.${field}`)) || '';
+      }
+    }
+  } catch (e) { console.error('[Personalize] Error loading context:', e); }
+}
+
+async function pzSaveContext() {
+  try {
+    for (const field of _pzContextFields) {
+      const input = document.getElementById(`pz-context-${field}`);
+      if (input) {
+        await window.pocketAgent.settings.set(`personalize.${field}`, input.value);
+      }
+    }
+    _pzShowToast('Saved! Reboot to apply', 'success');
+    _pzActivateReboot();
+  } catch (e) { _pzShowToast('Couldn\'t save context', 'error'); }
 }
 
 // ---- System Prompt ----

@@ -439,14 +439,22 @@ class SettingsManagerClass {
   }
 
   /**
-   * Get user context: profile details + world (goals, struggles, fun facts).
-   * Groups all "about the user" content together.
+   * Get user context: profile details + world (goals, struggles, fun facts)
+   * + context bundle (brand style, writing rules, business, references,
+   * custom instructions). Groups all "about the user" content together so
+   * the chat engine can drop it into the system prompt verbatim.
    */
   getFormattedUserContext(): string {
     const profile = this.getFormattedProfile();
     const goals = this.get('personalize.goals');
     const struggles = this.get('personalize.struggles');
     const funFacts = this.get('personalize.funFacts');
+
+    const brandStyle = this.get('personalize.brandStyle');
+    const writingRules = this.get('personalize.writingRules');
+    const business = this.get('personalize.business');
+    const references = this.get('personalize.references');
+    const customInstructions = this.get('personalize.customInstructions');
 
     const parts: string[] = [];
 
@@ -473,6 +481,40 @@ class SettingsManagerClass {
         worldLines.push(funFacts);
       }
       parts.push(worldLines.join('\n'));
+    }
+
+    // Context bundle — long-form, user-supplied context that mirrors what
+    // people paste into a GPT Project or Claude system prompt.
+    const hasContext =
+      brandStyle || writingRules || business || references || customInstructions;
+    if (hasContext) {
+      const ctxLines: string[] = ['## Your Context'];
+      if (brandStyle) {
+        ctxLines.push('');
+        ctxLines.push('### Brand & Style');
+        ctxLines.push(brandStyle);
+      }
+      if (writingRules) {
+        ctxLines.push('');
+        ctxLines.push('### Writing Rules');
+        ctxLines.push(writingRules);
+      }
+      if (business) {
+        ctxLines.push('');
+        ctxLines.push('### About My Business');
+        ctxLines.push(business);
+      }
+      if (references) {
+        ctxLines.push('');
+        ctxLines.push('### Documents & References');
+        ctxLines.push(references);
+      }
+      if (customInstructions) {
+        ctxLines.push('');
+        ctxLines.push('### Custom Instructions');
+        ctxLines.push(customInstructions);
+      }
+      parts.push(ctxLines.join('\n'));
     }
 
     return parts.join('\n\n');

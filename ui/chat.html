@@ -892,6 +892,8 @@
         </div>
         <div class="pz-nav-item" data-tab="world">Your World
         </div>
+        <div class="pz-nav-item" data-tab="context">Context
+        </div>
         <div class="pz-nav-item" data-tab="system-prompt">System Prompt
         </div>
       </nav>
@@ -951,6 +953,34 @@
             <textarea id="pz-world-funfacts" rows="10" placeholder="Interests, hobbies, people in your life&#10;&#10;e.g. I have a golden retriever named Max&#10;my partner's name is Sarah&#10;I'm vegetarian, oat milk latte lover"></textarea>
           </div>
           <div class="pz-action-bar"><span class="info">Reboot me to apply changes!</span><div class="buttons"><button onclick="playNormalClick(); pzSaveWorld()">Save</button></div></div>
+        </div>
+
+        <!-- Context Tab — brand book, style guide, business overview, references, custom instructions. -->
+        <div class="pz-tab" id="pz-tab-context">
+          <div class="pz-section-header"><h2>Context</h2><p>Paste in your brand book, style guide, and operating rules — like a GPT Project or Claude system prompt. I’ll use this in every conversation.</p></div>
+          <div class="pz-mode-tabs" id="pz-context-mode-tabs">
+            <button class="pz-mode-tab active" data-context-tab="brandStyle">Brand &amp; Style</button>
+            <button class="pz-mode-tab" data-context-tab="writingRules">Writing Rules</button>
+            <button class="pz-mode-tab" data-context-tab="business">About My Business</button>
+            <button class="pz-mode-tab" data-context-tab="references">Documents &amp; References</button>
+            <button class="pz-mode-tab" data-context-tab="customInstructions">Custom Instructions</button>
+          </div>
+          <div class="pz-world-tab-content" data-context-panel="brandStyle">
+            <textarea id="pz-context-brandStyle" rows="14" placeholder="Paste your brand voice / brand book / tone guidelines.&#10;&#10;e.g. People-first language. No hype, no corporate buzzwords. Three audiences:&#10;1) Business owners ready to scale&#10;2) Coaches and consultants&#10;3) Operators who want practical AI"></textarea>
+          </div>
+          <div class="pz-world-tab-content" data-context-panel="writingRules" style="display:none;">
+            <textarea id="pz-context-writingRules" rows="14" placeholder="Your writing rules — grammar, format, length, punctuation, sign-offs.&#10;&#10;e.g. Lowercase everywhere except proper nouns. No em-dashes. No periods at end of casual messages. Sign off emails as &#39;— Brett’."></textarea>
+          </div>
+          <div class="pz-world-tab-content" data-context-panel="business" style="display:none;">
+            <textarea id="pz-context-business" rows="14" placeholder="What does your business do? Products, services, audience, market, positioning.&#10;&#10;e.g. Total Success AI — AI consulting, implementation, and training for SMBs. Founded 2025 by Brett Lechtenberg + Manny Torres. Core offers: assessments, implementation sprints, AI Academy training."></textarea>
+          </div>
+          <div class="pz-world-tab-content" data-context-panel="references" style="display:none;">
+            <textarea id="pz-context-references" rows="14" placeholder="Key URLs, docs, asset locations, accounts — things to refer to.&#10;&#10;e.g.&#10;Website: totalsuccessai.com&#10;Calendar: speaktobrett.com&#10;Playbook: ~/Documents/AI Chief of Staff/playbook.md&#10;GHL workspace: app.gohighlevel.com/..."></textarea>
+          </div>
+          <div class="pz-world-tab-content" data-context-panel="customInstructions" style="display:none;">
+            <textarea id="pz-context-customInstructions" rows="14" placeholder="Always-do / never-do rules, response templates, safety guardrails.&#10;&#10;e.g.&#10;• Never quote prices without confirming with me first&#10;• Default response length: 3 sentences unless I ask for more&#10;• When drafting emails, always end with a single clear CTA&#10;• If unsure, ask me before sending anything external"></textarea>
+          </div>
+          <div class="pz-action-bar"><span class="info">Reboot me to apply changes!</span><div class="buttons"><button onclick="playNormalClick(); pzSaveContext()">Save</button></div></div>
         </div>
 
         <!-- System Prompt Tab -->
