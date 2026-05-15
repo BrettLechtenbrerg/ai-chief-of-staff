@@ -1,7 +1,7 @@
 {
   "name": "ai-chief-of-staff",
-  "version": "1.0.0",
-  "description": "AI Chief of Staff — a private desktop AI agent by Total Success AI. Persistent memory, scheduled routines, browser automation, and 40+ skill integrations, powered by the Claude Agent SDK.",
+  "version": "1.0.0-beta.1",
+  "description": "AI Chief of Staff \u2014 a private desktop AI agent by Total Success AI. Persistent memory, scheduled routines, browser automation, and 40+ skill integrations, powered by the Claude Agent SDK.",
   "type": "module",
   "main": "dist/main/index.js",
   "scripts": {
@@ -139,7 +139,7 @@
       }
     ]
   },
-  "author": "Total Success AI — Brett Lechtenberg",
+  "author": "Total Success AI \u2014 Brett Lechtenberg",
   "license": "MIT",
   "overrides": {
     "better-sqlite3": "^12.6.2"
