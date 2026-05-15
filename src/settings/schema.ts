@@ -335,12 +335,12 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
   // Appearance settings
   {
     key: 'ui.skin',
-    defaultValue: 'dracula',
+    defaultValue: 'tsai',
     encrypted: false,
     category: 'appearance',
     label: 'UI Skin',
     description:
-      'Visual theme for the app (dracula, cream, light, dawn, midnight, nord, mocha, rosepine, gruvbox, solarized, onedark)',
+      'Visual theme for the app (tsai, dracula, cream, light, dawn, midnight, nord, mocha, rosepine, gruvbox, solarized, onedark)',
     type: 'string',
   },
 

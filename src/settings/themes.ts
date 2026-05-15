@@ -32,7 +32,41 @@ export interface ThemeDefinition {
 }
 
 export const THEMES: Record<string, ThemeDefinition> = {
-  // Dracula — the default skin. Null palette — ui/shared/variables.css
+  // Total Success AI — brand-matched navy + silver dark theme.
+  // This is the default skin shipped to AI Chief of Staff clients
+  // (see schema.ts defaultValue: 'tsai').
+  //
+  // Brand reference (from TSAI-Site):
+  //   Navy:        #0A1F44  (primary)
+  //   Navy Light:  #1E3A8A  (accent / interactive)
+  //   Silver:      #C0C0C0  (metallic accents)
+  //   Silver Light:#E8E8E8  (highlight)
+  //   White:       #FFFFFF
+  tsai: {
+    id: 'tsai',
+    name: 'Total Success AI',
+    palette: {
+      'bg-primary': '#0A1F44' /* TSAI Navy — main chat surface */,
+      'bg-secondary': '#0F2A5C' /* slightly lighter navy — sidebar / chrome */,
+      'bg-tertiary': '#1E3A8A' /* TSAI Navy Light — hover / raised */,
+      border: 'rgba(192, 192, 192, 0.28)' /* silver, faded */,
+      'text-primary': '#FFFFFF',
+      'text-secondary': '#E8E8E8' /* silver light */,
+      'text-muted': '#9AA8C7' /* desaturated silver for de-emphasized text */,
+      accent: '#C0C0C0' /* silver — replaces purple */,
+      'accent-secondary': '#E8E8E8',
+      'accent-hover': '#FFFFFF',
+      error: '#FF7A7A' /* softened red, readable on navy */,
+      success: '#7AE3A3' /* mint, navy-friendly */,
+      warning: '#FFD27A' /* warm amber */,
+      orange: '#FFA86B',
+      'user-bubble': '#1E3A8A' /* TSAI Navy Light — distinct from chrome */,
+      'user-bubble-solid': '#1E3A8A',
+      'assistant-bubble': '#0F2A5C',
+    },
+  },
+
+  // Dracula — the upstream baseline. Null palette — ui/shared/variables.css
   // IS the dracula baseline, so picking this skin clears all overrides.
   dracula: {
     id: 'dracula',
