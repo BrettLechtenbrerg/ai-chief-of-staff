@@ -177,9 +177,89 @@ async function _pzLoadContext() {
       const input = document.getElementById(`pz-context-${field}`);
       if (input) {
         input.value = (await window.pocketAgent.settings.get(`personalize.${field}`)) || '';
+        _pzWireContextDropTarget(input);
       }
     }
   } catch (e) { console.error('[Personalize] Error loading context:', e); }
+}
+
+// Soft cap per field. Plenty of room for a typical brand book (5-20 pages)
+// while keeping the per-turn system-prompt cost reasonable. Set to 30k.
+const _PZ_CONTEXT_SOFT_CAP = 30000;
+
+function _pzWireContextDropTarget(textarea) {
+  if (!textarea || textarea.dataset.pzDropWired === 'true') return;
+  textarea.dataset.pzDropWired = 'true';
+
+  // Visual feedback — toggle a class while a draggable item is over the textarea.
+  textarea.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    textarea.classList.add('pz-drop-active');
+  });
+  textarea.addEventListener('dragover', (e) => {
+    // Required to let drop fire on the element.
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  textarea.addEventListener('dragleave', (e) => {
+    // Only clear when the cursor truly leaves the element (not just a child).
+    if (e.target === textarea) textarea.classList.remove('pz-drop-active');
+  });
+  textarea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    textarea.classList.remove('pz-drop-active');
+    const files = Array.from(e.dataTransfer.files || []);
+    if (!files.length) return;
+    // Only one file at a time keeps the UX predictable. If multiple are
+    // dropped, process the first and toast the rest as skipped.
+    const [first, ...rest] = files;
+    _pzExtractAndAppend(textarea, first);
+    if (rest.length) {
+      _pzShowToast(`Inserted 1 file, ignored ${rest.length} more — drop one at a time`, 'success');
+    }
+  });
+}
+
+async function _pzExtractAndAppend(textarea, file) {
+  // Electron exposes the host filesystem path on the File object.
+  const filePath = file && file.path;
+  if (!filePath) {
+    _pzShowToast('Could not read dropped file', 'error');
+    return;
+  }
+
+  _pzShowToast(`Extracting ${file.name}…`, 'success');
+  try {
+    const result = await window.pocketAgent.context.extractText(filePath);
+    if (!result || !result.success) {
+      _pzShowToast(result?.error || 'Extraction failed', 'error');
+      return;
+    }
+
+    const existing = textarea.value.trim();
+    const header = `\n\n--- From ${result.filename || 'dropped file'} ---\n\n`;
+    const combined = existing ? existing + header + result.text : result.text;
+
+    if (combined.length > _PZ_CONTEXT_SOFT_CAP) {
+      const proceed = window.confirm(
+        `This will make the field ${combined.length.toLocaleString()} characters ` +
+        `(soft cap ${_PZ_CONTEXT_SOFT_CAP.toLocaleString()}). Long context costs more tokens ` +
+        `on every chat turn. Insert anyway?`
+      );
+      if (!proceed) return;
+    }
+
+    textarea.value = combined;
+    // Trigger any input listeners other code might attach later.
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    _pzShowToast(
+      `Inserted ${result.charCount.toLocaleString()} chars from ${result.filename} — don\'t forget to Save`,
+      'success'
+    );
+  } catch (err) {
+    console.error('[Personalize] drop extraction failed:', err);
+    _pzShowToast('Could not extract text from that file', 'error');
+  }
 }
 
 async function pzSaveContext() {

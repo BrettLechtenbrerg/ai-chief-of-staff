@@ -130,6 +130,13 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     getAgentModes: () => ipcRenderer.invoke('customize:getAgentModes'),
   },
 
+  // ─── Context tab file extraction (drag-drop on Personalize → Context) ──
+  // Renderer hands the absolute path; main process reads it and returns
+  // plain text. Supports .txt / .md / .docx / .pdf, 10 MB hard cap.
+  context: {
+    extractText: (filePath: string) => ipcRenderer.invoke('context:extractText', filePath),
+  },
+
   // ─── Location & Timezone ─────────────────────────────────────────────
   location: {
     lookup: (query: string) => ipcRenderer.invoke('location:lookup', query),
