@@ -66,12 +66,12 @@ const WIN = {
 /**
  * Get the agent's isolated workspace directory.
  * This is separate from the app's project root to prevent conflicts.
- * Located in ~/Documents/Pocket-agent/  (falls back to userData if Documents is unavailable,
+ * Located in ~/Documents/AI Chief of Staff/ (falls back to userData if Documents is unavailable,
  * e.g. iCloud Drive syncing or broken symlink on macOS).
  */
 function getAgentWorkspace(): string {
   const documentsPath = app.getPath('documents');
-  const workspace = path.join(documentsPath, 'Pocket-agent');
+  const workspace = path.join(documentsPath, 'AI Chief of Staff');
 
   // Verify the Documents path is actually reachable on disk.
   // On macOS with iCloud Drive, ~/Documents can be a symlink to
@@ -82,7 +82,7 @@ function getAgentWorkspace(): string {
     return workspace;
   } catch {
     // Documents path is unreachable — fall back to Electron's userData directory
-    // (~/Library/Application Support/pocket-agent/ on macOS)
+    // (~/Library/Application Support/AI Chief of Staff/ on macOS)
     const fallback = path.join(app.getPath('userData'), 'workspace');
     console.warn(
       `[Main] Documents path unreachable (${documentsPath}), using fallback: ${fallback}`
@@ -315,7 +315,7 @@ function ensureAgentWorkspace(): string {
 function openChatWindow(): void {
   const win = createWindow({
     id: WIN.CHAT,
-    title: `Pocket Agent v${app.getVersion()}`,
+    title: `AI Chief of Staff v${app.getVersion()}`,
     htmlFile: 'chat.html',
     width: 1020,
     height: 720,
@@ -328,7 +328,7 @@ function openChatWindow(): void {
 function openCronWindow(): void {
   createWindow({
     id: WIN.CRON,
-    title: 'My Routines - Pocket Agent',
+    title: 'My Routines - AI Chief of Staff',
     htmlFile: 'cron.html',
     width: 700,
     height: 500,
@@ -351,7 +351,7 @@ function openSettingsWindow(tab?: string): void {
 function openCustomizeWindow(): void {
   createWindow({
     id: WIN.CUSTOMIZE,
-    title: 'Make It Yours - Pocket Agent',
+    title: 'Make It Yours - AI Chief of Staff',
     htmlFile: 'customize.html',
     width: 800,
     height: 650,
@@ -362,7 +362,7 @@ function openCustomizeWindow(): void {
 function openFactsWindow(): void {
   createWindow({
     id: WIN.FACTS,
-    title: 'My Brain - Pocket Agent',
+    title: 'My Brain - AI Chief of Staff',
     htmlFile: 'facts.html',
     width: 700,
     height: 550,
@@ -373,7 +373,7 @@ function openFactsWindow(): void {
 function openDailyLogsWindow(): void {
   createWindow({
     id: WIN.DAILY_LOGS,
-    title: 'Daily Logs - Pocket Agent',
+    title: 'Daily Logs - AI Chief of Staff',
     htmlFile: 'daily-logs.html',
     width: 700,
     height: 550,
@@ -384,7 +384,7 @@ function openDailyLogsWindow(): void {
 function openSoulWindow(): void {
   createWindow({
     id: WIN.SOUL,
-    title: 'My Approach - Pocket Agent',
+    title: 'My Approach - AI Chief of Staff',
     htmlFile: 'soul.html',
     width: 700,
     height: 550,
@@ -440,7 +440,7 @@ function setupIPC(): void {
 
 async function initializeAgent(): Promise<void> {
   const userDataPath = app.getPath('userData');
-  const dbPath = path.join(userDataPath, 'pocket-agent.db');
+  const dbPath = path.join(userDataPath, 'ai-chief-of-staff.db');
 
   // Check if we have required API keys
   if (!SettingsManager.hasRequiredKeys()) {
@@ -609,7 +609,7 @@ async function initializeAgent(): Promise<void> {
     }
   }
 
-  console.log('[Main] Pocket Agent initialized');
+  console.log('[Main] AI Chief of Staff initialized');
   updateTrayMenu();
 }
 
@@ -691,7 +691,7 @@ app.whenReady().then(async () => {
     }
 
     const userDataPath = app.getPath('userData');
-    const dbPath = path.join(userDataPath, 'pocket-agent.db');
+    const dbPath = path.join(userDataPath, 'ai-chief-of-staff.db');
     console.log('[Main] DB path:', dbPath);
 
     // Initialize settings first (uses same DB)

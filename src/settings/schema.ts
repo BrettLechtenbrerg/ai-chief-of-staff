@@ -377,7 +377,7 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
   {
     key: 'personalize.description',
     defaultValue:
-      'You are a personal AI assistant who lives inside Pocket Agent. You help with whatever the user needs, remember everything, and keep things fun along the way.',
+      'You are a personal AI assistant who lives inside AI Chief of Staff. You help with whatever the user needs, remember everything, and keep things fun along the way.',
     encrypted: false,
     category: 'personalize',
     label: 'Agent Description',

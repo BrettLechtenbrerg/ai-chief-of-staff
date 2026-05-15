@@ -102,7 +102,7 @@ export async function handleSetProjectTool(input: unknown): Promise<string> {
 
   const db = getDb();
   if (!db) {
-    return JSON.stringify({ error: 'Database not found. Please start Pocket Agent first.' });
+    return JSON.stringify({ error: 'Database not found. Please start AI Chief of Staff first.' });
   }
 
   try {

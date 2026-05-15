@@ -61,7 +61,7 @@
   font-display: swap;
 }
 
-/* ----- Aliases for legacy font names used inline in pocket-agent HTML.
+/* ----- Aliases for legacy font names used inline in the app's HTML.
    'Cal Sans' (previously the heading face) and 'Roboto' both remap to
    the local Helveticaneue body face so the entire UI — including any
    per-page `font-family: 'Cal Sans'` rules — reads in a single

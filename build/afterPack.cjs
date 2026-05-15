@@ -17,7 +17,7 @@ exports.default = async function(context) {
   let resourcesPath, appPath;
 
   if (platform === 'darwin') {
-    resourcesPath = path.join(appOutDir, 'Pocket Agent.app', 'Contents', 'Resources');
+    resourcesPath = path.join(appOutDir, 'AI Chief of Staff.app', 'Contents', 'Resources');
     appPath = path.join(resourcesPath, 'app');
   } else {
     // Windows / Linux: flat structure

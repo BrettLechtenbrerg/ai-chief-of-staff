@@ -604,7 +604,7 @@ describe('CdpTier', () => {
     });
 
     it('should accept an injected downloadPath via options object', () => {
-      const injected = '/tmp/pocket-agent-test-downloads';
+      const injected = '/tmp/ai-chief-of-staff-test-downloads';
       const tier = new CdpTier({ downloadPath: injected });
       expect(tier.getDownloadPath()).toBe(injected);
     });

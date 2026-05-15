@@ -10,7 +10,7 @@ import fs from 'fs';
 import os from 'os';
 
 // Test database path
-const testDbPath = path.join(os.tmpdir(), 'pocket-agent-session-test.db');
+const testDbPath = path.join(os.tmpdir(), 'ai-chief-of-staff-session-test.db');
 
 // Clean up any existing test db
 if (fs.existsSync(testDbPath)) {

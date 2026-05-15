@@ -17,7 +17,7 @@
     <!-- Keychain access (for safeStorage) -->
     <key>com.apple.security.keychain-access-groups</key>
     <array>
-        <string>$(AppIdentifierPrefix)com.unstablemind.pocket-agent</string>
+        <string>$(AppIdentifierPrefix)com.totalsuccessai.ai-chief-of-staff</string>
     </array>
 
     <!-- File access -->

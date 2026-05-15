@@ -1,5 +1,5 @@
 /**
- * macOS-specific tools for Pocket Agent
+ * macOS-specific tools for AI Chief of Staff
  *
  * Provides:
  * - Native notifications via Electron

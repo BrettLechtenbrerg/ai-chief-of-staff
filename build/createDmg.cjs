@@ -8,7 +8,7 @@ const path = require('path');
  */
 function createDmg(appPath, outputPath, options = {}) {
   const {
-    volumeName = 'Pocket Agent',
+    volumeName = 'AI Chief of Staff',
     background = null,
     iconSize = 80,
     windowWidth = 540,

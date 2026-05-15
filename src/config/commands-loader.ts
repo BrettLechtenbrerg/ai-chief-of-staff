@@ -1,7 +1,7 @@
 /**
  * Shared command/workflow loader
  *
- * Reads workflow command files from ~/Documents/Pocket-agent/.claude/commands/
+ * Reads workflow command files from ~/Documents/AI Chief of Staff/.claude/commands/
  * Used by both the IPC handler (desktop) and Telegram bot.
  */
 
@@ -17,7 +17,7 @@ export interface WorkflowCommand {
 }
 
 function getCommandsDir(): string {
-  return path.join(os.homedir(), 'Documents', 'Pocket-agent', '.claude', 'commands');
+  return path.join(os.homedir(), 'Documents', 'AI Chief of Staff', '.claude', 'commands');
 }
 
 /**

@@ -153,7 +153,7 @@ async function handleCreateJob(
   try {
     const dbPath = getDbPath();
     if (!fs.existsSync(dbPath)) {
-      return JSON.stringify({ error: 'Database not found. Start Pocket Agent first.' });
+      return JSON.stringify({ error: 'Database not found. Start AI Chief of Staff first.' });
     }
 
     const db = new Database(dbPath);

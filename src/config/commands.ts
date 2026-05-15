@@ -1,7 +1,7 @@
 /**
  * Default workflow commands
  *
- * These are populated into ~/Documents/Pocket-agent/commands/ on first install and updates.
+ * These are populated into ~/Documents/AI Chief of Staff/commands/ on first install and updates.
  * Users can also create their own commands in the same directory.
  */
 
@@ -15,7 +15,7 @@ export const DEFAULT_COMMANDS: DefaultCommand[] = [
     filename: 'create-workflow.md',
     content: `---
 name: create-workflow
-description: Create a new workflow command for Pocket Agent
+description: Create a new workflow command for AI Chief of Staff
 ---
 
 # Create a New Workflow
@@ -24,7 +24,7 @@ The user wants to create a new workflow command. Ask them what the workflow shou
 
 ## Workflow File Format
 
-Each workflow is a single Markdown file placed in \`~/Documents/Pocket-agent/.claude/commands/\`.
+Each workflow is a single Markdown file placed in \`~/Documents/AI Chief of Staff/.claude/commands/\`.
 
 The filename becomes the command identifier. Use lowercase kebab-case (e.g., \`daily-report.md\`, \`code-review.md\`).
 
@@ -92,7 +92,7 @@ Review the current staged changes and provide feedback.
 2. Choose a clear, descriptive kebab-case filename
 3. Write the frontmatter with a short name and description
 4. Write clear step-by-step instructions in the body
-5. Save the file to \`~/Documents/Pocket-agent/.claude/commands/<name>.md\`
+5. Save the file to \`~/Documents/AI Chief of Staff/.claude/commands/<name>.md\`
 6. Tell the user to reopen the workflows panel to see it
 `,
   },

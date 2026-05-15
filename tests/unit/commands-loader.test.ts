@@ -34,7 +34,7 @@ import { loadWorkflowCommands, findWorkflowCommand } from '../../src/config/comm
 
 describe('Commands Loader', () => {
   const mockHomedir = '/mock/home';
-  const expectedDir = path.join(mockHomedir, 'Documents', 'Pocket-agent', '.claude', 'commands');
+  const expectedDir = path.join(mockHomedir, 'Documents', 'AI Chief of Staff', '.claude', 'commands');
 
   beforeEach(() => {
     vi.resetAllMocks();

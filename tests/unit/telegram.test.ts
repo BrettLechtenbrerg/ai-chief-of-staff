@@ -314,7 +314,7 @@ describe('TelegramBot', () => {
 
         expect(ctx.reply).toHaveBeenCalled();
         const replyCall = ctx.reply.mock.calls[0][0] as string;
-        expect(replyCall).toContain('Welcome to Pocket Agent');
+        expect(replyCall).toContain('Welcome to AI Chief of Staff');
         expect(replyCall).toContain('123'); // User ID
         expect(replyCall).toContain('/help');
         expect(replyCall).toContain('/status');

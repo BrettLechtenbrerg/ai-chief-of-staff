@@ -96,7 +96,7 @@ export async function sendReminderToAllChannels(
 ): Promise<void> {
   // Always send to desktop (notification + chat to the correct session)
   if (channels.onNotification) {
-    channels.onNotification('Pocket Agent', message);
+    channels.onNotification('AI Chief of Staff', message);
   }
   if (channels.onChatMessage) {
     channels.onChatMessage(`${type}_reminder`, message, message, sessionId);

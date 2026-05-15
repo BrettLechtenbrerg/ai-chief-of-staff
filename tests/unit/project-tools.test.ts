@@ -93,7 +93,7 @@ describe('Project Tools', () => {
     it('returns error when path does not exist', async () => {
       mockExistsSync.mockImplementation((p: unknown) => {
         // DB path exists, but the project path does not
-        if (typeof p === 'string' && p.includes('pocket-agent.db')) return true;
+        if (typeof p === 'string' && p.includes('ai-chief-of-staff.db')) return true;
         if (typeof p === 'string' && p === '/nonexistent/project') return false;
         return true;
       });
@@ -127,7 +127,7 @@ describe('Project Tools', () => {
     it('returns error when DB is not found', async () => {
       mockExistsSync.mockImplementation((p: unknown) => {
         // DB does not exist, but the project path does
-        if (typeof p === 'string' && p.includes('pocket-agent.db')) return false;
+        if (typeof p === 'string' && p.includes('ai-chief-of-staff.db')) return false;
         return true;
       });
 

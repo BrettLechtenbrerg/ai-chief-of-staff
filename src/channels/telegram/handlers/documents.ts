@@ -22,7 +22,7 @@ export interface DocumentHandlerDeps {
  * Get the files directory path (creates if doesn't exist)
  */
 function getFilesDirectory(): string {
-  const filesDir = path.join(os.homedir(), 'Documents', 'Pocket-agent', 'files');
+  const filesDir = path.join(os.homedir(), 'Documents', 'AI Chief of Staff', 'files');
 
   if (!fs.existsSync(filesDir)) {
     fs.mkdirSync(filesDir, { recursive: true });

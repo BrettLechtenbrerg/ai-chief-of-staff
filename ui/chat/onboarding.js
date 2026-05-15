@@ -48,17 +48,17 @@ async function checkAndShowOnboarding() {
 function getPlatformText(platform) {
   if (platform === 'darwin') {
     return {
-      storageInfo: "Pocket Agent uses your Mac's Keychain to securely store API keys. You may be prompted for your Mac password.",
+      storageInfo: "AI Chief of Staff uses your Mac's Keychain to securely store API keys. You may be prompted for your Mac password.",
       storageFallback: 'Could not access Keychain. Keys will be stored unencrypted.',
     };
   } else if (platform === 'win32') {
     return {
-      storageInfo: 'Pocket Agent uses Windows Credential Store to securely store API keys.',
+      storageInfo: 'AI Chief of Staff uses Windows Credential Store to securely store API keys.',
       storageFallback: 'Could not access Credential Store. Keys will be stored unencrypted.',
     };
   }
   return {
-    storageInfo: 'Pocket Agent uses your system keyring to securely store API keys. You may be prompted for your keyring password.',
+    storageInfo: 'AI Chief of Staff uses your system keyring to securely store API keys. You may be prompted for your keyring password.',
     storageFallback: 'Could not access system keyring. Keys will be stored unencrypted.',
   };
 }

@@ -72,7 +72,7 @@ exports.default = async function(context) {
 
     let appPath = null;
     for (const appDir of possibleAppDirs) {
-      const candidatePath = path.join(appDir, 'Pocket Agent.app');
+      const candidatePath = path.join(appDir, 'AI Chief of Staff.app');
       if (fs.existsSync(candidatePath)) {
         appPath = candidatePath;
         break;
@@ -91,7 +91,7 @@ exports.default = async function(context) {
 
     try {
       createDmg(appPath, artifactPath, {
-        volumeName: 'Pocket Agent',
+        volumeName: 'AI Chief of Staff',
         background: hasBackground ? backgroundPath : null,
         iconSize: 80,
         windowWidth: 540,

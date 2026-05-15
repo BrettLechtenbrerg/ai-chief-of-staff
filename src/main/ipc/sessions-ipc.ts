@@ -15,7 +15,7 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
  */
 function getAgentWorkspace(): string {
   const documentsPath = app.getPath('documents');
-  return path.join(documentsPath, 'Pocket-agent');
+  return path.join(documentsPath, 'AI Chief of Staff');
 }
 
 /**

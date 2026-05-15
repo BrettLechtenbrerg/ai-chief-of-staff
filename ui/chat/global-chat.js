@@ -1207,7 +1207,7 @@ function updateChatCounts(online, inChat) {
   const el = document.getElementById('chat-online-stats');
   if (el) el.textContent = `${online} online · ${inChat} in chat`;
   if (globalChatMode) {
-    const prefix = _appVersion ? `Pocket Agent v${_appVersion}` : 'Pocket Agent';
+    const prefix = _appVersion ? `AI Chief of Staff v${_appVersion}` : 'AI Chief of Staff';
     document.title = `${prefix} — ${online} online · ${inChat} in chat`;
   }
 }
@@ -1276,7 +1276,7 @@ async function toggleGlobalChat() {
     // Update title bar for global chat
     const chatStatsEl = document.getElementById('chat-online-stats');
     if (chatStatsEl && chatStatsEl.textContent) {
-      const prefix = _appVersion ? `Pocket Agent v${_appVersion}` : 'Pocket Agent';
+      const prefix = _appVersion ? `AI Chief of Staff v${_appVersion}` : 'AI Chief of Staff';
       document.title = `${prefix} — ${chatStatsEl.textContent}`;
     }
 

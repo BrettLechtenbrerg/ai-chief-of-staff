@@ -110,7 +110,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Show app version in titlebar
   try {
     const version = await window.pocketAgent.app.getVersion();
-    document.title = `Pocket Agent v${version}`;
+    document.title = `AI Chief of Staff v${version}`;
   } catch (err) {
     console.error('Failed to load app version:', err);
   }

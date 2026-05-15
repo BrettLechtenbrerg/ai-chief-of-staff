@@ -371,7 +371,7 @@ export async function handleBrowserTool(input: unknown): Promise<string> {
     const path = await import('path');
     const os = await import('os');
     const timestamp = Date.now();
-    const screenshotsDir = path.join(os.homedir(), 'Documents', 'Pocket-agent', 'screenshots');
+    const screenshotsDir = path.join(os.homedir(), 'Documents', 'AI Chief of Staff', 'screenshots');
 
     // Ensure screenshots directory exists
     if (!fs.existsSync(screenshotsDir)) {

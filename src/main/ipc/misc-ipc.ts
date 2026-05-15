@@ -66,8 +66,8 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   ipcMain.handle('app:openPath', async (_, filePath: string) => {
-    // Security: only allow opening paths within the Pocket-agent documents directory
-    const allowedDir = path.join(app.getPath('documents'), 'Pocket-agent');
+    // Security: only allow opening paths within the AI Chief of Staff documents directory
+    const allowedDir = path.join(app.getPath('documents'), 'AI Chief of Staff');
     const resolvedPath = path.resolve(filePath);
     if (!resolvedPath.startsWith(allowedDir)) {
       console.warn('[Main] Blocked openPath outside allowed directory:', filePath);
@@ -79,7 +79,7 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   // Open an image in the default viewer — handles both local paths and URLs
   ipcMain.handle('app:openImage', async (_, src: string) => {
     try {
-      const mediaDir = path.join(app.getPath('documents'), 'Pocket-agent', 'media');
+      const mediaDir = path.join(app.getPath('documents'), 'AI Chief of Staff', 'media');
       if (src.startsWith('http://') || src.startsWith('https://')) {
         // Remote URL — download to media dir first
         if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
