@@ -38,19 +38,19 @@ describe('getDbCandidates', () => {
 
   it('macOS path uses HOME and Library/Application Support', () => {
     const candidates = getDbCandidates();
-    expect(candidates[0]).toContain('Library/Application Support/pocket-agent/pocket-agent.db');
+    expect(candidates[0]).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
     expect(candidates[0]).toContain('/home/testuser');
   });
 
   it('Linux path uses HOME and .config', () => {
     const candidates = getDbCandidates();
-    expect(candidates[1]).toContain('.config/pocket-agent/pocket-agent.db');
+    expect(candidates[1]).toContain('.config/ai-chief-of-staff/ai-chief-of-staff.db');
     expect(candidates[1]).toContain('/home/testuser');
   });
 
   it('Windows path uses USERPROFILE and AppData/Roaming', () => {
     const candidates = getDbCandidates();
-    expect(candidates[2]).toContain('AppData/Roaming/pocket-agent/pocket-agent.db');
+    expect(candidates[2]).toContain('AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 });
 
@@ -76,16 +76,16 @@ describe('getDbPath', () => {
     );
 
     const result = getDbPath();
-    expect(result).toContain('Library/Application Support/pocket-agent/pocket-agent.db');
+    expect(result).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
   });
 
   it('skips macOS path and returns Linux path when only Linux path exists', () => {
     mockExistsSync.mockImplementation((p) =>
-      String(p).includes('.config/pocket-agent')
+      String(p).includes('.config/ai-chief-of-staff')
     );
 
     const result = getDbPath();
-    expect(result).toContain('.config/pocket-agent/pocket-agent.db');
+    expect(result).toContain('.config/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
   it('skips macOS and Linux paths and returns Windows path when only Windows path exists', () => {
@@ -94,7 +94,7 @@ describe('getDbPath', () => {
     );
 
     const result = getDbPath();
-    expect(result).toContain('AppData/Roaming/pocket-agent/pocket-agent.db');
+    expect(result).toContain('AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
   it('falls back to macOS path (candidates[0]) when no path exists', () => {
@@ -103,7 +103,7 @@ describe('getDbPath', () => {
     const result = getDbPath();
     const candidates = getDbCandidates();
     expect(result).toBe(candidates[0]);
-    expect(result).toContain('Library/Application Support/pocket-agent/pocket-agent.db');
+    expect(result).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
   });
 
   it('returns macOS path when multiple paths exist (first match wins)', () => {
@@ -111,6 +111,6 @@ describe('getDbPath', () => {
     mockExistsSync.mockReturnValue(true);
 
     const result = getDbPath();
-    expect(result).toContain('Library/Application Support/pocket-agent/pocket-agent.db');
+    expect(result).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
   });
 });
