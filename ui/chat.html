@@ -549,7 +549,7 @@
   <button id="fresh-start-btn" class="floating-fresh-btn" title="Fresh Start">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m15.167 1l.598 1.118c.404.755.606 1.133.472 1.295c-.133.162-.573.031-1.454-.23A9.8 9.8 0 0 0 12 2.78c-5.247 0-9.5 4.128-9.5 9.22a8.97 8.97 0 0 0 1.27 4.61M8.834 23l-.598-1.118c-.404-.756-.606-1.134-.472-1.295c.133-.162.573-.032 1.454.23c.88.261 1.815.402 2.783.402c5.247 0 9.5-4.128 9.5-9.22a8.97 8.97 0 0 0-1.27-4.609"/></svg>
   </button>
-  <button id="chat-toggle-btn" class="floating-toggle-btn" title="Global Chat">
+  <button id="chat-toggle-btn" class="floating-toggle-btn acos-hidden" title="Global Chat" aria-hidden="true">
     <svg class="toggle-chat-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7.5 8.5h9m-9 4H13m-11-2c0-.77.013-1.523.04-2.25c.083-2.373.125-3.56 1.09-4.533c.965-.972 2.186-1.024 4.626-1.129A100 100 0 0 1 12 2.5c1.48 0 2.905.03 4.244.088c2.44.105 3.66.157 4.626 1.13c.965.972 1.007 2.159 1.09 4.532a64 64 0 0 1 0 4.5c-.083 2.373-.125 3.56-1.09 4.533c-.965.972-2.186 1.024-4.626 1.129q-1.102.047-2.275.07c-.74.014-1.111.02-1.437.145s-.6.358-1.148.828l-2.179 1.87A.73.73 0 0 1 8 20.77v-2.348l-.244-.01c-2.44-.105-3.66-.157-4.626-1.13c-.965-.972-1.007-2.159-1.09-4.532A64 64 0 0 1 2 10.5"/></svg>
     <svg class="toggle-agent-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M16.998 7.127Q17.48 7 18 7a4 4 0 1 1-1.027 7.867m.025-7.74L17 7a4 4 0 0 0-7.91-.85m7.908.977A4 4 0 0 1 16.465 9m.508 5.867q.027-.18.027-.367a2.5 2.5 0 0 0-2-2.45m1.973 2.817A2.5 2.5 0 0 1 14.5 17H14a4 4 0 0 0-4 4M9.09 6.15a4 4 0 0 0-4.932 4.97M9.09 6.15A4 4 0 0 1 11.465 8m-7.306 3.12A3.001 3.001 0 0 0 5 17a3 3 0 0 0 2.83-2m-3.671-3.88q.136.467.376.88"/><path d="M11.836 11.744c-.51.491-1.383.576-2.129.157c-.746-.42-1.127-1.21-.972-1.901"/></g></svg>
     <span id="chat-toggle-badge" class="chat-unread-badge hidden">0</span>
@@ -573,7 +573,7 @@
         </div>
         <div class="settings-nav-item" data-section="browser">Browser
         </div>
-        <div class="settings-nav-item" data-section="chat">Chat
+        <div class="settings-nav-item acos-hidden" data-section="chat" aria-hidden="true">Chat
         </div>
         <div class="settings-nav-item" data-section="skins">Skins
         </div>
@@ -735,7 +735,10 @@
         </section>
 
         <!-- Chat Section -->
-        <section id="chat" class="settings-section">
+        <!-- ACOS: Global Chat hidden — connects to upstream's shared chat server.
+             To restore, remove the acos-hidden classes from #chat-toggle-btn,
+             the data-section="chat" nav item, and this section. -->
+        <section id="chat" class="settings-section acos-hidden" aria-hidden="true">
           <h2 class="section-title">Global Chat</h2>
           <p class="section-desc">Configure your global chat identity.</p>
           <div class="settings-grid">

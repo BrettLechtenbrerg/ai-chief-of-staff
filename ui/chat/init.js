@@ -40,25 +40,34 @@ async function initializeChat() {
   // Initialize notification sound
   initNotificationSound();
 
-  // Connect to global chat server (stay online while app is open)
-  await getOrCreateChatUsername();
-  connectChatWs();
+  // ACOS: Global Chat is hidden in this build. The UI surfaces are gated
+  // with the .acos-hidden class (see ui/shared/base.css). We also skip the
+  // websocket connect and username registration so no data is sent to
+  // upstream's shared chat server. To restore the feature, delete this
+  // ACOS_GLOBAL_CHAT_ENABLED block and uncomment the original below.
+  const ACOS_GLOBAL_CHAT_ENABLED = false;
 
-  // Listen for chat username changes from settings window
-  window.pocketAgent.chat.onUsernameChanged((newUsername) => {
-    console.log('[Chat] Username changed via settings:', newUsername);
-    globalChatUsername = newUsername;
-    // Clear any pending reconnect timer and reconnect with new username
-    clearTimeout(chatWsReconnectTimer);
-    if (chatWs) {
-      chatWs.onclose = null; // Prevent auto-reconnect with old handler
-      chatWs.close();
-      chatWs = null;
-    }
+  if (ACOS_GLOBAL_CHAT_ENABLED) {
+    // Connect to global chat server (stay online while app is open)
+    await getOrCreateChatUsername();
     connectChatWs();
-    // Update header badge if in chat mode
-    if (globalChatMode) updateHeaderTierBadge();
-  });
+
+    // Listen for chat username changes from settings window
+    window.pocketAgent.chat.onUsernameChanged((newUsername) => {
+      console.log('[Chat] Username changed via settings:', newUsername);
+      globalChatUsername = newUsername;
+      // Clear any pending reconnect timer and reconnect with new username
+      clearTimeout(chatWsReconnectTimer);
+      if (chatWs) {
+        chatWs.onclose = null; // Prevent auto-reconnect with old handler
+        chatWs.close();
+        chatWs = null;
+      }
+      connectChatWs();
+      // Update header badge if in chat mode
+      if (globalChatMode) updateHeaderTierBadge();
+    });
+  }
 
   // Listen for cron test run start (insert user message bubble before execution)
   window.pocketAgent.events.onCronTesting((data) => {

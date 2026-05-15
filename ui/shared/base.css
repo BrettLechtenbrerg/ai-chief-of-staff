@@ -141,3 +141,11 @@ td {
   background-color: color-mix(in srgb, var(--bg-primary) 35%, transparent);
   border-color: var(--text-secondary);
 }
+
+/* AI Chief of Staff: utility to hide upstream features we have chosen not to
+   expose (e.g. global chat that routes through upstream's shared server).
+   Apply this class instead of deleting markup so the feature can be
+   re-enabled by removing the class. */
+.acos-hidden {
+  display: none !important;
+}
