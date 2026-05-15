@@ -197,12 +197,25 @@ function _rtnRenderJobs() {
 
   const jobs = _rtnAllJobs.filter(j => _rtnBucketJob(j) === _rtnActiveBucket);
 
+  // Per-tab action row — "Create Task" + "Or pick a recipe" — always shown,
+  // whether the tab is empty or already has tasks. Surfaces the path
+  // forward consistently in Daily / Weekly / Monthly.
+  const actionRow = `<div class="rtn-tab-actions">
+      <button class="btn-cinamon rtn-create-btn" onclick="playNormalClick(); openRoutineEditor()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="vertical-align: -2px; margin-right: 4px;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"/></svg>Create Task
+      </button>
+      <button onclick="playNormalClick(); showRecipesModal()">Or pick a recipe</button>
+    </div>`;
+
   if (jobs.length === 0) {
-    jobsList.innerHTML = `<div class="rtn-empty"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg><p>${_rtnEscapeHtml(_rtnEmptyMessageForBucket(_rtnActiveBucket))}</p></div>`;
+    jobsList.innerHTML = actionRow + `<div class="rtn-empty">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg>
+      <p>${_rtnEscapeHtml(_rtnEmptyMessageForBucket(_rtnActiveBucket))}</p>
+    </div>`;
     return;
   }
 
-  jobsList.innerHTML = jobs.map(job => {
+  jobsList.innerHTML = actionRow + jobs.map(job => {
       const sessionName = _rtnSessionsMap[job.session_id] || job.session_id || 'Default';
       const promptDisplay = job.prompt.startsWith('[Workflow: ')
         ? '⚡ ' + _rtnEscapeHtml(job.prompt.substring(11, job.prompt.indexOf(']')))
@@ -511,6 +524,13 @@ function openRoutineEditorFromRecipes() {
   // Closes the modal and opens the existing routine editor window so the
   // user can paste the recipe prompt they just copied.
   hideRecipesModal();
+  openRoutineEditor();
+}
+
+// Opens the cron / routine editor window. Used by:
+//   • the primary "Create Task" button in the Scheduled Tasks panel header
+//   • the "Open Task Editor" footer button in the Recipes modal
+function openRoutineEditor() {
   try {
     window.pocketAgent.app.openRoutines();
   } catch (err) {

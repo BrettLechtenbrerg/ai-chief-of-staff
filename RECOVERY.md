@@ -10,7 +10,7 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 >
 > **Working directory**: `/Users/brettlechtenberg/dev/ai-chief-of-staff`
 > **GitHub**: https://github.com/BrettLechtenbrerg/ai-chief-of-staff
-> **Latest release**: https://github.com/BrettLechtenbrerg/ai-chief-of-staff/releases/tag/v1.0.0-beta.2 (public, prerelease)
+> **Latest release**: https://github.com/BrettLechtenbrerg/ai-chief-of-staff/releases/tag/v1.0.0-beta.3 (public, prerelease)
 > **Landing page**: https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app (Vercel auto-deploys from BrettLechtenbrerg/TSAI-Site)
 > **Upstream**: https://github.com/KenKaiii/pocket-agent (MIT, fork point `v6.4.3` / commit `a534c63`)
 >
@@ -40,6 +40,7 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 
 | Tag | Date | Description |
 |-----|------|-------------|
+| `v1.0.0-beta.3` | May 15, 2026 | **Third beta release — “how do I make one?” fix.** Testers couldn't find how to create a task from scratch in the Scheduled Tasks panel — only Recipes was visible. Added a **`+ Create Task`** primary CTA to the panel header that opens the cron editor window directly. Added a persistent per-tab action row (**`Create Task`** + **`Or pick a recipe`**) at the top of every Daily/Weekly/Monthly tab, regardless of whether the tab already has tasks. All four buttons in the Scheduled Tasks panel chrome (Create Task, Or pick a recipe, Recipes, Back) now share the same silver cinamon-pill style with dark-navy text — visually uniform per tester preference. Mac DMGs + Windows installers + auto-updater YML published. Auto-updater on `v1.0.0-beta.2` installs will silently pull this build on next app launch. |
 | `v1.0.0-beta.2` | May 15, 2026 | **Second beta release — UX clarity.** Mac DMGs (arm64 + x64) + Windows NSIS installers (universal + per-arch) + mac/win zips + auto-updater YML, all published as a public prerelease. Landing page bumped to point at these URLs. Same feature set as v1.0.0-beta.1 plus everything in `v0.5-ux-clarity` (renamed tabs, directive CTAs, Help modal, Daily/Weekly/Monthly cadence tabs). Still unsigned — Apple Developer ID enrollment in progress under business partner. Auto-updater on v1.0.0-beta.1 installs will silently pull this build on next launch. |
 | `v0.5-ux-clarity` | May 15, 2026 | **First-round tester feedback pass.** Personalize tabs renamed (Context → **Knowledge Base**, Your World → **About You**). Sidebar `Routines` button rewritten as a directive CTA — **“Click Here To Schedule Tasks”** (panel header + cron window + recipes modal + help copy still read “Scheduled Tasks”). New **“What I Can Do”** help modal (7 collapsible sections + numbered “how to make a scheduled task” steps + Browse Recipes CTA) launched from a pill button in the empty-state — the pill copy is now the longer directive “Click here to see a sample of / what I can do for your life and business” with a hard line-break for readability. Scheduled Tasks list split into **Daily / Weekly / Monthly** cadence tabs with live count badges — bucketing derived from each job's cron string. TSAI-Site landing page updated in parallel: proper macOS Gatekeeper workaround (System Settings → Privacy & Security → Open Anyway) replaces the broken “right-click → Open” step, new amber callout block above the install guide, capability cards renamed to match in-app. Working tag — no new GH Release; `v1.0.0-beta.1` installers still serve from the landing page. |
 | `v1.0.0-beta.1` | May 15, 2026 | **First beta release.** Mac DMGs (arm64 + x64) + Windows NSIS installers (universal + per-arch) published as a public prerelease on GitHub. Landing page wired to these downloads. Includes everything below + Context tab (5 sub-tabs with drag-drop .txt/.md/.docx/.pdf extraction), Routine Recipes modal (8 templates), Recipes scroll fix. |
@@ -51,7 +52,7 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 To roll back:
 
 ```bash
-git checkout v1.0.0-beta.2   # detached HEAD — branch off if you intend to work
+git checkout v1.0.0-beta.3   # detached HEAD — branch off if you intend to work
 ```
 
 ---

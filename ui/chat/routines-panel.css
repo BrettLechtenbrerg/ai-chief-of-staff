@@ -40,7 +40,21 @@
   gap: 8px;
 }
 
-/* Header buttons inherit the cinamon-pill look from shared/buttons.css. */
+/* Every button in the Scheduled Tasks panel chrome (header row + the
+   per-tab action row) uses dark-navy text on the silver cinamon pill so
+   the whole toolbar reads as one consistent surface. Tester preference
+   over visual hierarchy: "make them all the same." */
+#routines-view .routines-header-actions button,
+#routines-view .rtn-tab-actions button,
+.rtn-create-btn {
+  color: var(--bg-primary); /* navy on silver — highest contrast on tsai */
+}
+
+#routines-view .routines-header-actions button:hover,
+#routines-view .rtn-tab-actions button:hover,
+.rtn-create-btn:hover {
+  color: var(--bg-primary);
+}
 
 /* Cadence tabs — Daily / Weekly / Monthly */
 #routines-view .rtn-tabs {
@@ -181,6 +195,19 @@
 #routines-view .rtn-job-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
 /* .rtn-icon-btn visuals come from shared/icon-buttons.css. */
+
+/* Per-tab action row — "Create Task" + "Or pick a recipe". Sits at the top
+   of every cadence tab (Daily / Weekly / Monthly), whether the tab is
+   empty or already has rows. Mirrors the buttons in the panel header so
+   testers always have an obvious next action regardless of which tab
+   they're looking at. */
+#routines-view .rtn-tab-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 16px 4px;
+}
 
 /* Empty state */
 #routines-view .rtn-empty {
