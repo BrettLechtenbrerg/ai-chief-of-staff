@@ -204,7 +204,7 @@ npm run typecheck && npm run lint
 ## Active workstreams
 
 ### Now
-- **First-round beta testing** — testers have v1.0.0-beta.4 via the landing page. Auto-updater on beta.1/.2/.3 installs silently pulls beta.4 on launch. **First signed + notarized release** — zero Gatekeeper friction for new Mac installs. Collect feedback before next release.
+- **First-round beta testing** — testers have v1.0.0-beta.5 via the landing page. Auto-updater on beta.1/.2/.3/.4 installs silently pulls beta.5 on launch. **First release with external MCP server support** — testers can wire up their own Gmail/Calendar/GHL/etc. by dropping a `mcp-servers.json` (Phase 3 settings UI is next so this doesn't require terminal). Collect feedback before next release.
 
 ### Likely next (after testers report back)
 - **SMS / GHL / Email reminder delivery channels** — the landing page promises these; the app currently delivers via desktop + Telegram. Likely Twilio for SMS, webhook for GHL, SMTP for email. New scheduler delivery channels in `src/scheduler/`.
