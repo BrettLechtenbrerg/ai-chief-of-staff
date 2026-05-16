@@ -126,6 +126,7 @@ exports.default = async function(context) {
   const realIdentityConfigured = (typeof configuredIdentity === 'string' && configuredIdentity.length > 0) || !!process.env.CSC_NAME || !!process.env.CSC_LINK;
   const keychainProfile = process.env.APPLE_KEYCHAIN_PROFILE || 'AC_PASSWORD';
 
+  let stapledAtLeastOneDmg = false;
   if (realIdentityConfigured) {
     for (const artifactPath of artifactPaths) {
       if (!artifactPath.endsWith('.dmg')) continue;
@@ -150,12 +151,48 @@ exports.default = async function(context) {
         execSync(`xcrun stapler staple "${artifactPath}"`, { stdio: 'inherit' });
         execSync(`xcrun stapler validate "${artifactPath}"`, { stdio: 'inherit' });
         console.log(`[afterAllArtifactBuild] DMG notarized + stapled: ${filename}`);
+        stapledAtLeastOneDmg = true;
       } catch (error) {
         console.error(`[afterAllArtifactBuild] DMG notarize/staple failed for ${filename}:`, error.message);
         // Don't throw — the inner .app is still notarized, so Gatekeeper
         // online verification still works. Only offline first-launch is
         // affected, and we want the build artifacts to remain available.
       }
+    }
+  }
+
+  // Stapling adds bytes to the DMG — electron-builder wrote latest-mac.yml
+  // BEFORE we stapled, so its DMG entries now have stale size + sha512.
+  // Auto-updater would reject the file on integrity check. Patch the YML
+  // in place with the actual stapled file's size + sha512.
+  if (stapledAtLeastOneDmg && process.platform === 'darwin') {
+    const yamlPath = path.join(outDir, 'latest-mac.yml');
+    if (fs.existsSync(yamlPath)) {
+      console.log('[afterAllArtifactBuild] Patching latest-mac.yml DMG entries with stapled size + sha512...');
+      const crypto = require('crypto');
+      let yaml = fs.readFileSync(yamlPath, 'utf8');
+      for (const artifactPath of artifactPaths) {
+        if (!artifactPath.endsWith('.dmg')) continue;
+        const filename = path.basename(artifactPath);
+        const buf = fs.readFileSync(artifactPath);
+        const size = buf.length;
+        const sha512 = crypto.createHash('sha512').update(buf).digest('base64');
+        // Replace the size + sha512 lines that follow this DMG's url line.
+        // electron-builder formats them as 3-line blocks:
+        //   - url: <filename>
+        //     sha512: <hash>
+        //     size: <bytes>
+        const re = new RegExp(
+          `(- url: ${filename.replace(/[.+]/g, '\\$&')}\\s*\\n\\s*sha512: )[^\\n]+(\\s*\\n\\s*size: )\\d+`,
+        );
+        if (re.test(yaml)) {
+          yaml = yaml.replace(re, `$1${sha512}$2${size}`);
+          console.log(`[afterAllArtifactBuild]   patched ${filename}`);
+        } else {
+          console.warn(`[afterAllArtifactBuild]   could not find ${filename} entry in latest-mac.yml`);
+        }
+      }
+      fs.writeFileSync(yamlPath, yaml);
     }
   }
 
