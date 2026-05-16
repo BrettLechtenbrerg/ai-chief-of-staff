@@ -77,6 +77,19 @@ exports.default = async function(context) {
     const entitlements = path.join(__dirname, 'entitlements.mac.plist');
     const bundleId = 'com.totalsuccessai.ai-chief-of-staff';
 
+    // If a real Apple Developer ID Application identity is configured in
+    // electron-builder (via package.json build.mac.identity OR the
+    // CSC_NAME env var), electron-builder will sign with the real cert
+    // AFTER this afterPack hook. Skip the ad-hoc step entirely so we
+    // don't waste time signing a bundle that's about to be re-signed.
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+    const configuredIdentity = pkg && pkg.build && pkg.build.mac && pkg.build.mac.identity;
+    const realIdentityConfigured = (typeof configuredIdentity === 'string' && configuredIdentity.length > 0) || !!process.env.CSC_NAME || !!process.env.CSC_LINK;
+    if (realIdentityConfigured) {
+      console.log('[afterPack] real Apple Developer ID identity configured — electron-builder will sign; skipping ad-hoc step');
+      return;
+    }
+
     // Detect: if electron-builder already applied a non-linker signature, skip.
     let needsResign = true;
     try {

@@ -115,5 +115,49 @@ exports.default = async function(context) {
     }
   }
 
+  // Notarize + staple each DMG when a real Developer ID signing identity is
+  // configured. electron-builder notarizes the inner .app inside the .zip
+  // but doesn't notarize the outer .dmg wrappers — if we don't do this here,
+  // Gatekeeper still works (the inner .app is notarized) but clients need
+  // internet on first install for online verification. Stapled DMGs work
+  // entirely offline.
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  const configuredIdentity = pkg && pkg.build && pkg.build.mac && pkg.build.mac.identity;
+  const realIdentityConfigured = (typeof configuredIdentity === 'string' && configuredIdentity.length > 0) || !!process.env.CSC_NAME || !!process.env.CSC_LINK;
+  const keychainProfile = process.env.APPLE_KEYCHAIN_PROFILE || 'AC_PASSWORD';
+
+  if (realIdentityConfigured) {
+    for (const artifactPath of artifactPaths) {
+      if (!artifactPath.endsWith('.dmg')) continue;
+      const filename = path.basename(artifactPath);
+
+      // Skip if already stapled (idempotent re-runs)
+      try {
+        execSync(`xcrun stapler validate "${artifactPath}"`, { stdio: 'pipe' });
+        console.log(`[afterAllArtifactBuild] DMG already stapled: ${filename}`);
+        continue;
+      } catch {
+        // not stapled yet, proceed
+      }
+
+      console.log(`[afterAllArtifactBuild] Notarizing DMG: ${filename} (this takes 2–10 min at Apple)...`);
+      try {
+        execSync(
+          `xcrun notarytool submit "${artifactPath}" --keychain-profile "${keychainProfile}" --wait`,
+          { stdio: 'inherit' }
+        );
+        console.log(`[afterAllArtifactBuild] Stapling DMG: ${filename}`);
+        execSync(`xcrun stapler staple "${artifactPath}"`, { stdio: 'inherit' });
+        execSync(`xcrun stapler validate "${artifactPath}"`, { stdio: 'inherit' });
+        console.log(`[afterAllArtifactBuild] DMG notarized + stapled: ${filename}`);
+      } catch (error) {
+        console.error(`[afterAllArtifactBuild] DMG notarize/staple failed for ${filename}:`, error.message);
+        // Don't throw — the inner .app is still notarized, so Gatekeeper
+        // online verification still works. Only offline first-launch is
+        // affected, and we want the build artifacts to remain available.
+      }
+    }
+  }
+
   return artifactPaths;
 };

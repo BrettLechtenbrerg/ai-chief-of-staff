@@ -65,8 +65,13 @@ npm install                  # rebuilds better-sqlite3 native bindings
 npm run dev                  # Electron with TS watch
 npm run typecheck && npm run lint && npm test
 
-# Mac DMG (unsigned, ad-hoc signed via afterPack hook)
+# Mac DMG (unsigned, ad-hoc signed via afterPack hook — fast iteration)
 npm run dist:local           # produces arm64 + x64 DMGs in ./release/
+
+# Mac DMG (REAL signed + notarized + stapled — use for releases) — ~15–20 min
+npm run dist:signed          # uses Developer ID Application: Brett Lechtenberg (2HQTY95NHD)
+                             # uses AC_PASSWORD keychain profile for notarization
+                             # afterAllArtifactBuild hook stapes the DMG wrappers
 
 # Windows installers (requires Docker Desktop running)
 docker run --rm \
@@ -201,7 +206,7 @@ npm run typecheck && npm run lint
 
 ### Likely next (after testers report back)
 - **SMS / GHL / Email reminder delivery channels** — the landing page promises these; the app currently delivers via desktop + Telegram. Likely Twilio for SMS, webhook for GHL, SMTP for email. New scheduler delivery channels in `src/scheduler/`.
-- **Apple Developer ID code-signing** ($99/yr) — eliminates the Gatekeeper right-click step + the macOS keychain re-prompts on rebuilds. Real fix; see "macOS keychain prompts" note below.
+- ~~**Apple Developer ID code-signing** — DONE May 16, 2026.~~ Enrolled under Brett Lechtenberg (individual), Team ID `2HQTY95NHD`. Cert + key backed up in TSAI-TSBS Master File + 8 TB external as `Brett-DeveloperID-2HQTY95NHD.p12`. Notarization wired via `AC_PASSWORD` keychain profile (`xcrun notarytool store-credentials`). `npm run dist:signed` produces fully signed + notarized + stapled DMGs that pass `spctl --assess` as `source=Notarized Developer ID`. Next build will be cut as `v1.0.0-beta.4` and shipped to testers.
 - **Windows code-signing certificate** — eliminates the SmartScreen "More info → Run anyway" step. Standalone EV cert ~$200–500/yr.
 - **Logo polish** — current logo is dark navy on transparent, reads faint in the macOS Dock against transparent surfaces. A tighter-cropped or backplate variant would help.
 - **Tray icon background** — Brett asked for a more visible tray icon in v1.0.0-beta.1 testing. Currently a black template image (correct macOS UX); a white-fill variant or different glyph is an option.
@@ -215,8 +220,10 @@ npm run typecheck && npm run lint
 
 ## Known quirks (so you don't re-debug them)
 
-### macOS keychain prompts on rebuild
-Each rebuild produces a slightly different ad-hoc signature → macOS's keychain ACL invalidates → "AI Chief of Staff wants to access … Safe Storage" prompts appear on next launch. "Always Allow" sticks **only until the next rebuild**. The real fix is an Apple Developer ID. For now, a one-time prompt for clients on first install is acceptable (matches the landing page's "first-launch warnings are normal" promise).
+### macOS keychain prompts on rebuild (FIXED for signed builds)
+**Fixed for signed builds as of v1.0.0-beta.4** — `npm run dist:signed` now uses a stable Developer ID Application signature, so the keychain ACL no longer invalidates between rebuilds.
+
+For *unsigned* `dist:local` builds the old quirk still applies: each rebuild produces a slightly different ad-hoc signature → macOS's keychain ACL invalidates → "AI Chief of Staff wants to access … Safe Storage" prompts appear on next launch. Use `dist:signed` when you want a clean run.
 
 ### Auto-updater 406 from GitHub
 `electron-updater` polls `/releases/latest` even when there's no published latest release. After v1.0.0-beta.1 went live this stopped firing. If you ever see the 406 again, it means we tagged a new version but didn't publish a Release with assets.
