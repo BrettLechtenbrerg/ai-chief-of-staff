@@ -29,7 +29,9 @@
     "dist": "npm run build && electron-builder --mac",
     "dist:local": "npm run build && electron-builder --mac --config.mac.identity=null --config.mac.hardenedRuntime=false --config.mac.notarize=false",
     "dist:win": "npm run build && electron-builder --win",
-    "dist:win:local": "npm run build && electron-builder --win --config.win.forceCodeSigning=false"
+    "dist:win:local": "npm run build && electron-builder --win --config.win.forceCodeSigning=false",
+    "install:local": "node scripts/install-local.cjs",
+    "dist:install": "npm run dist:local && npm run install:local"
   },
   "build": {
     "appId": "com.totalsuccessai.ai-chief-of-staff",

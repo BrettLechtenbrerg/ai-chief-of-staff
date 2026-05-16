@@ -77,8 +77,19 @@ docker run --rm \
   electronuserland/builder:wine \
   /bin/bash -c "npm config set ignore-scripts true && npm run dist:win:local"
 
-# Smoke-test the actual installed app (not dev) on this Mac
+# Install the freshly built app over /Applications and relaunch — ONE LINER
+# (kills running instance, swaps in the build matching this Mac's arch, strips
+# quarantine, opens it, prints installed version/bundle id for verification)
+npm run install:local              # uses host arch (arm64 on Apple Silicon, x64 on Intel)
+npm run install:local -- arm64     # force Apple Silicon build
+npm run install:local -- x64       # force Intel build
+
+# Or do build + install in a single command (use this after every version bump):
+npm run dist:install               # = npm run dist:local && npm run install:local
+
+# Manual equivalent if the script ever breaks:
 pkill -f "AI Chief of Staff"
+rm -rf "/Applications/AI Chief of Staff.app"
 cp -R release/mac/AI\ Chief\ of\ Staff.app /Applications/   # x64; use release/mac-arm64 on Apple Silicon
 xattr -dr com.apple.quarantine "/Applications/AI Chief of Staff.app"
 open "/Applications/AI Chief of Staff.app"
@@ -186,7 +197,7 @@ npm run typecheck && npm run lint
 ## Active workstreams
 
 ### Now
-- **First-round beta testing** — testers have v1.0.0-beta.1 via the landing page. Collect their feedback before next release.
+- **First-round beta testing** — testers have v1.0.0-beta.3 via the landing page. Auto-updater on beta.1/beta.2 installs silently pulls beta.3 on launch. Collect feedback before next release.
 
 ### Likely next (after testers report back)
 - **SMS / GHL / Email reminder delivery channels** — the landing page promises these; the app currently delivers via desktop + Telegram. Likely Twilio for SMS, webhook for GHL, SMTP for email. New scheduler delivery channels in `src/scheduler/`.
@@ -219,9 +230,25 @@ The full test suite shows ~205 failures, all from one root cause: `better-sqlite
 ### `pkill -f "AI Chief of Staff"` is your friend
 Mac builds sometimes hang on lingering Electron processes. When the app refuses to relaunch cleanly or `npm run dev` errors with port-in-use messages, `pkill -9 -f "AI Chief of Staff"; sleep 2` clears it.
 
+### Stale `/Applications` copy drift (fixed by `npm run install:local`)
+We ship DMGs to GitHub Releases for testers, but the locally-installed `/Applications/AI Chief of Staff.app` was never automatically refreshed when we bumped versions. Result: source tree showed `v1.0.0-beta.3`, but launching from the Dock ran the **original `v1.0.0` build from the very first DMG of the day**, which had the broken `Identifier=Electron` ad-hoc signature — hidden Dock icon + double-click-to-launch + missing every UX upgrade. **Fix:** after every version bump or local build, run `npm run install:local` (or `npm run dist:install` to build + install in one shot). Symptoms to watch for if this regresses: (a) installed app's `CFBundleShortVersionString` doesn't match `package.json`, (b) Dock icon vanishes, (c) double-click required to launch.
+
 ---
 
 ## Past sessions
+
+### May 16, 2026 (morning) — Local install drift fix + `npm run install:local`
+
+Returned to find the app on the Dock had reverted to its original look, the Dock icon was missing, and launching required a double-click. Diagnosed: `/Applications/AI Chief of Staff.app` was still the **very first `v1.0.0` build from May 15 06:52** — the one with the broken `Identifier=Electron` ad-hoc signature (the one we wrote the `afterPack.cjs` codesign fix for later that day). Every beta.1 / beta.2 / beta.3 release went to GitHub for testers but **never replaced the local copy**, so the local launcher had been running stale + broken-signed code for nearly 24 hours.
+
+Fix:
+
+1. **One-shot recovery this session:** killed the running process, replaced `/Applications/AI Chief of Staff.app` with `release/mac/AI Chief of Staff.app` (the freshly built x64 beta.3), `xattr -dr com.apple.quarantine`, opened. Verified: `CFBundleShortVersionString = 1.0.0-beta.3`, signature properly bound (`Identifier=com.totalsuccessai.ai-chief-of-staff`), Dock icon back, single-click launch.
+2. **Permanent fix — `scripts/install-local.cjs` + `npm run install:local`.** New script auto-detects host arch (`os.arch()`), picks `release/mac/` (x64) or `release/mac-arm64/`, kills any running instance, swaps in the new bundle, strips quarantine, relaunches, and prints `CFBundleShortVersionString` + `CFBundleIdentifier` for verification. Accepts an arch override: `npm run install:local -- arm64`.
+3. **Combo command** `npm run dist:install` = `dist:local && install:local`, so a single command takes you from source change to running the freshly installed app on the Dock. **Use this after every version bump going forward** — no more drift.
+4. **Documented quirk** under "Stale `/Applications` copy drift" in Known quirks, with symptoms to watch for so it can't haunt a future session.
+
+No source/feature changes — tooling + docs only. No new tag, no new release. `package.json` unchanged version (`1.0.0-beta.3`).
 
 ### May 15, 2026 (evening) — First-round tester feedback pass (`v0.5-ux-clarity`)
 
