@@ -357,6 +357,14 @@ export class ChatEngine {
           ? getCoderAgentTools(this.toolsConfig, this.getCoderCwd(sessionId))
           : getChatAgentTools(this.toolsConfig, this.workspace);
 
+      // Sanity log: how many tools did this turn ship to the model, and how
+      // many of them are external MCP tools? Helps diagnose 'agent says it
+      // has no calendar tools' after we wired MCP. Shows up once per turn.
+      const mcpToolCount = agentTools.filter((t) => t.name.startsWith('mcp__')).length;
+      console.log(
+        `[ChatEngine] tools shipped: ${agentTools.length} total (${mcpToolCount} via MCP)`,
+      );
+
       // Map thinking level
       const thinkingLevel = SettingsManager.get('agent.thinkingLevel') || 'normal';
       const thinking =
