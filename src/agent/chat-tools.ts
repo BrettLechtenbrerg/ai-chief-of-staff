@@ -14,6 +14,7 @@ import { createTools as createCoderTools } from '@kenkaiiii/ggcoder';
 import { getCustomTools, ToolsConfig } from '../tools';
 import { wrapToolHandler } from '../tools/diagnostics';
 import { createSubAgentTool } from '../tools/subagent';
+import { buildMCPAgentTools } from '../mcp/proxy';
 import { getStreamConfig } from './chat-providers';
 import { validateBashCommand, validateWritePath } from './safety';
 
@@ -139,7 +140,15 @@ export function getChatAgentTools(config: ToolsConfig, cwd: string): AgentTool[]
   // Add shell_command tool
   tools.push(buildShellCommandTool());
 
-  // Add sub-agent tool (receives parent tools so it can select a subset)
+  // External MCP server tools (Gmail/Calendar/GHL/etc.) — see src/mcp/.
+  // Empty array when no servers are connected, so this is a no-op for users
+  // who haven't configured any MCP servers in mcp-servers.json.
+  for (const mcpTool of buildMCPAgentTools()) {
+    tools.push(mcpTool);
+  }
+
+  // Add sub-agent tool (receives parent tools so it can select a subset).
+  // Must be last so the sub-agent sees every tool above it, including MCP.
   tools.push(createSubAgentTool(tools, getStreamConfig));
 
   return tools;
@@ -176,11 +185,14 @@ export function getCoderAgentTools(config: ToolsConfig, cwd: string): AgentTool[
     });
   }
 
-  // Merge: coder native tools (with write-path safety) + MCP tools
+  // Merge: coder native tools (with write-path safety) + in-process custom
+  // tools (browser, notify, project, etc.) + external MCP server tools
+  // (Gmail / Calendar / GHL / etc., see src/mcp/). buildMCPAgentTools()
+  // returns [] when no servers are connected.
   const safeCoderTools = coderNativeTools.map((t) =>
     WRITE_TOOL_NAMES.has(t.name) ? wrapWithWritePathSafety(t) : t
   );
-  return [...safeCoderTools, ...mcpTools];
+  return [...safeCoderTools, ...mcpTools, ...buildMCPAgentTools()];
 }
 
 /**

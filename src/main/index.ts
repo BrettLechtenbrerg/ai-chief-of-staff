@@ -18,6 +18,7 @@ import { createWindow, getWindow } from './windows';
 import { fixPathForPackagedApp } from './node-paths';
 import { setupBirthdayCronJobs } from './birthday';
 import { createTray, updateTrayMenu, initTray } from './tray';
+import { getMCPManager } from '../mcp/manager';
 import {
   registerAgentIPC,
   registerSessionsIPC,
@@ -500,6 +501,15 @@ async function initializeAgent(): Promise<void> {
     tools: toolsConfig,
   });
 
+  // Start external MCP servers (Gmail / Calendar / GHL / etc.) configured
+  // in <userData>/mcp-servers.json. Fire and forget — each server's startup
+  // failure is logged but doesn't block app boot. Tools become available
+  // as soon as each child process finishes its MCP handshake; turns started
+  // before that finishes simply see fewer tools.
+  getMCPManager()
+    .start(app.getPath('userData'))
+    .catch((err) => console.error('[Main] MCP manager startup failed:', (err as Error).message));
+
   // Listen for model changes and broadcast to UI
   // Remove previous listener to prevent stacking on re-init
   if (modelChangedHandler) {
@@ -782,6 +792,9 @@ app.on('before-quit', async () => {
     modelChangedHandler = null;
   }
   await stopAgent();
+  await getMCPManager()
+    .stop()
+    .catch((err) => console.warn('[Main] MCP manager stop error:', (err as Error).message));
   if (memory) {
     memory.close();
   }

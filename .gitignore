@@ -10,8 +10,10 @@ dist/
 
 # Config with secrets
 config.json
+mcp-servers.json
 release/
 *.cer
+*.p12
 .claude/
 .gg/
 app.json
