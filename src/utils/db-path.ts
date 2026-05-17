@@ -15,11 +15,22 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-/** Ordered list of candidate DB paths for the current environment. */
+/** Ordered list of candidate DB paths for the current environment.
+ *
+ * IMPORTANT (May 17, 2026): Electron's `app.getPath('userData')` derives the
+ * folder name from `package.json` `name` (the lowercase slug), NOT
+ * `productName`, unless `app.setName()` is called. So both dev (`npm run dev`)
+ * AND the packaged macOS app end up writing to the lowercase-slug folder.
+ *
+ * The Title Case path is kept as a fallback in case a future Electron version
+ * changes this behavior or a user has migrated their data manually, but the
+ * canonical location is now the lowercase slug.
+ */
 export function getDbCandidates(): string[] {
   const home = process.env.HOME || process.env.USERPROFILE || '';
   return [
-    path.join(home, 'Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db'), // macOS
+    path.join(home, 'Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db'), // macOS (canonical — matches package.json `name`)
+    path.join(home, 'Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db'), // macOS legacy/fallback (matches `productName` if app.setName is ever called)
     path.join(home, '.config/ai-chief-of-staff/ai-chief-of-staff.db'), // Linux
     path.join(home, 'AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db'), // Windows
   ];
