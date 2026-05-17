@@ -284,7 +284,7 @@ export async function handleDocumentMessage(
 
       // Look up which session this chat is linked to
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       return AgentManager.processMessage(prompt, 'telegram', sessionId, undefined, {
         hasAttachment: true,
@@ -307,7 +307,7 @@ export async function handleDocumentMessage(
     // Notify callback for cross-channel sync
     if (onMessageCallback) {
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
       const displayMessage = caption
         ? `${caption} [Document: ${fileName}]`
         : `Sent document: ${fileName}`;

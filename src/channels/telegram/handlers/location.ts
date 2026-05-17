@@ -151,7 +151,7 @@ export async function handleLocationMessage(
 
       // Look up which session this chat is linked to
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       const agentResult = await AgentManager.processMessage(
         prompt,
@@ -211,7 +211,7 @@ export async function handleLocationMessage(
     // Notify callback for cross-channel sync
     if (onMessageCallback) {
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
       const locationStr =
         result.geocoding?.displayName || `${locationData.latitude}, ${locationData.longitude}`;
 

@@ -43,7 +43,7 @@ export async function handleTextMessage(ctx: Context, deps: MessageHandlerDeps):
     const result = await withTyping(ctx, async () => {
       // Look up which session this chat is linked to
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       return AgentManager.processMessage(fullMessage, 'telegram', sessionId);
     });
@@ -63,7 +63,7 @@ export async function handleTextMessage(ctx: Context, deps: MessageHandlerDeps):
     // Notify callback for cross-channel sync (to desktop)
     if (onMessageCallback) {
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       onMessageCallback({
         userMessage: message,

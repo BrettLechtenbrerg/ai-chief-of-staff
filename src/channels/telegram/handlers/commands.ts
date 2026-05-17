@@ -108,7 +108,7 @@ Workflows are reusable command templates. Use /workflow to see what's available,
   bot.command('new', async (ctx) => {
     const chatId = ctx.chat?.id;
     const memory = AgentManager.getMemory();
-    const sessionId = chatId && memory ? memory.getSessionForChat(chatId) || 'default' : 'default';
+    const sessionId = chatId && memory ? memory.ensureSessionForChat(chatId) : 'default';
 
     AgentManager.clearConversation(sessionId);
     await ctx.reply(

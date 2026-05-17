@@ -119,7 +119,7 @@ export async function handlePhotoMessage(ctx: Context, deps: MediaHandlerDeps): 
 
       // Look up which session this chat is linked to
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       return AgentManager.processMessage(prompt, 'telegram', sessionId, undefined, {
         hasAttachment: true,
@@ -142,7 +142,7 @@ export async function handlePhotoMessage(ctx: Context, deps: MediaHandlerDeps): 
     // Notify callback for cross-channel sync
     if (onMessageCallback) {
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
       const displayMessage = ctx.message?.caption || 'Sent a photo';
 
       onMessageCallback({
@@ -238,7 +238,7 @@ export async function handleVoiceMessage(ctx: Context, deps: MediaHandlerDeps): 
 
       // Look up which session this chat is linked to
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       return {
         result: await AgentManager.processMessage(prompt, 'telegram', sessionId, undefined, {
@@ -264,7 +264,7 @@ export async function handleVoiceMessage(ctx: Context, deps: MediaHandlerDeps): 
     // Notify callback for cross-channel sync
     if (onMessageCallback) {
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
       const fullTranscript = result.transcription.text || '';
       const displayMessage = caption ? `${caption}\n\n${fullTranscript}` : fullTranscript;
 
@@ -366,7 +366,7 @@ export async function handleAudioMessage(ctx: Context, deps: MediaHandlerDeps): 
 
       // Look up which session this chat is linked to
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       return {
         result: await AgentManager.processMessage(prompt, 'telegram', sessionId, undefined, {
@@ -392,7 +392,7 @@ export async function handleAudioMessage(ctx: Context, deps: MediaHandlerDeps): 
     // Notify callback for cross-channel sync
     if (onMessageCallback) {
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
       const fullTranscript = result.transcription.text || '';
       const displayMessage = caption
         ? `${caption} [${audio.title || 'Audio'}: "${fullTranscript}"]`

@@ -57,7 +57,7 @@ async function handleConfirmation(
     const chatId = ctx.chat?.id;
     if (chatId) {
       const memory = AgentManager.getMemory();
-      const sessionId = memory?.getSessionForChat(chatId) || 'default';
+      const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
       try {
         const result = await withTyping(ctx, async () => {
@@ -99,7 +99,7 @@ async function handleLocationAction(
   if (!chatId) return;
 
   const memory = AgentManager.getMemory();
-  const sessionId = memory?.getSessionForChat(chatId) || 'default';
+  const sessionId = memory?.ensureSessionForChat(chatId) || 'default';
 
   let prompt: string;
 

@@ -625,6 +625,45 @@ export class MemoryManager {
   }
 
   /**
+   * Get the session ID for a Telegram chat, auto-creating + linking a session if none exists.
+   *
+   * Use this from message handlers instead of `getSessionForChat(...) || 'default'`.
+   * The bare `'default'` string violates the messages.session_id FK constraint when no
+   * row with id='default' exists in `sessions`, which is the normal case for fresh installs.
+   *
+   * The auto-created session is named `Telegram (<groupName-or-chatId>)` so it's
+   * recognisable in the desktop sidebar and can be `/link`'d to a different session
+   * later via the existing /link command.
+   */
+  ensureSessionForChat(chatId: number, groupName?: string): string {
+    const existing = _getSessionForChat(this.db, chatId);
+    if (existing) return existing;
+
+    const label = groupName?.trim() || `chat ${chatId}`;
+    const baseName = `Telegram (${label})`;
+
+    // Guard against the unique-name index on sessions(name) by suffixing if needed.
+    let name = baseName;
+    let suffix = 2;
+    while (this.db.prepare('SELECT 1 FROM sessions WHERE name = ?').get(name)) {
+      name = `${baseName} ${suffix++}`;
+    }
+
+    const id = `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    this.db
+      .prepare(
+        `
+        INSERT INTO sessions (id, name, mode, working_directory, created_at, updated_at)
+        VALUES (?, ?, 'general', NULL, (strftime('%Y-%m-%dT%H:%M:%fZ')), (strftime('%Y-%m-%dT%H:%M:%fZ')))
+      `
+      )
+      .run(id, name);
+
+    _linkTelegramChat(this.db, chatId, id, groupName);
+    return id;
+  }
+
+  /**
    * Get the Telegram chat ID for a session
    */
   getChatForSession(sessionId: string): number | null {
