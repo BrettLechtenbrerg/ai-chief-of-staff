@@ -152,6 +152,15 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     list: () => ipcRenderer.invoke('cron:list'),
     create: (name: string, schedule: string, prompt: string, channel: string, sessionId: string) =>
       ipcRenderer.invoke('cron:create', name, schedule, prompt, channel, sessionId),
+    update: (
+      oldName: string,
+      newName: string,
+      schedule: string,
+      prompt: string,
+      channel: string,
+      sessionId: string,
+    ) =>
+      ipcRenderer.invoke('cron:update', oldName, newName, schedule, prompt, channel, sessionId),
     delete: (name: string) => ipcRenderer.invoke('cron:delete', name),
     toggle: (name: string, enabled: boolean) => ipcRenderer.invoke('cron:toggle', name, enabled),
     run: (name: string) => ipcRenderer.invoke('cron:run', name),
@@ -300,6 +309,11 @@ contextBridge.exposeInMainWorld('pocketAgent', {
       ) => callback(data);
       ipcRenderer.on('cron:testing', listener);
       return () => ipcRenderer.removeListener('cron:testing', listener);
+    },
+    onCronCheckPendingEdit: (callback: () => void): (() => void) => {
+      const listener = () => callback();
+      ipcRenderer.on('cron:check-pending-edit', listener);
+      return () => ipcRenderer.removeListener('cron:check-pending-edit', listener);
     },
     onTelegramMessage: (
       callback: (data: {
@@ -528,6 +542,14 @@ declare global {
           prompt: string,
           channel: string,
           sessionId: string
+        ) => Promise<{ success: boolean }>;
+        update: (
+          oldName: string,
+          newName: string,
+          schedule: string,
+          prompt: string,
+          channel: string,
+          sessionId: string,
         ) => Promise<{ success: boolean }>;
         delete: (name: string) => Promise<{ success: boolean }>;
         toggle: (name: string, enabled: boolean) => Promise<{ success: boolean }>;

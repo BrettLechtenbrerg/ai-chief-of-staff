@@ -229,16 +229,19 @@ function _rtnRenderJobs() {
             <div class="rtn-job-prompt">${promptDisplay}</div>
           </div>
           <div class="rtn-job-actions">
-            <button class="rtn-icon-btn" onclick="playNormalClick(); rtnToggleJob('${_rtnEscapeAttr(job.name)}', ${!job.enabled})" title="${job.enabled ? 'Pause' : 'Resume'}">
+            <button class="rtn-icon-btn" onclick="playNormalClick(); rtnToggleJob('${_rtnEscapeAttr(job.name)}', ${!job.enabled})" data-tip="${job.enabled ? 'Pause task' : 'Resume task'}">
               ${job.enabled
                 ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 7c0-1.414 0-2.121.44-2.56C4.878 4 5.585 4 7 4s2.121 0 2.56.44C10 4.878 10 5.585 10 7v10c0 1.414 0 2.121-.44 2.56C9.122 20 8.415 20 7 20s-2.121 0-2.56-.44C4 19.122 4 18.415 4 17zm10 0c0-1.414 0-2.121.44-2.56C14.878 4 15.585 4 17 4s2.121 0 2.56.44C20 4.878 20 5.585 20 7v10c0 1.414 0 2.121-.44 2.56c-.439.44-1.146.44-2.56.44s-2.121 0-2.56-.44C14 19.122 14 18.415 14 17z"/></svg>'
                 : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M18.89 12.846c-.353 1.343-2.023 2.292-5.364 4.19c-3.23 1.835-4.845 2.752-6.146 2.384a3.25 3.25 0 0 1-1.424-.841C5 17.614 5 15.743 5 12s0-5.614.956-6.579a3.25 3.25 0 0 1 1.424-.84c1.301-.37 2.916.548 6.146 2.383c3.34 1.898 5.011 2.847 5.365 4.19a3.3 3.3 0 0 1 0 1.692Z"/></svg>'
               }
             </button>
-            <button class="rtn-icon-btn" onclick="playNormalClick(); rtnRunJob('${_rtnEscapeAttr(job.name)}')" title="Test run">
+            <button class="rtn-icon-btn" onclick="playNormalClick(); rtnEditJob('${_rtnEscapeAttr(job.name)}')" data-tip="Edit task">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1l1-4z"/></svg>
+            </button>
+            <button class="rtn-icon-btn" onclick="playNormalClick(); rtnRunJob('${_rtnEscapeAttr(job.name)}')" data-tip="Run task now">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M8.628 12.674H8.17c-1.484 0-2.225 0-2.542-.49c-.316-.489-.015-1.17.588-2.533l1.812-4.098c.548-1.239.822-1.859 1.353-2.206S10.586 3 11.935 3h2.09c1.638 0 2.458 0 2.767.535c.309.536-.098 1.25-.91 2.681l-1.073 1.886c-.404.711-.606 1.066-.603 1.358c.003.378.205.726.53.917c.25.147.657.147 1.471.147c1.03 0 1.545 0 1.813.178c.349.232.531.646.467 1.061c-.049.32-.395.703-1.088 1.469l-5.535 6.12c-1.087 1.203-1.63 1.804-1.996 1.613c-.365-.19-.19-.983.16-2.569l.688-3.106c.267-1.208.4-1.812.08-2.214c-.322-.402-.937-.402-2.168-.402Z"/></svg>
             </button>
-            <button class="rtn-icon-btn danger" onclick="playNormalClick(); rtnDeleteJob('${_rtnEscapeAttr(job.name)}')" title="Delete">
+            <button class="rtn-icon-btn danger" onclick="playNormalClick(); rtnDeleteJob('${_rtnEscapeAttr(job.name)}')" data-tip="Delete task permanently">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5"/></svg>
             </button>
           </div>
@@ -307,6 +310,20 @@ async function rtnDeleteJob(name) {
     _rtnShowToast('Poof! Gone.', 'success');
     _rtnLoadJobs();
   } catch (err) { _rtnShowToast(err.message, 'error'); }
+}
+
+// Opens the Scheduled Task editor window pre-filled with this job's data.
+// We pass the target job name via localStorage — the cron window reads it
+// on DOMContentLoaded, fetches the job from `cron.list()`, fills the form,
+// and switches the submit button into "Save Changes" mode.
+function rtnEditJob(name) {
+  try {
+    localStorage.setItem('acos-edit-job', name);
+    window.pocketAgent.app.openRoutines();
+  } catch (err) {
+    console.error('[Routines] rtnEditJob failed:', err);
+    _rtnShowToast(err.message || 'Could not open editor', 'error');
+  }
 }
 
 // ============================================================================

@@ -40,6 +40,47 @@ export function registerCronIPC(deps: IPCDependencies): void {
     return { success };
   });
 
+  // Update an existing job. If newName differs from oldName, the old job is
+  // deleted and a new one is created (the DB constraint is UNIQUE on name).
+  // Same name + new schedule/prompt just re-saves via saveCronJob's
+  // INSERT...ON CONFLICT(name) DO UPDATE clause.
+  ipcMain.handle(
+    'cron:update',
+    async (
+      _,
+      oldName: string,
+      newName: string,
+      schedule: string,
+      prompt: string,
+      channel: string,
+      sessionId: string
+    ) => {
+      const scheduler = getScheduler();
+      if (!scheduler) return { success: false };
+
+      // If the user renamed, delete the old record first to free up the unique
+      // index. If same name, createJob's underlying upsert handles it.
+      if (oldName && oldName !== newName) {
+        scheduler.deleteJob(oldName);
+      } else {
+        // Same name — we still need to stop the in-memory cron task so the
+        // new schedule takes effect (createJob → scheduleJob adds a new task
+        // but won't replace an existing one with the same name).
+        scheduler.stopJob(oldName);
+      }
+
+      const success = await scheduler.createJob(
+        newName,
+        schedule,
+        prompt,
+        channel || 'default',
+        sessionId || 'default'
+      );
+      updateTrayMenu();
+      return { success };
+    }
+  );
+
   ipcMain.handle('cron:toggle', async (_, name: string, enabled: boolean) => {
     const scheduler = getScheduler();
     const success = scheduler?.setJobEnabled(name, enabled);

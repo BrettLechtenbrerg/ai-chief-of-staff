@@ -96,6 +96,37 @@ button.is-cinamon:disabled {
   transform: none;
 }
 
+/* TSAI skin: silver accent (#C0C0C0) + white text = unreadable. Override
+   every cinamon-pill selector so text reads as the TSAI navy (--bg-primary).
+   Scoped via [data-skin="tsai"] on <html> (set by shared/theme-loader.js) so
+   no other skin is affected — those keep white-on-saturated. */
+[data-skin="tsai"] button:not([class]):not(#send-btn),
+[data-skin="tsai"] .header-actions > button.reboot,
+[data-skin="tsai"] .pz-header-actions > button.reboot,
+[data-skin="tsai"] .header-actions > button,
+[data-skin="tsai"] .pz-header-actions > button,
+[data-skin="tsai"] .ob-btn.primary,
+[data-skin="tsai"] .plan-btn.plan-btn-approve,
+[data-skin="tsai"] .create-btn,
+[data-skin="tsai"] .oauth-btn,
+[data-skin="tsai"] .skills-setup-btn,
+[data-skin="tsai"] .btn-cinamon,
+[data-skin="tsai"] button.is-cinamon,
+[data-skin="tsai"] button:not([class]):not(#send-btn):hover:not(:disabled),
+[data-skin="tsai"] .header-actions > button.reboot:hover:not(:disabled),
+[data-skin="tsai"] .pz-header-actions > button.reboot:hover:not(:disabled),
+[data-skin="tsai"] .header-actions > button:hover:not(:disabled),
+[data-skin="tsai"] .pz-header-actions > button:hover:not(:disabled),
+[data-skin="tsai"] .ob-btn.primary:hover:not(:disabled),
+[data-skin="tsai"] .plan-btn.plan-btn-approve:hover:not(:disabled),
+[data-skin="tsai"] .create-btn:hover:not(:disabled),
+[data-skin="tsai"] .oauth-btn:hover:not(:disabled),
+[data-skin="tsai"] .skills-setup-btn:hover:not(:disabled),
+[data-skin="tsai"] .btn-cinamon:hover:not(:disabled),
+[data-skin="tsai"] button.is-cinamon:hover:not(:disabled) {
+  color: var(--bg-primary);
+}
+
 /* ============================================================
    DANGER PILL — destructive CTAs (Sign out, Delete, Discard …).
    Same chunky pill primitive as cinamon, but uses --error instead

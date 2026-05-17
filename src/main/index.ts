@@ -328,7 +328,7 @@ function openChatWindow(): void {
 }
 
 function openCronWindow(): void {
-  createWindow({
+  const win = createWindow({
     id: WIN.CRON,
     title: 'My Scheduled Tasks - AI Chief of Staff',
     htmlFile: 'cron.html',
@@ -336,6 +336,18 @@ function openCronWindow(): void {
     height: 500,
     boundsKey: 'window.cronBounds',
   });
+  // If the window was already open and was just focused, the renderer's
+  // DOMContentLoaded handler won't re-fire — send an explicit event so it
+  // re-checks `localStorage['acos-edit-job']` and switches into edit mode.
+  if (win && !win.isDestroyed()) {
+    if (win.webContents.isLoading()) {
+      win.webContents.once('did-finish-load', () => {
+        if (!win.isDestroyed()) win.webContents.send('cron:check-pending-edit');
+      });
+    } else {
+      win.webContents.send('cron:check-pending-edit');
+    }
+  }
 }
 
 function openSettingsWindow(tab?: string): void {

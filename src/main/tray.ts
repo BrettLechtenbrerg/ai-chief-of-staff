@@ -14,6 +14,10 @@ let tray: Tray | null = null;
 // Cached tray menu icon — built once, reused on every updateTrayMenu() call
 let cachedMenuIcon: Electron.NativeImage | undefined;
 
+// Latest context menu, rebuilt by updateTrayMenu(). The right-click handler
+// pops this up; we deliberately don't bind it to left-click via setContextMenu.
+let cachedContextMenu: Electron.Menu | null = null;
+
 export interface TrayCallbacks {
   openChatWindow: () => void;
   openSettingsWindow: (tab?: string) => void;
@@ -158,7 +162,17 @@ export async function createTray(): Promise<void> {
   tray = new Tray(icon);
   tray.setToolTip('AI Chief of Staff');
 
-  // Double-click opens chat
+  // Left-click opens chat directly. Right-click shows the context menu
+  // (set in updateTrayMenu via `tray.popUpContextMenu()` rather than
+  // `setContextMenu`, so a left-click no longer triggers the menu).
+  // Matches Slack / Discord / ChatGPT Desktop expectation.
+  tray.on('click', () => {
+    callbacks?.openChatWindow();
+  });
+  tray.on('right-click', () => {
+    if (cachedContextMenu) tray?.popUpContextMenu(cachedContextMenu);
+  });
+  // Keep double-click working too, in case muscle memory.
   tray.on('double-click', () => {
     callbacks?.openChatWindow();
   });
@@ -220,5 +234,9 @@ export function updateTrayMenu(): void {
     },
   ]);
 
-  tray.setContextMenu(contextMenu);
+  // Store the menu on the tray for `popUpContextMenu()` (called from the
+  // right-click handler). Do NOT call `tray.setContextMenu(contextMenu)` —
+  // doing so makes a single LEFT click also open the menu, which is exactly
+  // the two-click friction we're fixing.
+  cachedContextMenu = contextMenu;
 }

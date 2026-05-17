@@ -40,21 +40,9 @@
   gap: 8px;
 }
 
-/* Every button in the Scheduled Tasks panel chrome (header row + the
-   per-tab action row) uses dark-navy text on the silver cinamon pill so
-   the whole toolbar reads as one consistent surface. Tester preference
-   over visual hierarchy: "make them all the same." */
-#routines-view .routines-header-actions button,
-#routines-view .rtn-tab-actions button,
-.rtn-create-btn {
-  color: var(--bg-primary); /* navy on silver — highest contrast on tsai */
-}
-
-#routines-view .routines-header-actions button:hover,
-#routines-view .rtn-tab-actions button:hover,
-.rtn-create-btn:hover {
-  color: var(--bg-primary);
-}
+/* Navy-on-silver text for these buttons (tester preference — "make them
+   all the same") is now handled globally in shared/buttons.css under the
+   [data-skin="tsai"] scope. No per-panel override needed. */
 
 /* Cadence tabs — Daily / Weekly / Monthly */
 #routines-view .rtn-tabs {
