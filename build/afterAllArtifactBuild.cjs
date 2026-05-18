@@ -163,36 +163,69 @@ exports.default = async function(context) {
 
   // Stapling adds bytes to the DMG — electron-builder wrote latest-mac.yml
   // BEFORE we stapled, so its DMG entries now have stale size + sha512.
-  // Auto-updater would reject the file on integrity check. Patch the YML
-  // in place with the actual stapled file's size + sha512.
+  // Auto-updater would reject the file on integrity check. Parse the YAML,
+  // recompute each stapled DMG's size + sha512, and re-serialize.
+  //
+  // History: this used to be a regex-replace. It hand-patched the `files:`
+  // array entries fine, but missed the top-level `path:` + `sha512:` block
+  // that electron-builder also emits for the "primary" download — so updates
+  // shipped through three releases with a stale primary sha512 that we
+  // patched by hand each time. The YAML parser fixes both at once and is
+  // robust against any future filename character (parens, brackets, etc).
   if (stapledAtLeastOneDmg && process.platform === 'darwin') {
     const yamlPath = path.join(outDir, 'latest-mac.yml');
     if (fs.existsSync(yamlPath)) {
       console.log('[afterAllArtifactBuild] Patching latest-mac.yml DMG entries with stapled size + sha512...');
       const crypto = require('crypto');
-      let yaml = fs.readFileSync(yamlPath, 'utf8');
+      const yaml = require('js-yaml');
+      const doc = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
+
+      // Build a lookup: filename -> { size, sha512 } for every stapled DMG.
+      const updates = new Map();
       for (const artifactPath of artifactPaths) {
         if (!artifactPath.endsWith('.dmg')) continue;
         const filename = path.basename(artifactPath);
         const buf = fs.readFileSync(artifactPath);
-        const size = buf.length;
-        const sha512 = crypto.createHash('sha512').update(buf).digest('base64');
-        // Replace the size + sha512 lines that follow this DMG's url line.
-        // electron-builder formats them as 3-line blocks:
-        //   - url: <filename>
-        //     sha512: <hash>
-        //     size: <bytes>
-        const re = new RegExp(
-          `(- url: ${filename.replace(/[.+]/g, '\\$&')}\\s*\\n\\s*sha512: )[^\\n]+(\\s*\\n\\s*size: )\\d+`,
-        );
-        if (re.test(yaml)) {
-          yaml = yaml.replace(re, `$1${sha512}$2${size}`);
+        updates.set(filename, {
+          size: buf.length,
+          sha512: crypto.createHash('sha512').update(buf).digest('base64'),
+        });
+      }
+
+      const patched = new Set();
+
+      // Patch entries in the `files:` array.
+      if (Array.isArray(doc.files)) {
+        for (const entry of doc.files) {
+          const update = entry && entry.url && updates.get(entry.url);
+          if (update) {
+            entry.sha512 = update.sha512;
+            entry.size = update.size;
+            patched.add(entry.url);
+          }
+        }
+      }
+
+      // Patch the top-level `path:` + `sha512:` block (the "primary" download).
+      // electron-builder doesn't emit a top-level `size:` for this block, so we
+      // only update `sha512` here — the size lives in the matching `files:` entry.
+      if (doc.path && updates.has(doc.path)) {
+        doc.sha512 = updates.get(doc.path).sha512;
+        patched.add('(top-level path: ' + doc.path + ')');
+      }
+
+      fs.writeFileSync(
+        yamlPath,
+        yaml.dump(doc, { lineWidth: -1, noRefs: true, quotingType: "'" }),
+      );
+
+      for (const filename of updates.keys()) {
+        if (patched.has(filename)) {
           console.log(`[afterAllArtifactBuild]   patched ${filename}`);
         } else {
           console.warn(`[afterAllArtifactBuild]   could not find ${filename} entry in latest-mac.yml`);
         }
       }
-      fs.writeFileSync(yamlPath, yaml);
     }
   }
 
