@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="chat/attachments.css">
   <link rel="stylesheet" href="chat/sidebar.css">
   <link rel="stylesheet" href="chat/settings-panel.css">
+  <link rel="stylesheet" href="chat/connections-panel.css">
   <link rel="stylesheet" href="chat/brain-panel.css">
   <link rel="stylesheet" href="chat/routines-panel.css">
   <link rel="stylesheet" href="chat/personalize-panel.css">
@@ -590,6 +591,8 @@
         </div>
         <div class="settings-nav-item" data-section="browser">Browser
         </div>
+        <div class="settings-nav-item" data-section="connections">Connections
+        </div>
         <div class="settings-nav-item acos-hidden" data-section="chat" aria-hidden="true">Chat
         </div>
         <div class="settings-nav-item" data-section="skins">Skins
@@ -736,6 +739,20 @@
               <div class="setting-row"><label>Port</label><input type="number" id="browser-port" value="9222" min="1024" max="65535" class="w-80"></div>
             </div>
           </details>
+        </section>
+
+        <!-- Connections Section (MCP Servers) -->
+        <section id="connections" class="settings-section">
+          <h2 class="section-title">Connections</h2>
+          <p class="section-desc">External tools your AI can use. Each row is one MCP server.</p>
+          <div class="connections-toolbar">
+            <button class="skills-setup-btn btn-compact btn-accent" onclick="playNormalClick(); connOpenEditor()">+ Add Connection</button>
+            <button class="skills-setup-btn btn-compact" onclick="playNormalClick(); connOpenConfigFile()">Open config file</button>
+          </div>
+          <div id="connections-editor" class="connections-editor hidden"></div>
+          <div id="connections-list" class="connections-list">
+            <div class="connections-empty">Loading…</div>
+          </div>
         </section>
 
         <!-- Pocket CLI Section -->
@@ -1219,6 +1236,7 @@
   <script src="chat/ui-chrome.js"></script>
   <script src="chat/plan-approval.js"></script>
   <script src="chat/settings-panel.js"></script>
+  <script src="chat/connections-panel.js"></script>
   <script src="chat/brain-panel.js"></script>
   <script src="chat/routines-panel.js"></script>
   <script src="chat/personalize-panel.js"></script>

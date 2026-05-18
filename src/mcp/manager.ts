@@ -122,6 +122,76 @@ export class MCPServerManager {
     return statuses;
   }
 
+  /**
+   * Add a new MCP server at runtime (Settings UI "Add connection" flow).
+   * Instantiates an MCPClient, starts it, and rebuilds the tool index so
+   * the agent sees the new tools immediately. Errors propagate so the UI
+   * can surface a clean failure (the client's own `lastError` will also
+   * carry the message).
+   *
+   * If a client with the same name already exists, this throws — callers
+   * should use `replaceClient` to swap an existing entry.
+   */
+  async addClient(name: string, cfg: ExternalMCPServerConfig): Promise<void> {
+    if (this.clients.has(name)) {
+      throw new Error(`MCP server '${name}' is already registered`);
+    }
+    if (cfg.disabled) {
+      this.disabledServers.add(name);
+      return;
+    }
+    // If we previously had it as disabled, clear that bookkeeping.
+    this.disabledServers.delete(name);
+
+    const client = new MCPClient(name, cfg);
+    this.clients.set(name, client);
+    try {
+      await client.start();
+    } catch (err) {
+      // Keep the client in the map so its `lastError` is visible via
+      // getServerStatuses(); the UI uses that to render the failed badge.
+      console.error(`[MCP Manager] addClient '${name}' failed:`, (err as Error).message);
+    }
+    this.rebuildToolIndex();
+  }
+
+  /**
+   * Stop and remove a named client. Safe to call for names that aren't
+   * registered (no-op). Used by Settings UI delete + toggle-off flows.
+   */
+  async stopClient(name: string): Promise<void> {
+    this.disabledServers.delete(name);
+    const client = this.clients.get(name);
+    if (!client) return;
+    try {
+      await client.stop();
+    } catch (err) {
+      console.warn(`[MCP Manager] error stopping '${name}':`, (err as Error).message);
+    }
+    this.clients.delete(name);
+    this.rebuildToolIndex();
+  }
+
+  /**
+   * Stop the named client (if any), then start a new one with the given
+   * config. Used by Settings UI edit + toggle-on flows.
+   *
+   * Drain check: if the existing client has in-flight tool calls we wait
+   * up to ~1.5s (3 × 500ms) before forcing the stop, to avoid yanking the
+   * transport out from under an active request.
+   */
+  async replaceClient(name: string, cfg: ExternalMCPServerConfig): Promise<void> {
+    const existing = this.clients.get(name);
+    if (existing) {
+      // Wait briefly for in-flight calls to settle before stopping.
+      for (let attempt = 0; attempt < 3 && existing.inFlightCount > 0; attempt++) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+    await this.stopClient(name);
+    await this.addClient(name, cfg);
+  }
+
   /** Reap every child process. Called on app quit. */
   async stop(): Promise<void> {
     const stops: Promise<void>[] = [];

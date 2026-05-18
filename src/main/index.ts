@@ -28,6 +28,7 @@ import {
   registerMiscIPC,
   registerContextIPC,
   registerAudioIPC,
+  registerConnectionsIPC,
 } from './ipc';
 import type { IPCDependencies } from './ipc';
 
@@ -451,6 +452,7 @@ function setupIPC(): void {
   registerMiscIPC(deps);
   registerContextIPC();
   registerAudioIPC();
+  registerConnectionsIPC(() => app.getPath('userData'));
 }
 
 // ============ Agent Lifecycle ============

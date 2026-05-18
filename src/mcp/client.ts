@@ -32,6 +32,12 @@ export class MCPClient {
   private _tools: MCPToolDescriptor[] = [];
   private _status: MCPClientStatus = 'idle';
   private _lastError: string | null = null;
+  /**
+   * Count of in-flight `callTool` invocations. Used by the manager's
+   * `replaceClient` drain check so a Settings UI edit doesn't yank a
+   * server out from under an active tool call.
+   */
+  private _inFlightCount = 0;
 
   constructor(
     readonly serverName: string,
@@ -48,6 +54,11 @@ export class MCPClient {
 
   get lastError(): string | null {
     return this._lastError;
+  }
+
+  /** Number of tool calls currently in flight on this client. */
+  get inFlightCount(): number {
+    return this._inFlightCount;
   }
 
   /**
@@ -152,8 +163,13 @@ export class MCPClient {
     if (!this.client) throw new Error(`MCPClient '${this.serverName}' not connected`);
     if (this._status !== 'ready') throw new Error(`MCPClient '${this.serverName}' not ready (status=${this._status})`);
 
-    const result = await this.client.callTool({ name: toolName, arguments: args });
-    return stringifyToolResult(result);
+    this._inFlightCount++;
+    try {
+      const result = await this.client.callTool({ name: toolName, arguments: args });
+      return stringifyToolResult(result);
+    } finally {
+      this._inFlightCount--;
+    }
   }
 
   /** Close the transport and reap the child process. Safe to call multiple times. */

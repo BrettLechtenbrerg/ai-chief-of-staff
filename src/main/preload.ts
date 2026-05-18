@@ -288,6 +288,23 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     runCommand: (command: string) => ipcRenderer.invoke('shell:runCommand', command),
   },
 
+  // ─── Connections (MCP servers) ───────────────────────────────────────
+  // Settings → Connections section. Each entry in this namespace maps 1:1
+  // to a handler in src/main/ipc/connections-ipc.ts which mutates the
+  // user-owned mcp-servers.json file atomically and keeps the running
+  // MCPServerManager in sync.
+  connections: {
+    list: () => ipcRenderer.invoke('connections:list'),
+    add: (name: string, config: unknown) => ipcRenderer.invoke('connections:add', name, config),
+    update: (oldName: string, newName: string, config: unknown) =>
+      ipcRenderer.invoke('connections:update', oldName, newName, config),
+    delete: (name: string) => ipcRenderer.invoke('connections:delete', name),
+    toggle: (name: string, enabled: boolean) =>
+      ipcRenderer.invoke('connections:toggle', name, enabled),
+    testConnection: (config: unknown) => ipcRenderer.invoke('connections:testConnection', config),
+    openConfigFile: () => ipcRenderer.invoke('connections:openConfigFile'),
+  },
+
   // ─── Permissions (macOS) ─────────────────────────────────────────────
   permissions: {
     isMacOS: () => ipcRenderer.invoke('permissions:isMacOS'),
@@ -693,6 +710,30 @@ declare global {
 
       shell: {
         runCommand: (command: string) => Promise<string>;
+      };
+
+      connections: {
+        list: () => Promise<{
+          servers: Array<{
+            name: string;
+            command: string;
+            args: string[];
+            env: Record<string, string>;
+            cwd: string | null;
+            disabled: boolean;
+            status: 'idle' | 'starting' | 'ready' | 'failed' | 'stopped' | 'disabled';
+            toolCount: number;
+            lastError: string | null;
+          }>;
+        }>;
+        add: (name: string, config: unknown) => Promise<{ success: boolean }>;
+        update: (oldName: string, newName: string, config: unknown) => Promise<{ success: boolean }>;
+        delete: (name: string) => Promise<{ success: boolean }>;
+        toggle: (name: string, enabled: boolean) => Promise<{ success: boolean }>;
+        testConnection: (
+          config: unknown,
+        ) => Promise<{ ok: boolean; toolCount?: number; tools?: string[]; error?: string }>;
+        openConfigFile: () => Promise<{ success: boolean; path: string }>;
       };
 
       permissions: {

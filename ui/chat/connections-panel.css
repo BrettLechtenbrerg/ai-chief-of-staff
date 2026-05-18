@@ -1,0 +1,211 @@
+/**
+ * Settings → Connections section styles.
+ *
+ * Card-row list inside #settings-view, plus inline editor. Uses existing
+ * tokens (--accent, --bg-elevated, --text-secondary, etc.) and re-uses
+ * .status / .status.success / .status.error from settings-panel.css so the
+ * status badges automatically match the rest of the panel.
+ */
+
+#settings-view #connections .connections-toolbar {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
+}
+
+#settings-view #connections .connections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#settings-view #connections .connections-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  border: 1px dashed color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+#settings-view #connections .conn-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--text-muted) 18%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+#settings-view #connections .conn-row-main {
+  min-width: 0;
+}
+
+#settings-view #connections .conn-row-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+#settings-view #connections .conn-row-cmd {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--text-color--font-family--mono, ui-monospace, monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#settings-view #connections .conn-row-status .status {
+  margin-top: 0;
+}
+
+#settings-view #connections .conn-status-badge {
+  cursor: default;
+}
+
+#settings-view #connections .conn-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#settings-view #connections .conn-icon-btn {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--text-muted) 25%, transparent);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+#settings-view #connections .conn-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+#settings-view #connections .conn-icon-btn:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+#settings-view #connections .conn-icon-btn-danger:hover {
+  color: var(--accent-shadow, #d93a63);
+  border-color: color-mix(in srgb, var(--accent-shadow, #d93a63) 45%, transparent);
+  background: color-mix(in srgb, var(--accent-shadow, #d93a63) 10%, transparent);
+}
+
+/* ─── Inline editor ────────────────────────────────────────────────── */
+
+#settings-view #connections .connections-editor {
+  margin: 0 0 16px;
+  padding: 16px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+#settings-view #connections .conn-editor-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+#settings-view #connections .conn-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+#settings-view #connections .conn-editor-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#settings-view #connections .conn-editor-grid input,
+#settings-view #connections .conn-editor-grid textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-primary);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 25%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--text-color--font-family--mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+#settings-view #connections .conn-editor-grid input:focus,
+#settings-view #connections .conn-editor-grid textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#settings-view #connections .conn-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  gap: 8px;
+}
+
+#settings-view #connections .conn-editor-actions-right {
+  display: flex;
+  gap: 8px;
+}
+
+#settings-view #connections .conn-editor-status {
+  margin-top: 10px;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  min-height: 0;
+}
+
+#settings-view #connections .conn-editor-status:empty {
+  display: none;
+}
+
+#settings-view #connections .conn-editor-status.info {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+#settings-view #connections .conn-editor-status.success {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+#settings-view #connections .conn-editor-status.error {
+  color: var(--accent-shadow, #d93a63);
+  background: color-mix(in srgb, var(--accent-shadow, #d93a63) 12%, transparent);
+}
+
+/* Compact toggle inside the row aligns vertically with the icon buttons. */
+#settings-view #connections .conn-row-actions .toggle {
+  flex-shrink: 0;
+}
