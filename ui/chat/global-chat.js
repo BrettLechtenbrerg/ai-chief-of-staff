@@ -931,6 +931,15 @@ function showChatToast(msg) {
   notyf.error(msg);
 }
 
+// Let shared/ipc-error-handler.js show its "install out of date" message via
+// the same Notyf used everywhere else in the chat window.
+if (typeof window.__acosRegisterToast === 'function') {
+  window.__acosRegisterToast(function (msg, type) {
+    if (type === 'success') notyf.success(msg);
+    else notyf.error(msg);
+  });
+}
+
 function showTierToast(msg) {
   notyf.open({ type: 'success', message: msg, duration: 3500 });
 }

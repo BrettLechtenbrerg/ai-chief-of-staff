@@ -429,6 +429,7 @@
     }
   </style>
   <script src="shared/theme-loader.js"></script>
+  <script src="shared/ipc-error-handler.js"></script>
   <script type="module">
     import autoAnimate from 'https://cdn.jsdelivr.net/npm/@formkit/auto-animate@0.9/+esm';
     window._autoAnimate = autoAnimate;
@@ -1086,13 +1087,15 @@
       try {
         // Edit mode — dispatch to cron.update so a rename works correctly.
         if (editingJobOriginalName) {
-          const result = await window.pocketAgent.cron.update(
-            editingJobOriginalName,
-            name,
-            schedule,
-            prompt,
-            'default',
-            sessionId,
+          const result = await window.safeIpc('cron.update', () =>
+            window.pocketAgent.cron.update(
+              editingJobOriginalName,
+              name,
+              schedule,
+              prompt,
+              'default',
+              sessionId,
+            )
           );
           if (result.success) {
             showToast('Saved! ✨', 'success');
@@ -1108,7 +1111,9 @@
           return;
         }
 
-        const result = await window.pocketAgent.cron.create(name, schedule, prompt, 'default', sessionId);
+        const result = await window.safeIpc('cron.create', () =>
+          window.pocketAgent.cron.create(name, schedule, prompt, 'default', sessionId)
+        );
         if (result.success) {
           document.getElementById('job-name').value = '';
           document.getElementById('job-prompt').value = '';
@@ -1158,7 +1163,7 @@
       if (!confirm(`Delete "${name}"?`)) return;
 
       try {
-        await window.pocketAgent.cron.delete(name);
+        await window.safeIpc('cron.delete', () => window.pocketAgent.cron.delete(name));
         showToast('Poof! Gone.', 'success');
         loadJobs();
       } catch (err) {
@@ -1176,6 +1181,11 @@
     });
     function showToast(message, type = 'success') {
       notyf[type === 'error' ? 'error' : 'success'](message);
+    }
+
+    // Route safeIpc's stale-install toast through the same Notyf instance.
+    if (typeof window.__acosRegisterToast === 'function') {
+      window.__acosRegisterToast(function (msg, type) { showToast(msg, type); });
     }
 
     function escapeHtml(text) {

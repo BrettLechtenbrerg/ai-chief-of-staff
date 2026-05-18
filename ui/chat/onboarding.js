@@ -231,7 +231,9 @@ async function obStartClaudeOAuth() {
   btn.disabled = true;
   btn.innerHTML = '<span class="ob-spinner"></span> Opening browser...';
   try {
-    const result = await window.pocketAgent.auth.startOAuth();
+    const result = await window.safeIpc('auth.startOAuth', () =>
+      window.pocketAgent.auth.startOAuth()
+    );
     if (result.success) {
       obShowStep('ob-step-oauth-code');
       document.getElementById('ob-oauth-code').focus();
@@ -257,7 +259,9 @@ async function obStartOpenAIOAuth() {
   btn.disabled = true;
   btn.innerHTML = '<span class="ob-spinner"></span> Opening browser...';
   try {
-    const result = await window.pocketAgent.openaiAuth.startOAuth();
+    const result = await window.safeIpc('openaiAuth.startOAuth', () =>
+      window.pocketAgent.openaiAuth.startOAuth()
+    );
     if (result.success) {
       obShowStep('ob-step-name');
     } else {
@@ -283,7 +287,9 @@ async function obCompleteOAuth() {
   btn.innerHTML = '<span class="ob-spinner"></span> Verifying...';
 
   try {
-    const result = await window.pocketAgent.auth.completeOAuth(code);
+    const result = await window.safeIpc('auth.completeOAuth', () =>
+      window.pocketAgent.auth.completeOAuth(code)
+    );
     if (result.success) {
       // Other providers can be added later from the auth step's collapsible
       // section or from Settings. Keeping this step focused on the OAuth

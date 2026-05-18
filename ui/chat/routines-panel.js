@@ -306,7 +306,7 @@ async function rtnRunJob(name) {
 async function rtnDeleteJob(name) {
   if (!confirm(`Delete "${name}"?`)) return;
   try {
-    await window.pocketAgent.cron.delete(name);
+    await window.safeIpc('cron.delete', () => window.pocketAgent.cron.delete(name));
     _rtnShowToast('Poof! Gone.', 'success');
     _rtnLoadJobs();
   } catch (err) { _rtnShowToast(err.message, 'error'); }

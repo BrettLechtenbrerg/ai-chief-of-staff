@@ -634,7 +634,9 @@ async function stgStartOAuth() {
   btn.disabled = true;
   btn.textContent = 'Opening...';
   try {
-    const result = await window.pocketAgent.auth.startOAuth();
+    const result = await window.safeIpc('auth.startOAuth', () =>
+      window.pocketAgent.auth.startOAuth()
+    );
     if (result.success) {
       document.getElementById('oauth-code-section').classList.remove('hidden');
       document.getElementById('oauth-code').focus();
@@ -651,7 +653,9 @@ async function stgCompleteOAuth() {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Verifying...';
   try {
-    const result = await window.pocketAgent.auth.completeOAuth(code);
+    const result = await window.safeIpc('auth.completeOAuth', () =>
+      window.pocketAgent.auth.completeOAuth(code)
+    );
     if (result.success) {
       _stgShowToast('Connected!', 'success');
       document.getElementById('oauth-code-section').classList.add('hidden');
@@ -769,7 +773,9 @@ async function stgStartOpenAIOAuth() {
   btn.disabled = true;
   btn.textContent = 'Opening...';
   try {
-    const result = await window.pocketAgent.openaiAuth.startOAuth();
+    const result = await window.safeIpc('openaiAuth.startOAuth', () =>
+      window.pocketAgent.openaiAuth.startOAuth()
+    );
     if (result.success) {
       await _stgLoadSettings();
       _stgUpdateOpenAIAuthStatus();
@@ -930,7 +936,9 @@ async function _stgInitializeBrowserSection() {
   const statusEl = document.getElementById('browser-status');
   if (!selector || !statusEl) return;
   try {
-    const browsers = await window.pocketAgent.browser.detectInstalled();
+    const browsers = await window.safeIpc('browser.detectInstalled', () =>
+      window.pocketAgent.browser.detectInstalled()
+    );
     selector.innerHTML = '<option value="">Select browser...</option>';
     browsers.forEach(browser => {
       const option = document.createElement('option');
@@ -957,7 +965,9 @@ async function stgLaunchBrowserWithCdp() {
   launchBtn.disabled = true; launchBtn.textContent = 'Launching...';
   statusEl.className = 'status info'; statusEl.textContent = 'Launching...';
   try {
-    const result = await window.pocketAgent.browser.launch(browserId, port);
+    const result = await window.safeIpc('browser.launch', () =>
+      window.pocketAgent.browser.launch(browserId, port)
+    );
     if (result.success) {
       statusEl.className = 'status success'; statusEl.textContent = 'Connected';
       _stgShowToast('Browser launched with remote debugging enabled!', 'success');
