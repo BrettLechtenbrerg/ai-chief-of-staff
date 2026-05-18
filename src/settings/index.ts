@@ -10,6 +10,7 @@ import { safeStorage } from 'electron';
 
 import { SETTINGS_SCHEMA } from './schema';
 import type { SettingDefinition } from './schema';
+import { THEMES } from './themes';
 import {
   validateAnthropicKey,
   validateOpenAIKey,
@@ -47,10 +48,47 @@ class SettingsManagerClass {
     this.db = new Database(dbPath);
     this.createTable();
     this.loadDefaults();
+    this.migrateSkinToTsai();
     this.loadToCache();
     this.migrateTokensToSafeStorage();
     this.initialized = true;
     console.log('[Settings] Initialized');
+  }
+
+  /**
+   * Promote any empty / unknown ui.skin value to 'tsai' (the TSAI brand theme).
+   *
+   * Older installs may have ui.skin = '' (from a previous defaultValue) or
+   * 'default' (a string that never had a matching THEMES entry). When the
+   * renderer's theme loader looks up THEMES[skinId] it returns undefined and
+   * leaves the page on the raw CSS variables — the symptom users see as
+   * "the colors are not the TSAI branding".
+   *
+   * Migration condition: promote ONLY if the stored value is missing from
+   * THEMES. This preserves explicit user choices (dracula, nord, etc.).
+   * Idempotent — safe to run on every startup.
+   */
+  private migrateSkinToTsai(): void {
+    if (!this.db) return;
+
+    const row = this.db
+      .prepare('SELECT value FROM settings WHERE key = ?')
+      .get('ui.skin') as { value: string } | undefined;
+
+    if (!row) return; // loadDefaults() will have inserted it, but be defensive
+
+    const current = (row.value || '').trim();
+    if (current && Object.prototype.hasOwnProperty.call(THEMES, current)) {
+      // Already a valid theme — leave the user's choice alone.
+      return;
+    }
+
+    this.db
+      .prepare(
+        `UPDATE settings SET value = ?, updated_at = datetime('now') WHERE key = ?`
+      )
+      .run('tsai', 'ui.skin');
+    console.log(`[Settings] Migrated ui.skin from "${current}" to "tsai"`);
   }
 
   private createTable(): void {
