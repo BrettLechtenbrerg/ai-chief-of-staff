@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="shared/variables.css">
   <link rel="stylesheet" href="shared/notyf-theme.css">
   <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shared/icon-buttons.css">
   <link rel="stylesheet" href="chat/base.css">
   <link rel="stylesheet" href="chat/layout.css">
   <link rel="stylesheet" href="chat/messages.css">
@@ -484,19 +485,19 @@
         </div>
       </div>
       <div class="input-toolbar-btns">
-        <button class="input-toolbar-btn" id="attach-btn" title="Drop a file">
+        <button class="input-toolbar-btn" id="attach-btn" data-tip="Attach a file (image, PDF, doc)" aria-label="Attach a file">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.823 12L4.28 10.456a4.367 4.367 0 1 1 6.177-6.177l9.265 9.265a4.368 4.368 0 0 1-6.177 6.177l-3.474-3.475a2.73 2.73 0 0 1 3.86-3.86l1.93 1.93"/></svg>
         </button>
-        <button class="input-toolbar-btn" id="voice-btn" title="Record voice note (needs OpenAI key)" hidden>
+        <button class="input-toolbar-btn" id="voice-btn" data-tip="Record voice note (needs OpenAI key)" aria-label="Record voice note" hidden>
           <svg class="voice-icon-idle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm7 9a7 7 0 0 1-14 0m7 7v3"/></svg>
           <svg class="voice-icon-recording" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></svg>
           <span class="voice-spinner" aria-hidden="true"></span>
           <span class="voice-rec-dot" aria-hidden="true"></span>
         </button>
-        <button class="input-toolbar-btn" id="search-toolbar-btn" title="Search">
+        <button class="input-toolbar-btn" id="search-toolbar-btn" data-tip="Search this conversation" aria-label="Search conversation">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 17l4 4m-2-10a8 8 0 1 0-16 0a8 8 0 0 0 16 0"/></svg>
         </button>
-        <button class="input-toolbar-btn" id="workflows-toolbar-btn" title="Workflows">
+        <button class="input-toolbar-btn" id="workflows-toolbar-btn" data-tip="Slash-command workflows" aria-label="Workflows">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 8l1.84 1.85c.773.778 1.16 1.167 1.16 1.65s-.387.872-1.16 1.65L17 15M7 8L5.16 9.85C4.387 10.628 4 11.017 4 11.5s.387.872 1.16 1.65L7 15m7.5-11l-5 16"/></svg>
         </button>
         <div id="background-tasks-area" class="hidden">

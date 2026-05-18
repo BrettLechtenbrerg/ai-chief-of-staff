@@ -79,16 +79,20 @@
 
 /* Custom hover tooltip for icon buttons. Native HTML `title=` tooltips are
    unreliable in Electron (long delay, suppressed when window not focused,
-   inconsistent across platforms). Use `data-tip="Pause task"` instead. */
+   inconsistent across platforms). Use `data-tip="Pause task"` instead.
+   Also covers `.input-toolbar-btn` (chat composer toolbar) so the attach /
+   voice / search / workflows buttons get the same reliable hover label. */
 .icon-btn[data-tip],
 .rtn-icon-btn[data-tip],
-.delete-btn[data-tip] {
+.delete-btn[data-tip],
+.input-toolbar-btn[data-tip] {
   position: relative;
 }
 
 .icon-btn[data-tip]::after,
 .rtn-icon-btn[data-tip]::after,
-.delete-btn[data-tip]::after {
+.delete-btn[data-tip]::after,
+.input-toolbar-btn[data-tip]::after {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 6px);
@@ -112,7 +116,8 @@
 
 .icon-btn[data-tip]:hover::after,
 .rtn-icon-btn[data-tip]:hover::after,
-.delete-btn[data-tip]:hover::after {
+.delete-btn[data-tip]:hover::after,
+.input-toolbar-btn[data-tip]:hover::after {
   opacity: 1;
   visibility: visible;
   transition: opacity 120ms ease 200ms, visibility 0ms linear 200ms;

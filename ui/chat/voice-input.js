@@ -52,12 +52,14 @@
     btn.classList.remove('is-idle', 'is-recording', 'is-transcribing');
     btn.classList.add('is-' + next);
     btn.disabled = next === STATE.TRANSCRIBING;
+    // Use `data-tip` (custom CSS tooltip from shared/icon-buttons.css), not
+    // `title=` — native HTML tooltips are unreliable in Electron windows.
     if (next === STATE.RECORDING) {
-      btn.title = 'Click to stop recording';
+      btn.setAttribute('data-tip', 'Click to stop recording');
     } else if (next === STATE.TRANSCRIBING) {
-      btn.title = 'Transcribing\u2026';
+      btn.setAttribute('data-tip', 'Transcribing\u2026');
     } else {
-      btn.title = 'Record voice note (needs OpenAI key)';
+      btn.setAttribute('data-tip', 'Record voice note (needs OpenAI key)');
     }
   }
 
