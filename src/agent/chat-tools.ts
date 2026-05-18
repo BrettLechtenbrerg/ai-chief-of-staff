@@ -12,7 +12,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createTools as createCoderTools } from '@kenkaiiii/ggcoder';
 import { getCustomTools, ToolsConfig } from '../tools';
-import { wrapToolHandler } from '../tools/diagnostics';
+import { wrapToolHandler, getToolTimeout } from '../tools/diagnostics';
 import { createSubAgentTool } from '../tools/subagent';
 import { buildMCPAgentTools } from '../mcp/proxy';
 import { getStreamConfig } from './chat-providers';
@@ -107,7 +107,9 @@ export function getChatAgentTools(config: ToolsConfig, cwd: string): AgentTool[]
   const tools: AgentTool[] = [];
 
   for (const tool of customTools) {
-    const wrapped = wrapToolHandler(tool.name, tool.handler);
+    // Honor per-tool overrides in TOOL_TIMEOUTS (e.g. generate_blog_image
+    // needs 5 min for gpt-image-1; default 30s would always time out).
+    const wrapped = wrapToolHandler(tool.name, tool.handler, getToolTimeout(tool.name));
     const inputSchema = tool.input_schema as {
       properties?: Record<string, unknown>;
       required?: string[];
@@ -167,7 +169,8 @@ export function getCoderAgentTools(config: ToolsConfig, cwd: string): AgentTool[
   const mcpTools: AgentTool[] = [];
 
   for (const tool of customTools) {
-    const wrapped = wrapToolHandler(tool.name, tool.handler);
+    // Honor per-tool overrides in TOOL_TIMEOUTS (e.g. generate_blog_image).
+    const wrapped = wrapToolHandler(tool.name, tool.handler, getToolTimeout(tool.name));
     const inputSchema = tool.input_schema as {
       properties?: Record<string, unknown>;
       required?: string[];

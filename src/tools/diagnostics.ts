@@ -157,6 +157,13 @@ export const TOOL_TIMEOUTS = {
 
   // Slow tools - browser operations
   browser: 45000, // Browser can be slow
+
+  // Very slow tools - external generative APIs
+  // gpt-image-1 at quality:'high' commonly takes 60–180s; we've seen
+  // outliers near 4 min on busy days. 5 min keeps us off the timeout
+  // path so the agent doesn't lie about a successful call that's
+  // actually still in flight.
+  generate_blog_image: 300000,
 } as const;
 
 /**
