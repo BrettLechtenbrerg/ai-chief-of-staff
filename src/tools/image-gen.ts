@@ -37,6 +37,12 @@ export interface GenerateBlogImageInput {
    * only — the repo copy is what gets committed to the PR.
    */
   desktopCopy?: boolean;
+  /**
+   * If true, generate a SECOND 1024x1024 square image suitable for
+   * Instagram. Saved next to outputPath with `-square` appended before
+   * the .png extension. Costs ~$0.04 extra at quality:'high'.
+   */
+  generateSquare?: boolean;
 }
 
 export interface GenerateBlogImageResult {
@@ -44,7 +50,12 @@ export interface GenerateBlogImageResult {
   outputPath?: string;
   /** Path of the Desktop preview copy, if one was saved. */
   desktopCopyPath?: string;
+  /** Path of the IG-square variant, if generateSquare was true. */
+  squarePath?: string;
+  /** Path of the Desktop preview of the square image, if generated. */
+  squareDesktopCopyPath?: string;
   bytes?: number;
+  squareBytes?: number;
   error?: string;
 }
 
@@ -60,12 +71,28 @@ function desktopPreviewPath(repoPath: string): string {
   return path.join(home, 'Desktop', filename);
 }
 
-// Where the blog stores hero images. Lives in the TSAI-Site repo on Brett's
-// machine; the cron commits + pushes the file as part of the blog PR.
-const ALLOWED_DIR = path.resolve(
-  process.env.HOME || '',
-  'dev/TSAI-Site/public/blog-images',
-);
+// Allowed output directories for generated images. The tool can write
+// into any of these but nowhere else — prevents the agent from dropping
+// PNGs into random places on disk.
+//
+// 1. Each brand's site repo public/blog-images/ — where committed images live
+//    for blogs hosted on github-next (currently TSAI).
+// 2. The _brand-profiles/_inbox/ folder — where images for GHL-blog brands
+//    (PMMA, brett-personal) land. Brett uploads from here.
+const ALLOWED_DIRS = [
+  path.resolve(process.env.HOME || '', 'dev/TSAI-Site/public/blog-images'),
+  path.resolve(
+    process.env.HOME || '',
+    'dev/PMMA-Website-2026-Master/public/blog-images',
+  ),
+  path.resolve(
+    process.env.HOME || '',
+    'dev/BL-2026-Personal-Site/public/blog-images',
+  ),
+  path.resolve(process.env.HOME || '', 'dev/_brand-profiles/_inbox'),
+];
+
+
 
 const PHOTO_REALISTIC_PREAMBLE =
   'Photo-realistic editorial photograph, natural lighting, clean composition, professional quality, no text in image, no watermarks, no logos. Subject:';
@@ -97,9 +124,12 @@ function validateOutputPath(outputPath: string): string {
     throw new Error('outputPath must end with .png');
   }
   const resolved = path.resolve(outputPath);
-  if (!resolved.startsWith(ALLOWED_DIR + path.sep) && resolved !== ALLOWED_DIR) {
+  const allowed = ALLOWED_DIRS.some(
+    (dir) => resolved === dir || resolved.startsWith(dir + path.sep),
+  );
+  if (!allowed) {
     throw new Error(
-      `outputPath must be inside ${ALLOWED_DIR} (got: ${resolved})`,
+      `outputPath must be inside one of: ${ALLOWED_DIRS.join(', ')} (got: ${resolved})`,
     );
   }
   return resolved;
@@ -174,10 +204,64 @@ export async function generateBlogImage(
       }
     }
 
+    // Optional Instagram-square variant. Same prompt + style, different size.
+    // Best-effort: if the square generation fails, we still return success
+    // for the main image so the routine can continue.
+    let squarePath: string | undefined;
+    let squareBytes: number | undefined;
+    let squareDesktopCopyPath: string | undefined;
+    if (input.generateSquare === true) {
+      try {
+        const squareResolvedPath = resolved.replace(/\.png$/i, '-square.png');
+        // Square output stays in the same allowed dir as the hero — inheriting
+        // its validation. Re-validate to be safe.
+        validateOutputPath(squareResolvedPath);
+
+        const squareResponse = await openai.images.generate({
+          model: 'gpt-image-1',
+          prompt: finalPrompt,
+          size: '1024x1024',
+          quality: 'high',
+          n: 1,
+        });
+        const sb64 = squareResponse.data?.[0]?.b64_json;
+        if (sb64) {
+          const sbuffer = Buffer.from(sb64, 'base64');
+          fs.writeFileSync(squareResolvedPath, sbuffer);
+          squarePath = squareResolvedPath;
+          squareBytes = sbuffer.length;
+
+          // Desktop preview for the square too, if desktopCopy is on.
+          if (input.desktopCopy !== false) {
+            try {
+              const sPreview = desktopPreviewPath(squareResolvedPath);
+              fs.writeFileSync(sPreview, sbuffer);
+              squareDesktopCopyPath = sPreview;
+            } catch (err) {
+              console.warn(
+                '[image-gen] Square Desktop preview failed:',
+                (err as Error).message,
+              );
+            }
+          }
+        } else {
+          console.warn('[image-gen] Square generation returned no image data');
+        }
+      } catch (err) {
+        console.warn(
+          '[image-gen] Square generation failed (main hero is still saved):',
+          (err as Error).message,
+        );
+      }
+    }
+
     return {
       success: true,
       outputPath: resolved,
       desktopCopyPath,
+      squarePath,
+      squareBytes,
+      squareDesktopCopyPath,
       bytes: buffer.length,
     };
   } catch (err) {
@@ -225,12 +309,17 @@ export function getGenerateBlogImageToolDefinition() {
         outputPath: {
           type: 'string',
           description:
-            "Absolute path inside ~/dev/TSAI-Site/public/blog-images/. Must end with .png. Example: '/Users/brettlechtenberg/dev/TSAI-Site/public/blog-images/2026-05-25-ai-tools-coaches-hero.png'.",
+            "Absolute path. Must end with .png. Allowed parent dirs: ~/dev/TSAI-Site/public/blog-images/, ~/dev/PMMA-Website-2026-Master/public/blog-images/, ~/dev/BL-2026-Personal-Site/public/blog-images/, or ~/dev/_brand-profiles/_inbox/. The cron picks the right dir per the brand's blog backend.",
         },
         desktopCopy: {
           type: 'boolean',
           description:
             'Default true. Save a preview copy to ~/Desktop/blog-hero-preview-[filename] for Brett to eyeball before merging the PR. Pass false to skip the Desktop copy.',
+        },
+        generateSquare: {
+          type: 'boolean',
+          description:
+            'Default false. When true, generate a SECOND 1024x1024 square image variant for Instagram. Saved next to outputPath with `-square` appended before .png. Costs an extra ~$0.04 at quality:high. Pass true for any brand whose profile.image.generateSquareForInstagram is true (TSAI, PMMA, Brett-personal all enabled by default).',
         },
       },
       required: ['prompt', 'outputPath'],

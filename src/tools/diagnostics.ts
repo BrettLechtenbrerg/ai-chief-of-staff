@@ -162,8 +162,13 @@ export const TOOL_TIMEOUTS = {
   // gpt-image-1 at quality:'high' commonly takes 60–180s; we've seen
   // outliers near 4 min on busy days. 5 min keeps us off the timeout
   // path so the agent doesn't lie about a successful call that's
-  // actually still in flight.
-  generate_blog_image: 300000,
+  // actually still in flight. Doubled to 8 min for the square-variant
+  // path which makes TWO API calls in sequence.
+  generate_blog_image: 480000,
+
+  // Pure file I/O — fast, but allow generous headroom in case the
+  // inbox folder needs creation or the cron passes a huge image path.
+  write_daily_posting_packet: 15000,
 } as const;
 
 /**

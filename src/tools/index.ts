@@ -23,6 +23,10 @@ import {
   getSendTelegramToolDefinition,
   handleSendTelegramTool,
 } from './telegram-tool';
+import {
+  getWriteDailyPostingPacketToolDefinition,
+  handleWriteDailyPostingPacketTool,
+} from './daily-posting-packet';
 
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
@@ -202,6 +206,16 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: telegramDef.description,
     input_schema: telegramDef.input_schema as Record<string, unknown>,
     handler: handleSendTelegramTool,
+  });
+
+  // write_daily_posting_packet — multi-brand weekly content cron output.
+  // Writes a paste-ready packet file to ~/dev/_brand-profiles/_inbox/.
+  const packetDef = getWriteDailyPostingPacketToolDefinition();
+  tools.push({
+    name: packetDef.name,
+    description: packetDef.description,
+    input_schema: packetDef.input_schema as Record<string, unknown>,
+    handler: handleWriteDailyPostingPacketTool,
   });
 
   // Project tools
