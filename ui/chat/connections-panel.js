@@ -93,7 +93,10 @@ async function loadConnections() {
 
 function renderConnectionRow(server) {
   const enabled = !server.disabled;
-  const toggleClass = enabled ? 'toggle on' : 'toggle';
+  // Match the convention used elsewhere in #settings-view: `.toggle.active`
+  // drives the on-state styling (background + knob translate) from
+  // settings-panel.css.
+  const toggleClass = enabled ? 'toggle active' : 'toggle';
   return `
     <div class="conn-row" data-name="${_connEscapeHtml(server.name)}">
       <div class="conn-row-main">
