@@ -117,7 +117,18 @@ function buildPacketMarkdown(input: WriteDailyPostingPacketInput): string {
   lines.push('');
   if (input.blogBackend === 'ghl') {
     lines.push(
-      '> **Note**: This brand\'s blog is on GoHighLevel. The cron did NOT write a new blog file. The social posts below reference the topic; write the actual GHL blog when you have time, or skip and just post social.',
+      `> **⚠️ IMPORTANT — do this FIRST:** This brand's blog is on GoHighLevel. The social posts below all link to **${input.blogUrl}**, which **does NOT exist yet**. Before posting any social, do one of these two things:`,
+    );
+    lines.push('>');
+    lines.push(
+      `> 1. **Publish the GHL blog post** at that URL. Use the \`blog-draft.md\` file in this folder as your starting point — it's the full article, ready to paste into the GHL CMS.`,
+    );
+    lines.push(
+      `> 2. **OR** edit the link in each social post below to point somewhere real (e.g. your homepage or a related existing page).`,
+    );
+    lines.push('>');
+    lines.push(
+      `> Skip this step and your posts will broadcast a 404 link. Don't.`,
     );
     lines.push('');
   }
