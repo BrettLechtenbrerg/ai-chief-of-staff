@@ -72,7 +72,7 @@ ai-chief-of-staff/
 │   ├── main/              # Electron main process (tray, IPC, updater)
 │   ├── agent/             # Agent loop, safety, modes, chat tools
 │   ├── tools/             # Built-in tools (scheduler, macos, subagent, projects)
-│   ├── mcp/               # MCP server hosts (browser, project)
+│   ├── mcp/               # MCP client + manager + Settings IPC for external MCP servers
 │   ├── browser/           # Puppeteer-based browser automation
 │   ├── channels/telegram/ # Telegram bot handlers
 │   ├── scheduler/         # node-cron job runner + notifications
@@ -155,10 +155,18 @@ gh auth switch --user BrettLechtenbrerg
 
 ## Work History
 
+### May 18, 2026 (afternoon) — Connections settings UI + onboarding connectors mockup (beta.9)
+- Closed the "zero UI for connected tools" gap. New **Settings → Connections** section (nav item between Browser and Chat) lists every entry in `<userData>/mcp-servers.json` with live status from `MCPServerManager`, tool counts, and last-error tooltips. Add / edit / delete / toggle / Test-Connection / Open-config-file actions all work end-to-end.
+- Backend: `src/mcp/config.ts` gained `saveMCPConfig()` (write-tmp → fsync → rename atomic writer, validates shape, preserves unknown top-level + per-server fields so future ACOS keys aren't wiped by an older Settings UI). `src/mcp/manager.ts` gained `addClient` / `stopClient` / `replaceClient` with a drain check (`MCPClient.inFlightCount` waits up to ~1.5s for in-flight tool calls before stopping). New IPC layer `src/main/ipc/connections-ipc.ts` (six handlers) wired through `src/main/preload.ts` as `window.pocketAgent.connections.*`.
+- Renderer: `ui/chat/connections-panel.js` (card-row list, 5s status poll, inline editor, delete-confirm spells out the server name) + `ui/chat/connections-panel.css` (card layout reusing `.status` / `.keys-table` tokens).
+- Onboarding visual-only mockup: new "Connect your tools" step between funfacts and CLI install. Two `.connector-card` rows (Gmail+Calendar with Google G, GoHighLevel with envelope icon). Buttons surface a Notyf toast and advance — no OAuth code yet, blocked on Manny's Google business-case reply. Step auto-skips on subsequent launches via `onboarding.connectorsSeen=true`.
+- 27 new unit tests across `tests/unit/mcp-config-save.test.ts` (8: round-trip, atomic write, malformed-input rejection, forward-compat, autocreate-dir) and `tests/unit/connections-ipc.test.ts` (19: list-merge, add-dedup, update/rename/collision, delete-stops-client, toggle-flips, testConnection ok/throw/validate/timeout, openConfigFile). Suite 1086 → 1113 passing.
+- Released as **v1.0.0-beta.9** (commits `5b3a8a5` Settings UI + `7912a2f` onboarding mockup). Mac signed + notarized, Windows via Docker, landing page bumped + Vercel `--prod` deployed.
+
 ### May 17, 2026 (late night, after beta.7) — new-user docs + Gmail/Calendar connector decisions to Manny
 - Converted Brett's personal testing manual into a general new-user training doc: `~/Desktop/AI-Chief-of-Staff-Welcome-Guide.txt` (15 sections, copy-paste prompts, each section labels OUT OF THE BOX vs NEEDS-CONNECTOR).
 - Built a side-by-side capabilities comparison doc: `~/Desktop/AI-Chief-of-Staff-Capabilities-Comparison.txt` (checkbox table per section, Quick Summary scores **8 of 15 capabilities work out of the box, 7 unlock with connectors**).
-- Surfaced the discovery gap: there is **zero UI** anywhere in the app for MCP servers/connected tools. Users have no way to see what's connected. Roadmap fix ("Phase 3 — MCP Servers Settings UI") was in Active workstreams but not yet planned in detail.
+- Surfaced the discovery gap: there is **zero UI** anywhere in the app for MCP servers/connected tools. Users have no way to see what's connected. Roadmap fix ("Phase 3 — MCP Servers Settings UI") was in Active workstreams but not yet planned in detail. **Shipped May 18 (beta.9)** — see Connections row in `RECOVERY.md`.
 - Brett identified next priority: one-click Gmail + Calendar connection (the #1 tester request). Rather than jumping to a plan, surfaced **4 design decisions** that materially change scope (which MCP server to ship, whose Google OAuth client, where tokens live, scope of first release). Drafted email to Manny at `~/Desktop/email-to-manny-gmail-calendar-connector-decisions.txt` walking through all 4 + Brett's recommendations + 7-day timeline + Google verification critical path.
 - **Next session blocked on Manny's reply.** See "Next session — pick up here" at the top of Active workstreams in `RECOVERY.md` for full context.
 

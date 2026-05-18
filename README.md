@@ -57,6 +57,9 @@ Same brain, different interface. Talk to it from your phone with full access to 
 ### 40+ skill integrations
 Notion, GitHub, Slack, Apple Notes, Apple Reminders, Google Workspace, Trello, Obsidian, and more. Plus MCP server support for adding your own. Full terminal access when you need it.
 
+### Connections (MCP servers)
+Settings → Connections shows every external tool your AI can use. Add/edit/disable any MCP server, test the connection before saving, and see live status (Ready / Failed / Disabled) at a glance. Edits are atomic — a crash mid-save leaves your previous config intact. Same `mcp-servers.json` shape as Claude Desktop, so you can copy configs between the two.
+
 ---
 
 ## Getting started
