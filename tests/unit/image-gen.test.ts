@@ -9,7 +9,7 @@
  *  - validation: missing prompt, missing key, non-.png path
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -68,12 +68,13 @@ beforeEach(() => {
   // dev/TSAI-Site/public/blog-images using a tmp-redirected fs.mkdirSync.
 });
 
-afterAllRestore();
-
-function afterAllRestore() {
-  // Hoisted helper so we restore HOME even if a test throws.
-  // (vitest does this via beforeEach/afterEach normally; we just do it here.)
-}
+afterEach(() => {
+  // Restore HOME so the next test starts clean, then wipe the sandbox.
+  process.env.HOME = ORIGINAL_HOME;
+  if (sandboxHome && fs.existsSync(sandboxHome)) {
+    fs.rmSync(sandboxHome, { recursive: true, force: true });
+  }
+});
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
@@ -159,6 +160,13 @@ describe('image-gen / generateBlogImage success path', () => {
     const realHome = ORIGINAL_HOME || '';
     const allowedDir = path.join(realHome, 'dev/TSAI-Site/public/blog-images');
     const fakeFile = path.join(allowedDir, `__test-${Date.now()}.png`);
+    // The Desktop copy uses process.env.HOME, which the beforeEach()
+    // sandbox redirects to a temp dir. Match that for the assertion.
+    const desktopCopyExpected = path.join(
+      sandboxHome,
+      'Desktop',
+      `blog-hero-preview-${path.basename(fakeFile)}`,
+    );
 
     // 1x1 transparent PNG, base64-encoded \u2014 smallest valid PNG we can carry.
     const tinyPngBase64 =
@@ -178,6 +186,10 @@ describe('image-gen / generateBlogImage success path', () => {
       expect(r.bytes).toBeGreaterThan(0);
       expect(fs.existsSync(fakeFile)).toBe(true);
 
+      // Default behavior: Desktop preview copy also saved.
+      expect(r.desktopCopyPath).toBe(desktopCopyExpected);
+      expect(fs.existsSync(desktopCopyExpected)).toBe(true);
+
       // Confirm the prompt that went to the SDK got the photo-realistic preamble.
       expect(mockGenerate).toHaveBeenCalledTimes(1);
       const callArgs = mockGenerate.mock.calls[0][0];
@@ -189,6 +201,38 @@ describe('image-gen / generateBlogImage success path', () => {
       expect(callArgs.prompt).toContain('A coach at a clean wooden desk');
     } finally {
       if (fs.existsSync(fakeFile)) fs.unlinkSync(fakeFile);
+      if (fs.existsSync(desktopCopyExpected)) fs.unlinkSync(desktopCopyExpected);
+    }
+  });
+
+  it('skips the Desktop preview when desktopCopy is false', async () => {
+    const realHome = ORIGINAL_HOME || '';
+    const allowedDir = path.join(realHome, 'dev/TSAI-Site/public/blog-images');
+    const fakeFile = path.join(allowedDir, `__test-nodesk-${Date.now()}.png`);
+    const desktopCopyExpected = path.join(
+      sandboxHome,
+      'Desktop',
+      `blog-hero-preview-${path.basename(fakeFile)}`,
+    );
+
+    const tinyPngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+    mockGenerate.mockResolvedValue({
+      data: [{ b64_json: tinyPngBase64 }],
+    });
+
+    try {
+      const r = await generateBlogImage({
+        prompt: 'x',
+        outputPath: fakeFile,
+        desktopCopy: false,
+      });
+      expect(r.success).toBe(true);
+      expect(r.desktopCopyPath).toBeUndefined();
+      expect(fs.existsSync(desktopCopyExpected)).toBe(false);
+    } finally {
+      if (fs.existsSync(fakeFile)) fs.unlinkSync(fakeFile);
+      if (fs.existsSync(desktopCopyExpected)) fs.unlinkSync(desktopCopyExpected);
     }
   });
 

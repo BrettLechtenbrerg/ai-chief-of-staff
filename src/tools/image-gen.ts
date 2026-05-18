@@ -30,13 +30,34 @@ export interface GenerateBlogImageInput {
   style?: ImageStyle;
   /** Absolute path inside ~/dev/TSAI-Site/public/blog-images/ */
   outputPath: string;
+  /**
+   * If true (default), also save a copy to ~/Desktop/ with a
+   * `blog-hero-preview-` prefix so Brett can preview the image natively
+   * without hunting through the repo. The Desktop copy is for review
+   * only — the repo copy is what gets committed to the PR.
+   */
+  desktopCopy?: boolean;
 }
 
 export interface GenerateBlogImageResult {
   success: boolean;
   outputPath?: string;
+  /** Path of the Desktop preview copy, if one was saved. */
+  desktopCopyPath?: string;
   bytes?: number;
   error?: string;
+}
+
+/**
+ * Where the Desktop preview copy lives. Files here are throwaway —
+ * Brett looks at them to decide on the PR, then deletes when the post
+ * is merged. The prefix makes them easy to spot/sort/cull.
+ */
+function desktopPreviewPath(repoPath: string): string {
+  const home = process.env.HOME || '';
+  // Use the repo filename, prefixed, so the Desktop copy is self-labeling.
+  const filename = `blog-hero-preview-${path.basename(repoPath)}`;
+  return path.join(home, 'Desktop', filename);
 }
 
 // Where the blog stores hero images. Lives in the TSAI-Site repo on Brett's
@@ -135,7 +156,30 @@ export async function generateBlogImage(
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
     fs.writeFileSync(resolved, buffer);
 
-    return { success: true, outputPath: resolved, bytes: buffer.length };
+    // Desktop preview copy (default ON). Best-effort — if the write fails
+    // we still return success for the repo file. The preview is a
+    // convenience, not a contract.
+    let desktopCopyPath: string | undefined;
+    if (input.desktopCopy !== false) {
+      try {
+        const previewPath = desktopPreviewPath(resolved);
+        fs.mkdirSync(path.dirname(previewPath), { recursive: true });
+        fs.writeFileSync(previewPath, buffer);
+        desktopCopyPath = previewPath;
+      } catch (err) {
+        console.warn(
+          '[image-gen] Desktop preview copy failed (repo file is still saved):',
+          (err as Error).message,
+        );
+      }
+    }
+
+    return {
+      success: true,
+      outputPath: resolved,
+      desktopCopyPath,
+      bytes: buffer.length,
+    };
   } catch (err) {
     if (err instanceof OpenAI.APIError) {
       if (err.status === 401) {
@@ -164,7 +208,7 @@ export function getGenerateBlogImageToolDefinition() {
   return {
     name: 'generate_blog_image',
     description:
-      'Generate a hero image for a blog post using OpenAI gpt-image-1 and save it to ~/dev/TSAI-Site/public/blog-images/. Use photo-realistic style when the subject is a real-world scene/object/place/activity; use editorial-illustration when the subject is abstract (data, software, concepts). The tool enforces a style preamble \u2014 you only need to describe the subject.',
+      "Generate a hero image for a blog post using OpenAI gpt-image-1, save it to ~/dev/TSAI-Site/public/blog-images/, AND drop a preview copy on Brett's Desktop (prefixed blog-hero-preview-) so he can eyeball it without hunting through the repo. Use photo-realistic style when the subject is a real-world scene/object/place/activity; use editorial-illustration when the subject is abstract (data, software, concepts). The tool enforces a style preamble \u2014 you only need to describe the subject.",
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -182,6 +226,11 @@ export function getGenerateBlogImageToolDefinition() {
           type: 'string',
           description:
             "Absolute path inside ~/dev/TSAI-Site/public/blog-images/. Must end with .png. Example: '/Users/brettlechtenberg/dev/TSAI-Site/public/blog-images/2026-05-25-ai-tools-coaches-hero.png'.",
+        },
+        desktopCopy: {
+          type: 'boolean',
+          description:
+            'Default true. Save a preview copy to ~/Desktop/blog-hero-preview-[filename] for Brett to eyeball before merging the PR. Pass false to skip the Desktop copy.',
         },
       },
       required: ['prompt', 'outputPath'],
