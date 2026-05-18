@@ -1093,6 +1093,7 @@ async function stgInstallUpdate() {
 // ---- Skin Picker ----
 
 const _STG_SKIN_DESCRIPTIONS = {
+  tsai: 'Navy + silver brand theme',
   dracula: 'Classic Dracula',
   cream: 'Warm cream & cocoa',
   light: 'Clean & minimal', dawn: 'Rosé Pine Dawn',
@@ -1102,6 +1103,8 @@ const _STG_SKIN_DESCRIPTIONS = {
 };
 
 const _STG_SKIN_PREVIEWS = {
+  // TSAI brand theme — navy + silver. Must stay in sync with src/settings/themes.ts.
+  tsai:      ['#0A1F44', '#0F2A5C', '#C0C0C0', '#E8E8E8', '#FFFFFF'],
   dracula:   ['#21222c', '#282a36', '#bd93f9', '#ff79c6', '#f8f8f2'],
   cream:     ['#fff1b8', '#fff8e0', '#d93a63', '#ff94ac', '#33201a'],
   light:     ['#f9f9f9', '#ffffff', '#007aff', '#5856d6', '#1c1c1e'],
@@ -1113,6 +1116,9 @@ const _STG_SKIN_PREVIEWS = {
   gruvbox:   ['#1d2021', '#282828', '#fabd2f', '#fe8019', '#ebdbb2'],
   solarized: ['#073642', '#002b36', '#268bd2', '#2aa198', '#fdf6e3'],
   onedark:   ['#21252b', '#282c34', '#61afef', '#c678dd', '#abb2bf'],
+  // Safety-net entry — used by _stgRenderSkinGrid when an unknown theme id
+  // shows up, so future skins never render blank swatches.
+  default:   ['#0A1F44', '#0F2A5C', '#C0C0C0', '#E8E8E8', '#FFFFFF'],
 };
 
 async function _stgInitSkinPicker() {
