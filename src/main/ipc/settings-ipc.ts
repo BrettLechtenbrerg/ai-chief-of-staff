@@ -107,7 +107,10 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
   });
 
   ipcMain.handle('settings:getSkin', async () => {
-    return SettingsManager.get('ui.skin') || 'default';
+    // Fallback to 'tsai' (the TSAI brand theme) — there is no theme named
+    // 'default' in THEMES, so returning that would leave the renderer with
+    // an unknown skin id and no palette applied. See themes.ts.
+    return SettingsManager.get('ui.skin') || 'tsai';
   });
 
   ipcMain.handle('settings:get', async (_, key: string) => {
