@@ -31,26 +31,35 @@ describe('getDbCandidates', () => {
     process.env.USERPROFILE = originalUserProfile;
   });
 
-  it('returns three candidate paths', () => {
+  it('returns four candidate paths', () => {
+    // May 17, 2026: getDbCandidates now returns 4 paths — the canonical
+    // lowercase-slug macOS path (matches package.json `name`), a Title Case
+    // legacy/fallback path, Linux, and Windows.
     const candidates = getDbCandidates();
-    expect(candidates).toHaveLength(3);
+    expect(candidates).toHaveLength(4);
   });
 
-  it('macOS path uses HOME and Library/Application Support', () => {
+  it('canonical macOS path uses lowercase slug (matches package.json name)', () => {
     const candidates = getDbCandidates();
-    expect(candidates[0]).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
+    expect(candidates[0]).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
     expect(candidates[0]).toContain('/home/testuser');
+  });
+
+  it('legacy macOS path uses Title Case productName as fallback', () => {
+    const candidates = getDbCandidates();
+    expect(candidates[1]).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
+    expect(candidates[1]).toContain('/home/testuser');
   });
 
   it('Linux path uses HOME and .config', () => {
     const candidates = getDbCandidates();
-    expect(candidates[1]).toContain('.config/ai-chief-of-staff/ai-chief-of-staff.db');
-    expect(candidates[1]).toContain('/home/testuser');
+    expect(candidates[2]).toContain('.config/ai-chief-of-staff/ai-chief-of-staff.db');
+    expect(candidates[2]).toContain('/home/testuser');
   });
 
   it('Windows path uses USERPROFILE and AppData/Roaming', () => {
     const candidates = getDbCandidates();
-    expect(candidates[2]).toContain('AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db');
+    expect(candidates[3]).toContain('AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 });
 
@@ -69,14 +78,14 @@ describe('getDbPath', () => {
     process.env.USERPROFILE = originalUserProfile;
   });
 
-  it('returns the first existing path (macOS)', () => {
-    // Only the macOS path exists
+  it('returns the first existing path (canonical macOS lowercase slug)', () => {
+    // Only the canonical macOS lowercase-slug path exists
     mockExistsSync.mockImplementation((p) =>
-      String(p).includes('Library/Application Support')
+      String(p).includes('Library/Application Support/ai-chief-of-staff')
     );
 
     const result = getDbPath();
-    expect(result).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
+    expect(result).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
   it('skips macOS path and returns Linux path when only Linux path exists', () => {
@@ -97,20 +106,20 @@ describe('getDbPath', () => {
     expect(result).toContain('AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
-  it('falls back to macOS path (candidates[0]) when no path exists', () => {
+  it('falls back to canonical macOS path (candidates[0]) when no path exists', () => {
     mockExistsSync.mockReturnValue(false);
 
     const result = getDbPath();
     const candidates = getDbCandidates();
     expect(result).toBe(candidates[0]);
-    expect(result).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
+    expect(result).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
-  it('returns macOS path when multiple paths exist (first match wins)', () => {
-    // All paths "exist" — should still return the first one
+  it('returns canonical macOS path when multiple paths exist (first match wins)', () => {
+    // All paths "exist" — should still return the first one (lowercase slug)
     mockExistsSync.mockReturnValue(true);
 
     const result = getDbPath();
-    expect(result).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
+    expect(result).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 });

@@ -11,10 +11,15 @@ const path = require('path');
 const testScript = path.join(__dirname, '_test-sqlite.cjs');
 
 try {
-  // Create a temporary test script
+  // Create a temporary test script.
+  // NOTE: loading the JS shim is lazy — the .node binding only opens when we
+  // actually instantiate a Database. We force the dlopen so an ABI mismatch
+  // surfaces here instead of at first DB write inside the running app.
   fs.writeFileSync(testScript, `
     try {
-      require('better-sqlite3');
+      const Database = require('better-sqlite3');
+      const db = new Database(':memory:');
+      db.close();
       process.exit(0);
     } catch(e) {
       console.error(e.message);

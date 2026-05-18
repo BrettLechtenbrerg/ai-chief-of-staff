@@ -183,9 +183,10 @@ describe('Agent Modes', () => {
       }
     });
 
-    it('should fall back to coder for invalid IDs', () => {
+    it('should fall back to general for invalid IDs', () => {
+      // ACOS rebrand (v0.3): default mode is 'general' (personal assistant), not 'coder'.
       const config = getModeConfig('nonexistent');
-      expect(config.id).toBe('coder');
+      expect(config.id).toBe('general');
     });
   });
 

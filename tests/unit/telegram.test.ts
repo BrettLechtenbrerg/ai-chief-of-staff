@@ -136,6 +136,9 @@ vi.mock('../../src/agent', () => ({
       getSessionByName: () => null,
       linkTelegramChat: vi.fn(),
       unlinkTelegramChat: vi.fn(),
+      // Added May 17 (beta.6) to fix Telegram first-message FK-crash —
+      // handlers now resolve the session through this method before any DB writes.
+      ensureSessionForChat: () => 'default',
     }),
     getModel: () => 'claude-opus-4-7',
     setModel: vi.fn(),
