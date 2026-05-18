@@ -630,6 +630,11 @@ async function initializeAgent(): Promise<void> {
           scheduler.setTelegramBot(telegramBot);
         }
 
+        // Hand the bot to the agent-tool layer so the send_telegram_message
+        // tool can deliver messages mid-routine (used by the weekly blog cron).
+        const { setTelegramBotForTools } = await import('../tools');
+        setTelegramBotForTools(telegramBot);
+
         console.log('[Main] Telegram started');
       }
     } catch (error) {
@@ -645,6 +650,9 @@ async function stopAgent(): Promise<void> {
   if (telegramBot) {
     await telegramBot.stop();
     telegramBot = null;
+    // Clear the agent-tool reference so a stale bot can't be called.
+    const { setTelegramBotForTools } = await import('../tools');
+    setTelegramBotForTools(null);
   }
   if (scheduler) {
     scheduler.stopAll();

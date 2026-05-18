@@ -19,6 +19,12 @@ import {
   getGenerateBlogImageToolDefinition,
   handleGenerateBlogImageTool,
 } from './image-gen';
+import {
+  getSendTelegramToolDefinition,
+  handleSendTelegramTool,
+} from './telegram-tool';
+
+export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
 import { getSwitchAgentTool } from './agent-mode-tools';
 import { logActiveToolsStatus } from './diagnostics';
@@ -186,6 +192,16 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: imageGenDef.description,
     input_schema: imageGenDef.input_schema as Record<string, unknown>,
     handler: handleGenerateBlogImageTool,
+  });
+
+  // send_telegram_message — lets the agent ping Brett on his phone at the
+  // end of a long routine (e.g. weekly blog cron sending the PR URL).
+  const telegramDef = getSendTelegramToolDefinition();
+  tools.push({
+    name: telegramDef.name,
+    description: telegramDef.description,
+    input_schema: telegramDef.input_schema as Record<string, unknown>,
+    handler: handleSendTelegramTool,
   });
 
   // Project tools
