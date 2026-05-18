@@ -210,6 +210,48 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
+### Next session — pick up here (added May 17, late night)
+
+**Status: waiting on Manny's input before any code starts.**
+
+Tonight (after the beta.7 ship) the conversation turned to the #1 tester request: **make connecting Gmail + Calendar easy.** Today it requires hand-editing `~/Library/Application Support/AI Chief of Staff/mcp-servers.json` — the "ask Brett to walk you through it" problem. The goal: a Settings → Connections tab with one-click "Connect with Google."
+
+Before writing any code, four design decisions need answers. Email drafted and saved to `~/Desktop/email-to-manny-gmail-calendar-connector-decisions.txt` — Brett to send to Manny. When Manny replies, resume by reading that email + his answers, then plan from there.
+
+**The 4 decisions (full reasoning in the email):**
+
+1. **Which Gmail/Calendar MCP server to ship?**
+   - A) Bundle Google's official MCP servers (zero server code, narrower features)
+   - B) Fork Flo's servers + rebrand (~40 hours, source is APFS-dataless)
+   - C) Guided installer wizard (still asks users to install Node)
+   - **Brett's recommendation: A.**
+
+2. **Whose Google OAuth client?**
+   - (a) TSAI-owned, baked into the app (easy for users, requires Google verification 2–6 weeks)
+   - (b) Each user creates their own (current state, ~15 min per user, low adoption)
+   - **Brett's recommendation: hybrid — ship (a), submit verification paperwork same week, accept 100-user cap + "unverified app" warning during the verification window.**
+
+3. **Where do OAuth tokens live?** Encrypted in the local settings DB (same pattern as Anthropic OAuth tokens). **Brett's recommendation: yes, agree.**
+
+4. **Just Gmail + Calendar in beta.8, or also Docs + Drive?** Doing all 4 at once is more efficient with Google verification (one round vs two) but adds ~4 engineering days. **Brett's lean: Gmail + Calendar only first.**
+
+   **Bonus Q5**: Brett vs Manny on the Google OAuth verification paperwork (privacy policy URL, demo video, scope justifications).
+
+**Critical-path gate**: Google OAuth verification takes 2–6 weeks. Whoever owns the paperwork (decided in Q5) needs to start it the same week engineering kicks off so the "unverified app" warning clears as testers ramp up.
+
+**Rough plan if Manny green-lights A + hybrid + 3 + 4 (Gmail+Calendar only):**
+- ~1 week engineering (TSAI Google Cloud project Day 1; bundle Google MCP servers Day 2; OAuth handler + encrypted tokens Day 3; Connections UI Day 4; auto-write mcp-servers.json + onboarding step Day 5; smoke test + ship beta.8 Day 6).
+- Verification runs in parallel.
+- Brett wanted to start engineering early next week, which means Google Cloud project needs to stand up by Monday at latest.
+
+**Companion docs created tonight (also on Brett's Desktop):**
+- `AI-Chief-of-Staff-Welcome-Guide.txt` — new-user training doc, 15 sections of capabilities + copy-paste prompts.
+- `AI-Chief-of-Staff-Capabilities-Comparison.txt` — side-by-side checkbox table showing what works out-of-the-box vs. what needs a connector. 8 of 15 work immediately; 7 need connectors. **Gmail + Calendar are the two highest-value items in the "needs connector" column** — hence this being the next workstream.
+
+**When you resume:** read the email draft for the full reasoning, read Manny's reply, then enter plan mode for the connector work.
+
+---
+
 ### Now
 - **`v1.0.0-beta.7` shipped (May 17, late night).** Tester-regressions pass — fixes all 5 reports against beta.6 (TSAI colors not loading, "no handler" on Create Task + Sign In, blank tile in Skins picker, Browser Magic breaking without CDP setup) and flips `autoUpdater.autoDownload` from false to true so future bug-fix builds install on next quit instead of waiting on a manual click. See the `v1.0.0-beta.7` row in the rollback table. Mac DMGs signed/notarized/stapled (spctl: `Notarized Developer ID`), Windows installers built, all 11 artifacts on GitHub Releases as prerelease, landing page bumped (`TSAI-Site@f2497a1`) + Vercel `--prod` deployed. Local `/Applications/AI Chief of Staff.app` running beta.7. **Critical caveat**: current beta.5/.6 installs do NOT pull beta.7 automatically — `autoDownload=false` shipped in those versions. Brett needs to DM/email testers asking for one manual reinstall from totalsuccessai.com/hidden/ai-chief-of-staff-app; from beta.7 onward updates install themselves. Carried-over follow-ups:
   - Tray single-click → chat is still flaky; tracked in task list (id `9f91cdd0`).
@@ -261,6 +303,29 @@ We ship DMGs to GitHub Releases for testers, but the locally-installed `/Applica
 ---
 
 ## Past sessions
+
+### May 17, 2026 (late night, after beta.7) — new-user docs + connector decision email to Manny
+
+Following the beta.7 ship, Brett asked two things:
+
+1. **Convert the personal testing manual into a new-user training doc.** The original (`~/Desktop/AI-Chief-of-Staff-Test-Guide.txt`, dated 2026-05-16, for beta.5) was full of Brett-specific references (Sandy Utah, his GHL location IDs, his Flo token paths, his TSAI brand book). Rewrote as `~/Desktop/AI-Chief-of-Staff-Welcome-Guide.txt` (24 KB, 666 lines) — same 15 sections + power-user compound tests, but reframed as a capabilities tour. Every personal reference replaced with `[your city]`/`[contact name]`/`[yourdomain.com]` placeholders. Every section opens with **WHAT THIS SHOWS** + an explicit **WORKS OUT OF THE BOX** or **NEEDS [connector]** label so users know what to expect before pasting a prompt. Added new front-matter sections: **HOW TO USE THIS GUIDE** and **WHAT'S CONNECTED OUT OF THE BOX / WHAT REQUIRES A SETUP STEP** (directly addressing the discovery gap). Bumped framing to v1.0.0-beta.7 and added the auto-update note at the end.
+
+2. **Side-by-side comparison of out-of-the-box vs. with-connectors capabilities.** Brett wanted a checkbox-style "membership levels" visual. Built as `~/Desktop/AI-Chief-of-Staff-Capabilities-Comparison.txt` (18 KB, 353 lines). Same 15 sections; each gets a two-column layout. Left column = OUT OF THE BOX with `[✓]` for working capabilities; right column = WITH [CONNECTOR] showing what unlocks. Sections fully local (Memory, Knowledge Base, About You, File System) explicitly show `[—] No additional capability unlocked` on the right so users don't think they're missing something. Quick Summary table at the top scores all 15: **8 of 15 work out of the box, 7 unlock with connectors.** Bottom of doc explains how to check what's connected (`What tools do you currently have access to?` in chat) and how to add a connector (the JSON file path + "ask Brett until the UI ships").
+
+**The discovery gap surfaced clearly**: I grepped the entire `ui/` tree and confirmed **there is zero UI** anywhere in the app for MCP servers, connected tools, or available integrations. The only signal that no external connectors are wired is a single log line on app boot (`[MCP Config] No mcp-servers.json at …`) that users never see. "Phase 3 — MCP Servers Settings UI" is in the Likely Next workstream below but hasn't been planned in detail.
+
+3. **Brett raised the next priority**: Gmail + Calendar one-click connection. Discussed the architecture (Flo's servers are excellent but Brett-bound: hardcoded `brettlechtenberg.com` in SafetyChecker, `~/.flo/tokens.json` path, Flo OAuth client_id, source files APFS-dataless). Surfaced **four design decisions** with full reasoning rather than jumping straight to a plan. See "Next session — pick up here" at the top of Active workstreams for the questions + Brett's recommendations.
+
+4. **Drafted email to Manny** at `~/Desktop/email-to-manny-gmail-calendar-connector-decisions.txt` (12 KB) walking him through all 4 decisions, Brett's recommended path (A + hybrid + 3 + Gmail+Calendar-only), the 7-day engineering timeline, and the Google OAuth verification critical path. Brett's bonus question: who fills out the verification paperwork — Brett or Manny.
+
+**Saved on Brett's Desktop tonight**:
+- `AI-Chief-of-Staff-Welcome-Guide.txt` (new-user training)
+- `AI-Chief-of-Staff-Capabilities-Comparison.txt` (out-of-box vs connectors)
+- `email-to-manny-gmail-calendar-connector-decisions.txt` (decision memo)
+
+**Original testing manual preserved** at `~/Desktop/AI-Chief-of-Staff-Test-Guide.txt` and `.md` — unchanged.
+
+**End state**: Both repos clean and pushed. Brett shut down for the night. Next session blocked on Manny's reply.
 
 ### May 17, 2026 (late night) — v1.0.0-beta.7 release (tester regressions pass)
 

@@ -155,6 +155,13 @@ gh auth switch --user BrettLechtenbrerg
 
 ## Work History
 
+### May 17, 2026 (late night, after beta.7) — new-user docs + Gmail/Calendar connector decisions to Manny
+- Converted Brett's personal testing manual into a general new-user training doc: `~/Desktop/AI-Chief-of-Staff-Welcome-Guide.txt` (15 sections, copy-paste prompts, each section labels OUT OF THE BOX vs NEEDS-CONNECTOR).
+- Built a side-by-side capabilities comparison doc: `~/Desktop/AI-Chief-of-Staff-Capabilities-Comparison.txt` (checkbox table per section, Quick Summary scores **8 of 15 capabilities work out of the box, 7 unlock with connectors**).
+- Surfaced the discovery gap: there is **zero UI** anywhere in the app for MCP servers/connected tools. Users have no way to see what's connected. Roadmap fix ("Phase 3 — MCP Servers Settings UI") was in Active workstreams but not yet planned in detail.
+- Brett identified next priority: one-click Gmail + Calendar connection (the #1 tester request). Rather than jumping to a plan, surfaced **4 design decisions** that materially change scope (which MCP server to ship, whose Google OAuth client, where tokens live, scope of first release). Drafted email to Manny at `~/Desktop/email-to-manny-gmail-calendar-connector-decisions.txt` walking through all 4 + Brett's recommendations + 7-day timeline + Google verification critical path.
+- **Next session blocked on Manny's reply.** See "Next session — pick up here" at the top of Active workstreams in `RECOVERY.md` for full context.
+
 ### May 17, 2026 (late night) — v1.0.0-beta.7 release (tester regressions pass)
 - Fixed all 5 tester reports against beta.6: TSAI colors not loading (skin fallback + DB migration), "no handler registered" on Create Task + Sign In (new `window.safeIpc` helper showing a reinstall toast at 8 critical call sites), Skins picker blank tile (missing `tsai` entries in `_STG_SKIN_DESCRIPTIONS` / `_STG_SKIN_PREVIEWS`), Browser Magic breaking when CDP isn't set up (Electron-tier fallback + yellow CDP-not-active hint + clearer "Chrome already running" message).
 - Behaviour change: flipped `autoUpdater.autoDownload` from false to true so future bug-fix builds install silently on next quit — the main reason beta.5/.6 fixes never reached the field. **Critical caveat**: current beta.5/.6 installs do NOT auto-pull beta.7 (their `autoDownload` is still false); testers need one manual reinstall.
