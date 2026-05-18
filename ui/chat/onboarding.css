@@ -877,6 +877,92 @@ body:not(.onboarding-active) #chat-view {
   background: var(--border);
 }
 
+/* ─── Connectors mockup step ────────────────────────────────────────
+   Visual-only "Connect your tools" step that sits between the personalize
+   funfacts step and the CLI install step. The cards are intentionally
+   weighted to match .ob-form-group blocks so the step doesn't feel like
+   it's interrupting the flow.
+*/
+.connector-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.connector-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
+}
+
+.connector-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  transform: translateY(-1px);
+}
+
+.connector-card-logo {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated, var(--bg-primary));
+  border-radius: 8px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.connector-card-body {
+  min-width: 0;
+}
+
+.connector-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.connector-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.connector-card-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.connector-card-cta {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* On narrow widths, stack the CTA below the body so the row keeps breathing room. */
+@media (max-width: 720px) {
+  .connector-card {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+  }
+  .connector-card-cta {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
 .hidden { display: none !important; }
 
 /* Pause animations when window is hidden */

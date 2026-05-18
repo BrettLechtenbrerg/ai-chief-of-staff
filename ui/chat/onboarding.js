@@ -431,6 +431,7 @@ const OB_STEP_ORDER = [
   'ob-step-name', 'ob-step-location', 'ob-step-occupation',
   'ob-step-birthday', 'ob-step-agent-name',
   'ob-step-goals', 'ob-step-struggles', 'ob-step-funfacts',
+  'ob-step-connectors',
   'ob-step-cli', 'ob-step-success',
 ];
 
@@ -449,8 +450,9 @@ const OB_NAV_CONFIG = {
   'ob-step-personality': { back: 'ob-step-agent-name', skip: 'ob-step-goals' },
   'ob-step-goals': { back: 'ob-step-personality', skip: 'ob-step-struggles' },
   'ob-step-struggles': { back: 'ob-step-goals', skip: 'ob-step-funfacts' },
-  'ob-step-funfacts': { back: 'ob-step-struggles', skip: 'ob-step-cli' },
-  'ob-step-cli': { back: 'ob-step-funfacts', skip: 'ob-step-success' },
+  'ob-step-funfacts': { back: 'ob-step-struggles', skip: 'ob-step-connectors' },
+  'ob-step-connectors': { back: 'ob-step-funfacts', skip: () => obSaveConnectorsChoice() },
+  'ob-step-cli': { back: 'ob-step-connectors', skip: 'ob-step-success' },
   'ob-step-success': { back: null, skip: null },
 };
 
@@ -568,7 +570,36 @@ async function obSaveStruggles() {
 async function obSaveFunFacts() {
   const value = document.getElementById('ob-funfacts-input').value.trim();
   if (value) await window.pocketAgent.settings.set('personalize.funFacts', value);
+  obShowStep('ob-step-connectors');
+}
+
+// ---- Connectors mockup (visual only — buttons advance the flow) ----
+//
+// This step is intentionally non-functional. No OAuth, no token storage,
+// no mcp-servers.json mutation. The Notyf toast tells the user we noticed
+// their interest; Settings → Connections (built alongside this step) is
+// where the real connectors will land once Google/GHL approvals are in.
+//
+// Persistence (Risk #7 mitigation): `obSaveConnectorsChoice()` writes a
+// single flag so the step is auto-skipped on subsequent launches.
+
+async function obSaveConnectorsChoice() {
+  try {
+    await window.pocketAgent.settings.set('onboarding.connectorsSeen', 'true');
+  } catch (err) {
+    console.warn('[Onboarding] Could not persist connectorsSeen:', err);
+  }
   obShowStep('ob-step-cli');
+}
+
+async function obConnectGoogleMockup() {
+  _obToast("Coming soon — we'll save your interest.", 'success');
+  await obSaveConnectorsChoice();
+}
+
+async function obConnectGhlMockup() {
+  _obToast("Coming soon — we'll save your interest.", 'success');
+  await obSaveConnectorsChoice();
 }
 
 function obSkipToSuccess() {
