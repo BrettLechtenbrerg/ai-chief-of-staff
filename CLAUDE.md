@@ -155,10 +155,19 @@ gh auth switch --user BrettLechtenbrerg
 
 ## Work History
 
+### May 17, 2026 (late night) — v1.0.0-beta.7 release (tester regressions pass)
+- Fixed all 5 tester reports against beta.6: TSAI colors not loading (skin fallback + DB migration), "no handler registered" on Create Task + Sign In (new `window.safeIpc` helper showing a reinstall toast at 8 critical call sites), Skins picker blank tile (missing `tsai` entries in `_STG_SKIN_DESCRIPTIONS` / `_STG_SKIN_PREVIEWS`), Browser Magic breaking when CDP isn't set up (Electron-tier fallback + yellow CDP-not-active hint + clearer "Chrome already running" message).
+- Behaviour change: flipped `autoUpdater.autoDownload` from false to true so future bug-fix builds install silently on next quit — the main reason beta.5/.6 fixes never reached the field. **Critical caveat**: current beta.5/.6 installs do NOT auto-pull beta.7 (their `autoDownload` is still false); testers need one manual reinstall.
+- Mac DMGs signed + notarized + stapled (spctl: Notarized Developer ID), Windows installers via Docker; all 11 artifacts published to GitHub Releases as prerelease.
+- Landing page bumped + Vercel `--prod` deployed (`TSAI-Site@f2497a1`).
+- Typecheck + lint clean. Tests: 854 passing, 218 carrying over from beta.6 (no new regressions from this release's changes).
+- 7 logical commits using `git add -p` to split the multi-concern `settings-panel.js` diff cleanly.
+- Corrected RECOVERY.md's wrong "auto-updater silently pulls" claims in beta.5/.6 rows of the rollback table — those releases all had `autoDownload=false`.
+
 ### May 17, 2026 (night) — v1.0.0-beta.6 release
 - Test-pass hardening release: 13 fixes rolled up since beta.5 (Telegram first-message FK-crash, DB path canonical fix, Tool Discipline Rules 1–7, tray UX, GHL `search_contacts`/`get_appointments`/`skip→page`, Flo calendar recurring path, Flo docs discovery, Flo bookmarks Chrome-running guard).
 - Mac DMGs signed + notarized + stapled, Windows installers via Docker; all 11 artifacts published to GitHub Releases as prerelease.
-- Landing page bumped + Vercel deployed; auto-updater on beta.1–beta.5 installs pulls beta.6 on next launch.
+- Landing page bumped + Vercel deployed. Note: `autoUpdater.autoDownload` was still false at this release, so beta.1–beta.5 installs saw the update in Settings but did NOT auto-pull — corrected in beta.7.
 
 ### May 15, 2026 — Project bootstrap
 - Cloned from `KenKaiii/pocket-agent` v6.4.3 (commit `a534c63`), MIT.
