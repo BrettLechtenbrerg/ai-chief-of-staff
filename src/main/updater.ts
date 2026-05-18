@@ -57,7 +57,12 @@ export function initializeUpdater(): void {
   isInitialized = true;
 
   // Configure updater
-  autoUpdater.autoDownload = false;
+  // autoDownload=true: pull the new version in the background after the
+  // startup check finishes; autoInstallOnAppQuit=true then applies it silently
+  // on next quit. Before beta.7 this was false, which meant testers had to
+  // click Download + Install manually — most never did, so bug-fix builds
+  // never reached the field.
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
   // Set up event handlers

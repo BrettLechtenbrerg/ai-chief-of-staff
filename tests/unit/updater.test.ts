@@ -98,7 +98,11 @@ describe('updater', () => {
 
       initializeUpdater();
 
-      expect(mockAutoUpdater.autoDownload).toBe(false);
+      // beta.7: autoDownload flipped to true so testers get bug-fix builds
+      // pulled in the background instead of having to click Download manually.
+      // autoInstallOnAppQuit was already true — the pair gives a silent
+      // "installed on next quit" update flow.
+      expect(mockAutoUpdater.autoDownload).toBe(true);
       expect(mockAutoUpdater.autoInstallOnAppQuit).toBe(true);
     });
   });
