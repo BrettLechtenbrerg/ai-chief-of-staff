@@ -15,6 +15,10 @@ import { getMemoryTools } from './memory-tools';
 import { getSoulTools } from './soul-tools';
 import { getSchedulerTools } from './scheduler-tools';
 import { getNotifyToolDefinition, handleNotifyTool } from './macos';
+import {
+  getGenerateBlogImageToolDefinition,
+  handleGenerateBlogImageTool,
+} from './image-gen';
 import { getProjectTools } from './project-tools';
 import { getSwitchAgentTool } from './agent-mode-tools';
 import { logActiveToolsStatus } from './diagnostics';
@@ -170,6 +174,18 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: notifyDef.description,
     input_schema: notifyDef.input_schema as Record<string, unknown>,
     handler: handleNotifyTool,
+  });
+
+  // Image generation tool — used by the weekly blog cron to produce hero
+  // images via OpenAI gpt-image-1. Available in every mode so Brett can
+  // also trigger it ad-hoc from chat (e.g. "generate a hero for the
+  // ai-tools-coaches post").
+  const imageGenDef = getGenerateBlogImageToolDefinition();
+  tools.push({
+    name: imageGenDef.name,
+    description: imageGenDef.description,
+    input_schema: imageGenDef.input_schema as Record<string, unknown>,
+    handler: handleGenerateBlogImageTool,
   });
 
   // Project tools
