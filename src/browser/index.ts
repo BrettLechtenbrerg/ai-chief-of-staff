@@ -79,12 +79,27 @@ export class BrowserManager {
       return 'cdp';
     }
 
-    // "Use My Browser" setting enabled → prefer CDP
+    // "Use My Browser" setting enabled → prefer CDP, but only if it has a
+    // chance of working. If the user toggled this on but never launched
+    // Chrome with --remote-debugging-port=9222 (a very common mistake), CDP
+    // will fail and — because the failure path below only auto-falls-back for
+    // implicit selections — the browser tool reports "doesn't work" even
+    // though the Electron tier would have worked fine. Fall back to Electron
+    // here when the CDP tier has never successfully connected, so the agent
+    // stays functional with bad config.
     const useMyBrowserSetting = SettingsManager.get('browser.useMyBrowser');
     console.log(`[Browser] useMyBrowser setting = "${useMyBrowserSetting}"`);
     if (useMyBrowserSetting === 'true') {
-      console.log('[Browser] Use My Browser enabled, selecting CDP');
-      return 'cdp';
+      if (this.cdpTier && this.cdpTier.isConnected()) {
+        console.log('[Browser] Use My Browser enabled and CDP is connected, selecting CDP');
+        return 'cdp';
+      }
+      console.warn(
+        '[Browser] Use My Browser is on but CDP is not connected — ' +
+          'falling back to Electron. Launch Chrome with --remote-debugging-port=9222 ' +
+          'from Settings → Browser to enable CDP.'
+      );
+      return 'electron';
     }
 
     // If we were already using CDP (for auth), stay there

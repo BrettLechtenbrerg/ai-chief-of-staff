@@ -948,6 +948,20 @@ async function _stgInitializeBrowserSection() {
     });
     if (browsers.length === 1) selector.value = browsers[0].id;
     await stgTestBrowserConnection();
+
+    // If "Use My Browser" is on but the initial CDP test failed, downgrade the
+    // status from red to a yellow hint so the user knows the agent will still
+    // work (via the Electron tier fallback) and what to do to enable CDP.
+    try {
+      const useMyBrowser = await window.pocketAgent.settings.get('browser.useMyBrowser');
+      if (useMyBrowser === 'true' && statusEl.classList.contains('error')) {
+        statusEl.className = 'status warning';
+        statusEl.textContent =
+          'CDP not active — click Launch Browser to enable, or toggle Use My Browser off to use the built-in browser.';
+      }
+    } catch (_) {
+      /* non-fatal */
+    }
   } catch (err) {
     console.error('[Settings] Failed to initialize browser section:', err);
     statusEl.className = 'status error'; statusEl.textContent = 'Error loading';
@@ -975,8 +989,12 @@ async function stgLaunchBrowserWithCdp() {
       cdpInput.value = `http://localhost:${port}`;
       await window.pocketAgent.settings.set('browser.cdpUrl', cdpInput.value);
     } else if (result.alreadyRunning) {
-      statusEl.className = 'status warning'; statusEl.textContent = 'Browser running';
-      _stgShowToast(result.error, 'error');
+      statusEl.className = 'status warning'; statusEl.textContent = 'Chrome already running';
+      const isMac = (navigator.platform || '').toLowerCase().includes('mac');
+      const quitHint = isMac
+        ? 'Quit Chrome fully (Cmd+Q), then click Launch Browser again.'
+        : 'Close every Chrome window, then click Launch Browser again.';
+      _stgShowToast('Chrome is already running. ' + quitHint, 'error');
     } else {
       statusEl.className = 'status error'; statusEl.textContent = 'Launch failed';
       _stgShowToast(result.error || 'Failed to launch browser', 'error');

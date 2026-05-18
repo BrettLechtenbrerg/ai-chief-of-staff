@@ -75,8 +75,28 @@ describe('BrowserManager', () => {
       expect(mockElectronExecute).not.toHaveBeenCalled();
     });
 
-    it('selects cdp tier when useMyBrowser setting is true', async () => {
+    it('falls back to electron when useMyBrowser is true but CDP has never connected', async () => {
+      // beta.7 change: rather than fail when CDP is not set up (the common
+      // misconfiguration), we fall back to the Electron tier so the agent
+      // stays functional. See src/browser/index.ts selectTier().
       vi.mocked(SettingsManager.get).mockReturnValue('true');
+
+      await manager.execute({ action: 'navigate', url: 'https://example.com' });
+
+      expect(mockElectronExecute).toHaveBeenCalled();
+      expect(mockCdpExecute).not.toHaveBeenCalled();
+    });
+
+    it('selects cdp tier when useMyBrowser is true and CDP is already connected', async () => {
+      vi.mocked(SettingsManager.get).mockReturnValue('true');
+      mockCdpIsConnected.mockReturnValue(true);
+
+      // Force the CDP tier into existence + connected state by issuing one
+      // explicit CDP call first. That mirrors how a real session reaches
+      // this branch: the user previously launched Chrome successfully.
+      await manager.execute({ action: 'navigate', url: 'https://example.com', tier: 'cdp' });
+      mockCdpExecute.mockClear();
+      mockElectronExecute.mockClear();
 
       await manager.execute({ action: 'navigate', url: 'https://example.com' });
 
