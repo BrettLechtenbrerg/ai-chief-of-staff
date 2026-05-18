@@ -155,6 +155,11 @@ gh auth switch --user BrettLechtenbrerg
 
 ## Work History
 
+### May 17, 2026 (night) — v1.0.0-beta.6 release
+- Test-pass hardening release: 13 fixes rolled up since beta.5 (Telegram first-message FK-crash, DB path canonical fix, Tool Discipline Rules 1–7, tray UX, GHL `search_contacts`/`get_appointments`/`skip→page`, Flo calendar recurring path, Flo docs discovery, Flo bookmarks Chrome-running guard).
+- Mac DMGs signed + notarized + stapled, Windows installers via Docker; all 11 artifacts published to GitHub Releases as prerelease.
+- Landing page bumped + Vercel deployed; auto-updater on beta.1–beta.5 installs pulls beta.6 on next launch.
+
 ### May 15, 2026 — Project bootstrap
 - Cloned from `KenKaiii/pocket-agent` v6.4.3 (commit `a534c63`), MIT.
 - Stripped upstream git history; tagged unmodified snapshot as `v0.1-upstream-import`.
