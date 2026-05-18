@@ -27,6 +27,7 @@ import {
   registerCronIPC,
   registerMiscIPC,
   registerContextIPC,
+  registerAudioIPC,
 } from './ipc';
 import type { IPCDependencies } from './ipc';
 
@@ -449,6 +450,7 @@ function setupIPC(): void {
   registerCronIPC(deps);
   registerMiscIPC(deps);
   registerContextIPC();
+  registerAudioIPC();
 }
 
 // ============ Agent Lifecycle ============

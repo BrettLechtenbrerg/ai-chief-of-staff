@@ -141,6 +141,18 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     extractText: (filePath: string) => ipcRenderer.invoke('context:extractText', filePath),
   },
 
+  // ─── Audio transcription (chat composer mic button) ──────────────
+  // Renderer captures audio via MediaRecorder, hands the bytes here as a
+  // Uint8Array, and gets back transcribed text via OpenAI Whisper. The
+  // `isAvailable` probe gates the mic button on whether an OpenAI key is
+  // configured — keeping the same gate that transcribeAudio() uses
+  // internally, so the button never lies about its capabilities.
+  audio: {
+    isAvailable: () => ipcRenderer.invoke('audio:isAvailable'),
+    transcribe: (data: Uint8Array, format: string, language?: string) =>
+      ipcRenderer.invoke('audio:transcribe', { data, format, language }),
+  },
+
   // ─── Location & Timezone ─────────────────────────────────────────────
   location: {
     lookup: (query: string) => ipcRenderer.invoke('location:lookup', query),

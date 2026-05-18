@@ -72,7 +72,10 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "identity": "Brett Lechtenberg (2HQTY95NHD)",
-      "notarize": true
+      "notarize": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "AI Chief of Staff uses the microphone to transcribe voice notes into the chat composer when you tap the mic button."
+      }
     },
     "win": {
       "artifactName": "AI-Chief-of-Staff-${version}-${arch}-win.${ext}",

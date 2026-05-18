@@ -6,3 +6,4 @@ export { registerFactsIPC } from './facts-ipc';
 export { registerCronIPC } from './cron-ipc';
 export { registerMiscIPC } from './misc-ipc';
 export { registerContextIPC } from './context-ipc';
+export { registerAudioIPC } from './audio-ipc';

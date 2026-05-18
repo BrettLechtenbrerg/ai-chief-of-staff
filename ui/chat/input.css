@@ -428,6 +428,63 @@
   right: -4px;
 }
 
+/* Voice-input button — three visual states (idle / recording / transcribing).
+   The button shows two stacked SVGs (a mic and a stop square) and toggles
+   their visibility via the `.is-*` state class. A red dot pulses while
+   recording so the user has an unmistakable "you are live" cue, and a small
+   spinner appears while we wait on Whisper. */
+#voice-btn .voice-icon-idle,
+#voice-btn .voice-icon-recording,
+#voice-btn .voice-spinner,
+#voice-btn .voice-rec-dot {
+  display: none;
+}
+#voice-btn.is-idle .voice-icon-idle {
+  display: block;
+}
+#voice-btn.is-recording .voice-icon-recording,
+#voice-btn.is-recording .voice-rec-dot {
+  display: block;
+}
+#voice-btn.is-recording {
+  /* Red tint while live so the state is obvious peripherally. */
+  color: #f87171;
+  border-color: color-mix(in srgb, #f87171 45%, transparent);
+  background: color-mix(in srgb, #f87171 12%, transparent);
+}
+#voice-btn.is-transcribing .voice-spinner {
+  display: block;
+}
+#voice-btn.is-transcribing {
+  cursor: progress;
+  opacity: 0.85;
+}
+#voice-btn .voice-rec-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f87171;
+  animation: voice-rec-pulse 1.1s ease-in-out infinite;
+}
+@keyframes voice-rec-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+#voice-btn .voice-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--text-secondary) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: voice-spinner-spin 0.7s linear infinite;
+}
+@keyframes voice-spinner-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Slide-up panel */
 .slide-up-panel {
   position: absolute;
