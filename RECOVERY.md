@@ -159,6 +159,24 @@ cp "_backups/${ZIP}" "/Volumes/Brett's 8 TB/Backups/AI-Chief-of-Staff/"
 
 ---
 
+## Related repos
+
+### `BrettLechtenbrerg/brand-profiles` (private)
+
+Lives locally at `~/dev/_brand-profiles/`. Holds the per-brand voice rules, social-platform rules, and SEO topic queues for the multi-brand weekly content cron (built May 18, 2026). Three brands today: `tsai/`, `pmma/`, `brett-personal/`.
+
+The three cron jobs (`tsai-weekly-content` Mon 6am, `pmma-weekly-content` Tue 6am, `brett-weekly-content` Wed 6am) read these files at runtime — no rebuild needed when you tune voice/topics. Edit a rule file, commit, push, and the next cron run picks it up.
+
+Daily output (`_inbox/` folder) is gitignored — disposable packets that Brett pastes and discards.
+
+When a fresh Claude session needs to understand the multi-brand content system:
+```bash
+cat ~/dev/_brand-profiles/README.md
+ls ~/dev/_brand-profiles/*/profile.json
+```
+
+---
+
 ## Syncing upstream (when Ken releases a new version)
 
 The repo has no `upstream` remote because we stripped history on import. To pull a future Ken release:
