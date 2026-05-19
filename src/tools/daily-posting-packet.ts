@@ -7,7 +7,7 @@
  *     dividers, same per-platform order \u2014 so Brett's "first work session"
  *     muscle memory works across all 3 brands. The tool enforces this.
  *  2. Image handling. The tool knows how to copy the hero + IG-square PNGs
- *     into the inbox folder alongside the markdown, with the right names.
+ *     into the brand's Desktop folder alongside the markdown, with the right names.
  *  3. Topic-queue updates. Done in one place so we don't get a half-updated
  *     queue if the agent crashes mid-routine.
  *
@@ -68,10 +68,28 @@ export interface WriteDailyPostingPacketResult {
   error?: string;
 }
 
-const INBOX_DIR = path.resolve(
+/**
+ * Daily packets land on the Desktop in a per-brand folder so Brett can
+ * open the right brand's folder during his morning work session without
+ * scanning a long unified inbox. Each brand's history accumulates in its
+ * own folder, sorted by date.
+ *
+ *   ~/Desktop/Daily Postings/
+ *   ├── TSAI/
+ *   │   └── 2026-05-25 — Post Title.md (+ hero, square, blog-draft)
+ *   ├── PMMA/
+ *   └── Brett/
+ */
+const PACKET_ROOT = path.resolve(
   process.env.HOME || '',
-  'dev/_brand-profiles/_inbox',
+  'Desktop/Daily Postings',
 );
+
+function packetDirForBrand(brandShortName: string): string {
+  // Use the short name verbatim as the subfolder name — simpler than
+  // slug-sanitizing, and matches what Brett sees in the Telegram message.
+  return path.join(PACKET_ROOT, brandShortName);
+}
 
 /** Slug-safe filename component \u2014 lowercase, alphanumeric + dash only. */
 function sanitizeForFilename(s: string): string {
@@ -187,15 +205,18 @@ export async function writeDailyPostingPacket(
   const err = validateInput(input);
   if (err) return { success: false, error: err };
 
-  // Ensure inbox exists.
-  fs.mkdirSync(INBOX_DIR, { recursive: true });
+  // Ensure the brand's Desktop folder exists: ~/Desktop/Daily Postings/[Brand]/
+  const brandDir = packetDirForBrand(input.brandShortName);
+  fs.mkdirSync(brandDir, { recursive: true });
 
+  // Filename no longer includes the brand name \u2014 the parent folder names it.
+  // Keeps filenames short and readable.
   const titleSlug = sanitizeForFilename(input.postTitle);
-  const baseName = `${input.date} \u2014 ${input.brandShortName} \u2014 ${titleSlug}`;
-  const packetPath = path.join(INBOX_DIR, `${baseName}.md`);
-  const heroDest = path.join(INBOX_DIR, `${baseName} \u2014 hero.png`);
+  const baseName = `${input.date} \u2014 ${titleSlug}`;
+  const packetPath = path.join(brandDir, `${baseName}.md`);
+  const heroDest = path.join(brandDir, `${baseName} \u2014 hero.png`);
   const heroSquareDest = input.heroSquarePath
-    ? path.join(INBOX_DIR, `${baseName} \u2014 hero-square.png`)
+    ? path.join(brandDir, `${baseName} \u2014 hero-square.png`)
     : undefined;
 
   // Copy images.
@@ -238,7 +259,7 @@ export function getWriteDailyPostingPacketToolDefinition() {
   return {
     name: 'write_daily_posting_packet',
     description:
-      "Write the daily posting packet for a brand. Drops a single markdown file plus hero + IG-square images into ~/dev/_brand-profiles/_inbox/. The .md file contains paste-ready content for every active platform for the brand, formatted per its SOCIAL_RULES.md. Brett opens the file from Mac during his first work session, scans top-to-bottom, pastes each section into the corresponding platform, posts. Call this at the END of the weekly routine after you've already generated per-platform copy following the brand's social rules.",
+      "Write the daily posting packet for a brand. Drops a single markdown file plus hero + IG-square images into ~/Desktop/Daily Postings/[BrandShortName]/. The .md file contains paste-ready content for every active platform for the brand, formatted per its SOCIAL_RULES.md. Brett opens his Desktop's Daily Postings folder during his first work session, picks today's brand folder, scans top-to-bottom, pastes each section into the corresponding platform, posts. Call this at the END of the weekly routine after you've already generated per-platform copy following the brand's social rules.",
     input_schema: {
       type: 'object' as const,
       properties: {
