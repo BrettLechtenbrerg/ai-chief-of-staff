@@ -1,5 +1,30 @@
-import cron, { ScheduledTask } from 'node-cron';
+import { Cron } from 'croner';
 import Database from 'better-sqlite3';
+
+// node-cron was swapped for croner in beta.10. Reason: node-cron@4.2.1 has a
+// day-of-week parsing bug where `0 6 * * 2` (Tue) and several other DOW values
+// compute next-run as Jan 1 of a future year (2030 for Tue), so the task never
+// fires. Croner v10 parses the same expressions correctly, exposes `.nextRun()`
+// for UI display, and is DST-aware. Validate via try/catch on construction
+// (croner throws on invalid patterns) since croner has no separate validate fn.
+function validateCronExpression(expr: string): boolean {
+  try {
+    // paused:true so we don't side-effect schedule a real task during validation
+    const c = new Cron(expr, { paused: true }, () => {});
+    c.stop();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Lightweight wrapper exposing only what scheduleJob() / stopJob() need from
+// the underlying scheduler instance. Lets us keep `this.tasks: Map<string, X>`
+// typed without leaking croner internals further.
+interface ScheduledTaskHandle {
+  stop: () => void;
+  nextRun: () => Date | null;
+}
 import { AgentManager } from '../agent';
 import { MemoryManager, CronJob } from '../memory';
 import type { TelegramBot } from '../channels/telegram';
@@ -50,7 +75,7 @@ export interface JobResult {
  * calls AgentManager.processMessage() and routes responses.
  */
 export class CronScheduler {
-  private tasks: Map<string, ScheduledTask> = new Map();
+  private tasks: Map<string, ScheduledTaskHandle> = new Map();
   private jobs: Map<string, ScheduledJob> = new Map();
   private memory: MemoryManager | null = null;
   private telegramBot: TelegramBot | null = null;
@@ -515,7 +540,7 @@ export class CronScheduler {
    * Schedule a single job
    */
   scheduleJob(job: ScheduledJob): boolean {
-    if (!job.schedule || !cron.validate(job.schedule)) {
+    if (!job.schedule || !validateCronExpression(job.schedule)) {
       console.error(`[Scheduler] Invalid cron expression for ${job.name}: ${job.schedule}`);
       return false;
     }
@@ -524,22 +549,86 @@ export class CronScheduler {
     this.stopJob(job.name);
 
     const schedule = job.schedule;
-    const task = cron.schedule(schedule, async () => {
+    const cronTask = new Cron(schedule, async () => {
       await this.executeJob(job);
     });
 
-    this.tasks.set(job.name, task);
+    // Mirror croner's nextRun() into the DB so checkDueJobs() + the Scheduled
+    // Tasks panel both have a stable signal of when the job will fire next.
+    // Without this, weekly jobs sit at next_run_at=NULL until their first
+    // successful run — which is exactly how the node-cron DOW bug stayed silent
+    // for weeks. Persist on registration too.
+    const nextRunDate = cronTask.nextRun();
+    this.persistNextRunAt(job.name, nextRunDate);
+
+    // Sanity check — if a job's next fire is more than 8 days out, log a loud
+    // warning. Common cause: bad cron expression, OR a scheduler library bug
+    // like the one we just fixed. Anything beyond 1 week is suspicious for a
+    // weekly job and worth visibility.
+    if (nextRunDate) {
+      const daysOut = (nextRunDate.getTime() - Date.now()) / 86400000;
+      if (daysOut > 8) {
+        console.warn(
+          `[Scheduler] ⚠️  ${job.name} next-run is ${daysOut.toFixed(1)} days out (${nextRunDate.toISOString()}). ` +
+            `Schedule "${job.schedule}" — verify this is intentional.`
+        );
+      }
+    }
+
+    const handle: ScheduledTaskHandle = {
+      stop: () => cronTask.stop(),
+      nextRun: () => cronTask.nextRun(),
+    };
+    this.tasks.set(job.name, handle);
     this.jobs.set(job.name, job);
 
-    console.log(`[Scheduler] Scheduled: ${job.name} (${job.schedule}) → ${job.channel}`);
+    const nextRunStr = nextRunDate ? nextRunDate.toISOString() : 'unknown';
+    console.log(
+      `[Scheduler] Scheduled: ${job.name} (${job.schedule}) → ${job.channel} | next run: ${nextRunStr}`
+    );
     return true;
+  }
+
+  /**
+   * Write next_run_at for a job to the DB. Safe to call even if the DB hasn't
+   * been opened yet — we lazily reuse the scheduler's persistent connection.
+   */
+  private persistNextRunAt(jobName: string, nextRun: Date | null): void {
+    if (!this.dbPath) return;
+    try {
+      const db = this.db ?? new Database(this.dbPath);
+      if (!this.db) this.db = db; // promote to persistent if first call
+      db.prepare(
+        `UPDATE cron_jobs SET next_run_at = ?, updated_at = datetime('now') WHERE name = ?`
+      ).run(nextRun ? nextRun.toISOString() : null, jobName);
+    } catch (err) {
+      console.error(`[Scheduler] Failed to persist next_run_at for ${jobName}:`, err);
+    }
+  }
+
+  /**
+   * Lookup the next-run time for a scheduled cron task. Returns null if the
+   * job isn't currently registered (e.g. disabled, or 'at'/'every' type).
+   * Used by the Scheduled Tasks panel for the "Next run" column.
+   */
+  getNextRun(jobName: string): Date | null {
+    const handle = this.tasks.get(jobName);
+    return handle?.nextRun() ?? null;
   }
 
   /**
    * Execute a job
    */
   private async executeJob(job: ScheduledJob): Promise<void> {
+    const startTime = Date.now();
     console.log(`[Scheduler] Executing: ${job.name}`);
+
+    // Heartbeat: notify the linked Telegram chat that the job is starting.
+    // Silent no-op if the job's session has no linked Telegram chat. Gives the
+    // user a visible "🟢 routine starting" ping so a silent-fail (the kind that
+    // hid the node-cron DOW bug for weeks) is immediately obvious by its
+    // absence at scheduled time.
+    await this.sendHeartbeat(job, `🟢 ${job.name} starting…`);
 
     const result: JobResult = {
       jobName: job.name,
@@ -553,6 +642,8 @@ export class CronScheduler {
       result.error = 'AgentManager not initialized';
       this.addToHistory(result);
       console.error(`[Scheduler] ${result.error}`);
+      await this.sendHeartbeat(job, `❌ ${job.name} failed: AgentManager not initialized`);
+      this.persistLastRun(job.name, false, result.error, Date.now() - startTime);
       return;
     }
 
@@ -578,7 +669,72 @@ export class CronScheduler {
       console.error(`[Scheduler] Job ${job.name} failed:`, result.error);
     }
 
+    const durationMs = Date.now() - startTime;
+    this.persistLastRun(job.name, result.success, result.error, durationMs);
+
+    // Heartbeat: completion ping. Croner has already advanced .nextRun() by the
+    // time we're here, so re-persist next_run_at and quote the new value.
+    const handle = this.tasks.get(job.name);
+    const nextRunDate = handle?.nextRun() ?? null;
+    this.persistNextRunAt(job.name, nextRunDate);
+    const completionEmoji = result.success ? '✅' : '❌';
+    const tail = result.success
+      ? `done in ${(durationMs / 1000).toFixed(1)}s`
+      : `failed: ${result.error ?? 'unknown error'}`;
+    const nextStr = nextRunDate ? ` • next: ${nextRunDate.toLocaleString()}` : '';
+    await this.sendHeartbeat(job, `${completionEmoji} ${job.name} ${tail}${nextStr}`);
+
     this.addToHistory(result);
+  }
+
+  /**
+   * Send a short status ping to the job's linked Telegram chat. Silent no-op
+   * if no Telegram bot is configured, no memory is available, or the job's
+   * session has no linked chat. Errors swallowed — a heartbeat that fails
+   * must never break the job itself.
+   */
+  private async sendHeartbeat(job: ScheduledJob, text: string): Promise<void> {
+    const channels = this.getChannels();
+    if (!channels.telegramBot || !channels.memory) return;
+    try {
+      const sessionId = job.sessionId || 'default';
+      const linkedChatId = channels.memory.getChatForSession(sessionId);
+      if (linkedChatId === null) return;
+      await channels.telegramBot.sendMessage(linkedChatId, text);
+    } catch (err) {
+      console.warn(`[Scheduler] Heartbeat send failed for ${job.name}:`, err);
+    }
+  }
+
+  /**
+   * Persist last_run_at / last_status / last_error / last_duration_ms for a
+   * job that ran via the node-cron-style callback path (scheduleJob). The
+   * checkDueJobs() path already updates these columns inline. Both paths
+   * exist because recurring 'cron' jobs flow through scheduleJob() while
+   * one-shot 'at' / interval 'every' jobs flow through checkDueJobs().
+   */
+  private persistLastRun(
+    jobName: string,
+    success: boolean,
+    errorMsg: string | undefined,
+    durationMs: number
+  ): void {
+    if (!this.dbPath) return;
+    try {
+      const db = this.db ?? new Database(this.dbPath);
+      if (!this.db) this.db = db;
+      db.prepare(
+        `UPDATE cron_jobs SET
+           last_run_at = datetime('now'),
+           last_status = ?,
+           last_error = ?,
+           last_duration_ms = ?,
+           updated_at = datetime('now')
+         WHERE name = ?`
+      ).run(success ? 'ok' : 'error', errorMsg ?? null, durationMs, jobName);
+    } catch (err) {
+      console.error(`[Scheduler] Failed to persist last_run for ${jobName}:`, err);
+    }
   }
 
   /**
@@ -630,7 +786,7 @@ export class CronScheduler {
   ): Promise<boolean> {
     if (!this.memory) return false;
 
-    if (!cron.validate(schedule)) {
+    if (!validateCronExpression(schedule)) {
       console.error(`[Scheduler] Invalid cron: ${schedule}`);
       return false;
     }

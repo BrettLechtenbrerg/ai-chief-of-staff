@@ -2,25 +2,32 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CronScheduler, ScheduledJob } from '../../src/scheduler';
 import type { MemoryManager, CronJob } from '../../src/memory';
 
-// Mock node-cron
-vi.mock('node-cron', () => {
-  return {
-    default: {
-      validate: vi.fn((expr: string) => {
-        // Simple validation: must have 5 space-separated parts
-        const parts = expr.split(/\s+/);
-        if (parts.length !== 5) return false;
-        // Check for valid patterns (numbers, *, ranges, etc.)
-        const pattern = /^(\*|[0-9]+(-[0-9]+)?)(\/[0-9]+)?$/;
-        return parts.every((p) => pattern.test(p) || p === '*');
-      }),
-      schedule: vi.fn((_schedule: string, _callback: () => void) => {
-        return {
-          stop: vi.fn(),
-        };
-      }),
-    },
-  };
+// Mock croner. node-cron was swapped for croner in beta.10 because node-cron@4
+// had a day-of-week parsing bug that silently broke weekly schedules. Croner's
+// real Cron class throws on invalid expressions (no separate validate()).
+// IMPORTANT: must use `function` (not arrow) here — the scheduler does
+// `new Cron(...)` and arrow functions cannot be invoked with `new` in strict
+// mode (vitest warns: "The vi.fn() mock did not use 'function' or 'class' in
+// its implementation").
+vi.mock('croner', () => {
+  function CronMock(this: unknown, expr: string) {
+    const parts = expr.split(/\s+/);
+    if (parts.length !== 5) {
+      throw new Error(`Invalid cron expression: ${expr}`);
+    }
+    const pattern = /^(\*|[0-9]+(-[0-9]+)?)(\/[0-9]+)?$/;
+    if (!parts.every((p) => pattern.test(p) || p === '*')) {
+      throw new Error(`Invalid cron expression: ${expr}`);
+    }
+    const nextRunDate = new Date(Date.now() + 86400000);
+    // Return an object even when called with `new` — standard ES constructor
+    // semantics treat the returned object as the new instance.
+    return {
+      stop: vi.fn(),
+      nextRun: vi.fn(() => nextRunDate),
+    };
+  }
+  return { Cron: CronMock };
 });
 
 // Mock better-sqlite3 to avoid native module issues
