@@ -136,6 +136,80 @@ function _rtnScheduleToHuman(job) {
   return `${timeStr} daily`;
 }
 
+// Format a Date as a friendly relative-ish string for the health line:
+// "in 2h 14m", "in 6d", "4m ago", "yesterday", "Tue 6:00 AM". Always returns
+// something printable so empty cells don't leak into the UI.
+function _rtnRelativeWhen(date, opts = {}) {
+  if (!(date instanceof Date) || isNaN(date.getTime())) return null;
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const absMs = Math.abs(diffMs);
+  const future = diffMs > 0;
+
+  // Within 60s either side — say "now" rather than "in 0m" / "0m ago".
+  if (absMs < 60000) return future ? 'in <1m' : 'just now';
+
+  const minutes = Math.floor(absMs / 60000);
+  const hours = Math.floor(absMs / 3600000);
+  const days = Math.floor(absMs / 86400000);
+
+  if (absMs < 3600000) return future ? `in ${minutes}m` : `${minutes}m ago`;
+  if (absMs < 86400000) {
+    const mins = minutes % 60;
+    const tail = mins ? ` ${mins}m` : '';
+    return future ? `in ${hours}h${tail}` : `${hours}h${tail} ago`;
+  }
+  // 1–6 days out: relative. 7+ days: weekday + time, like "Tue 6:00 AM".
+  if (days < 7) {
+    if (opts.preferAbsoluteWeekday && future) {
+      return date.toLocaleDateString('en-US', { weekday: 'short' }) +
+        ' ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    return future ? `in ${days}d` : `${days}d ago`;
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+    (future ? ' ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '');
+}
+
+// Build the green/red health line under each job. Format:
+//   Next: Today 6:00 AM  ·  Last: 2h 14m ago • ✓ ok (3.4s)
+// Either half is omitted if its underlying timestamp is missing.
+function _rtnHealthLine(job) {
+  const parts = [];
+
+  if (job.next_run_at) {
+    const nextDate = _rtnParseDbTimestamp(job.next_run_at);
+    const rel = _rtnRelativeWhen(nextDate, { preferAbsoluteWeekday: true });
+    if (rel) parts.push(`<span class="rtn-job-next">Next: ${_rtnEscapeHtml(rel)}</span>`);
+  }
+
+  if (job.last_run_at) {
+    const lastDate = _rtnParseDbTimestamp(job.last_run_at);
+    const rel = _rtnRelativeWhen(lastDate);
+    const status = job.last_status || 'ok';
+    const statusGlyph = status === 'ok' ? '✓' : status === 'error' ? '✗' : '·';
+    const statusClass = status === 'error' ? 'rtn-job-status-error' : 'rtn-job-status-ok';
+    const dur = typeof job.last_duration_ms === 'number'
+      ? ` (${(job.last_duration_ms / 1000).toFixed(1)}s)`
+      : '';
+    const errTitle = job.last_error
+      ? ` title="${_rtnEscapeAttr(job.last_error)}"`
+      : '';
+    parts.push(
+      `<span class="rtn-job-last ${statusClass}"${errTitle}>` +
+        `Last: ${_rtnEscapeHtml(rel || 'unknown')} • ${statusGlyph} ${_rtnEscapeHtml(status)}${_rtnEscapeHtml(dur)}` +
+      `</span>`
+    );
+  }
+
+  if (parts.length === 0) {
+    // Show an explicit "never run yet" stub so users don't think a row that
+    // hasn't fired is broken.
+    return `<div class="rtn-job-health"><span class="rtn-job-never">Not run yet</span></div>`;
+  }
+  return `<div class="rtn-job-health">${parts.join(' · ')}</div>`;
+}
+
 // ---- Data Loading ----
 
 async function _rtnLoadSessions() {
@@ -220,12 +294,21 @@ function _rtnRenderJobs() {
       const promptDisplay = job.prompt.startsWith('[Workflow: ')
         ? '⚡ ' + _rtnEscapeHtml(job.prompt.substring(11, job.prompt.indexOf(']')))
         : _rtnEscapeHtml(job.prompt);
+
+      // Health line — "Next: <when>  ·  Last: <when> • <status>". Both parts
+      // are omitted gracefully if the underlying column is empty (job has
+      // never run, or scheduler hasn't computed next_run_at yet). This is the
+      // visible signal that PMMA/TSAI/Brett crons are alive without users
+      // having to open the DB — the gap that hid the node-cron DOW bug.
+      const healthLine = _rtnHealthLine(job);
+
       return `
         <div class="rtn-job-item ${job.enabled ? '' : 'disabled'}">
           <div class="rtn-job-status"></div>
           <div class="rtn-job-info">
             <div class="rtn-job-name">${_rtnEscapeHtml(job.name)}<span class="rtn-job-session-badge">${_rtnEscapeHtml(sessionName)}</span></div>
             <div class="rtn-job-schedule">${_rtnScheduleToHuman(job)}</div>
+            ${healthLine}
             <div class="rtn-job-prompt">${promptDisplay}</div>
           </div>
           <div class="rtn-job-actions">

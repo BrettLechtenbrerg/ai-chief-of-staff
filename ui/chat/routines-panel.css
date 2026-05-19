@@ -171,6 +171,36 @@
 
 #routines-view .rtn-job-schedule { font-size: 11px; color: var(--accent); font-weight: 500; }
 
+/* Health line under each job — "Next: ...  ·  Last: ...". Status emoji is
+   colored ok/error so a quick glance tells you the system is alive. The
+   error span carries a title= tooltip with the full error message. */
+#routines-view .rtn-job-health {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+#routines-view .rtn-job-next {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+#routines-view .rtn-job-last { opacity: 0.85; }
+#routines-view .rtn-job-status-ok { color: #22c55e; }
+#routines-view .rtn-job-status-error {
+  color: #ef4444;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+#routines-view .rtn-job-never {
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.6;
+}
+
 #routines-view .rtn-job-prompt {
   font-size: 11px;
   color: var(--text-muted);
