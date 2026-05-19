@@ -230,7 +230,39 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
-### Next session — pick up here (added May 17, late night)
+### Next session — pick up here (added May 19, early morning)
+
+**Status: blog-system port to PMMA + Brett — two draft PRs open, waiting on Brett's review/merge.**
+
+Goal Brett surfaced this morning: every brand's weekly-content cron should run identically to TSAI's (write markdown blog post → open draft PR → Brett merges → Vercel deploys). PMMA and Brett brands were configured as `backend: "ghl"` (social packets only). To unify them, both sites needed the same blog system TSAI has.
+
+**Two PRs open (DRAFT, ready for review):**
+- PMMA: https://github.com/PMMARocks-1/PMMA-Website-2026-Master/pull/1
+- Brett: https://github.com/BrettLechtenbrerg/BL-2026-Personal-Site/pull/1
+
+Each PR ports `lib/blog.ts`, `app/blog/page.tsx`, `app/blog/[slug]/page.tsx`, appends `.prose-blog` CSS, adds `gray-matter` + `react-markdown` + `remark-gfm`, creates `content/blog/` + `public/blog-images/`. Verified `next build` clean on both. PMMA restyled to dark theme (pmma-black/cranberry/gold). Brett restyled to light theme (white bg/cranberry/gold, Tailwind 4 syntax). Both PR descriptions explain visual choices and the after-merge flow.
+
+**What's WAITING on PR merge (do NOT apply before both PRs land):**
+1. `~/dev/_brand-profiles/pmma/profile.json` and `~/dev/_brand-profiles/brett-personal/profile.json` — flip `backend: "ghl"` → `"github-next"`, add `contentDir` + `imageDir` keys. **Currently sitting in `git stash` in the brand-profiles repo** under stash message `pmma+brett profile flips to github-next; apply after PRs merge`. To apply post-merge: `cd ~/dev/_brand-profiles && git stash pop && git add -A && git commit -m "feat(pmma,brett): switch blog backend to github-next" && git push`. Why stashed: the cron reads brand-profiles from disk live; if the flip were on disk before the PRs merged, the next cron run would try to commit to a `content/blog/` path that doesn't exist on main yet.
+
+**What's already in place (safe to leave even with PRs unmerged):**
+- Cron prompts updated in the ACOS DB for all 3 brands (`tsai-weekly-content`, `pmma-weekly-content`, `brett-weekly-content`). Generic edits: stripped stale `(TSAI currently)` / `(PMMA, brett-personal currently)` parentheticals. PMMA-specific edit: inserted a PMMA AUTH PRECHECK block inside Step 11 (`gh auth switch --user PMMARocks-1` + `git config user.name/email` verification — required because the PMMA repo is under a different GitHub account AND Vercel Hobby blocks deploys from any identity other than `PMMA / personalmastery1@gmail.com`). Brett-specific edit: inserted a BRETT AUTH PRECHECK block (`gh auth switch --user BrettLechtenbrerg`) so a PMMA cron run that ran first doesn't leave gh on the wrong account. All AUTH PRECHECK blocks are inside `For blog.backend === "github-next" only:` so they're inert until the profile flip lands.
+- All scheduler-relevant changes are picked up automatically — the periodic `checkForNewJobs()` hash diff includes the prompt, so the next tick reloads.
+
+**Next steps for the resuming session:**
+1. Confirm Brett merged both PRs (`gh pr view --repo PMMARocks-1/PMMA-Website-2026-Master 1` + `gh pr view --repo BrettLechtenbrerg/BL-2026-Personal-Site 1`). Wait for `state: MERGED`.
+2. Apply the stashed brand-profiles changes (command above).
+3. Run-now `brett-weekly-content` to validate the full end-to-end pipeline on a fresh github-next brand. Watch for: PR opens at `BL-2026-Personal-Site/pull/<N>`, packet lands at `~/Desktop/Daily Postings/Brett/`, Telegram notification fires, blog-topics.md row moves to Published.
+4. If Brett's dry-run succeeds, optionally run-now `pmma-weekly-content` to validate PMMA's auth-switch path works end-to-end too.
+5. After validation: regenerate `RECOVERY.md` with a `v0.11-multi-brand-blog-parity` rollback tag note.
+
+**Known caveats:**
+- Brett's site has no `.vercel/` folder locally, but the resume prompt says Vercel auto-deploys on push to main — meaning Vercel is wired via the GitHub integration (Vercel watches the repo), not local `vercel link`. The merge → deploy flow works without `.vercel/`; only the `vercel` CLI needs it.
+- PMMA's repo had 4 stray hero PNGs in `public/blog-images/` from earlier ghl-mode dry-runs. They were excluded from the port PR (the folder ships with just `.gitkeep`). The actual production heroes will be the new ones the cron generates after merge.
+
+---
+
+### Next session — pick up here (added May 17, late night, superseded by the May 19 entry above)
 
 **Status: waiting on Manny's input before any code starts.**
 
