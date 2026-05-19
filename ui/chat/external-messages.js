@@ -1,6 +1,18 @@
 function handleCronTestingStart(data) {
-  // Only handle if it's for the current session
-  if (data.sessionId && data.sessionId !== currentSessionId) return;
+  // Auto-switch the chat window to the cron's session so the user can
+  // SEE the routine work in real-time. Before this, clicking Run-now on a
+  // job whose session wasn't the active tab made the routine run invisibly
+  // — work happened, but the user saw "no visual verification" because
+  // narration was being routed to a different (background) session tab.
+  //
+  // switchSession() is async (it loads message history) and resolves
+  // quickly enough that the subsequent UI mutations land on the correct
+  // tab. We don't await here — the user-message bubble + status indicator
+  // below need to render NOW so the empty-state clears before the first
+  // tool_start event fires.
+  if (data.sessionId && data.sessionId !== currentSessionId) {
+    switchSession(data.sessionId);
+  }
 
   const sessionId = data.sessionId || currentSessionId;
 
