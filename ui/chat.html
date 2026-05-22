@@ -1062,6 +1062,25 @@
         </details>
 
         <details class="help-section">
+          <summary><span class="help-section-icon">✍️</span> Content Writer — one-click SEO blog + social posts</summary>
+          <div class="help-section-body">
+            <p>Click <strong>Content Writer</strong> in the sidebar to launch a full content pipeline in a single chat. One button, end-to-end:</p>
+            <ol class="help-steps">
+              <li>I research keyword ideas in your niche using DataForSEO (search volume + difficulty).</li>
+              <li>I read the top 3 SERP results and pick an angle that brings your brand’s perspective.</li>
+              <li>I fact-check every citable claim live before using it.</li>
+              <li>I generate a hero image (1792×1024) sized for blog headers.</li>
+              <li>I draft an 800–1200 word article in your brand voice (from your Knowledge Base).</li>
+              <li>I post the full article + image inline so you can review and request changes.</li>
+              <li>When you click <strong>✓ Approve &amp; Publish</strong>, I save <code>blog-post.md</code> to <code>~/Desktop/Blogs/YYYY-MM-DD-slug/</code>.</li>
+              <li>Then click <strong>⚡ Create social content</strong> and I’ll spin out 5 platform-tailored posts (Google Business Profile, Facebook, Instagram, LinkedIn, Medium) directly in the chat for copy-paste, plus an Instagram-square version of the hero. All 5 are also saved as <code>.md</code> files alongside the blog as a backup.</li>
+            </ol>
+            <p><strong>First-time setup:</strong> the Content Writer panel asks for three things — an OpenAI key (for image generation), DataForSEO login (for keyword research), and your brand book (so I write in your voice, not mine). Once all three are ✓, the <strong>▶ Write My Next Blog Post</strong> button unlocks.</p>
+            <p>Nothing ever publishes externally — output goes to your Desktop only. You copy-paste into your blog editor and social platforms when you’re ready.</p>
+          </div>
+        </details>
+
+        <details class="help-section">
           <summary><span class="help-section-icon">📁</span> Documents &amp; files</summary>
           <div class="help-section-body">
             <p>Drag any file straight into the chat input — PDFs, Word docs, text, markdown, images. I’ll read it and we can talk about it.</p>
@@ -1091,11 +1110,17 @@
         </details>
 
         <div class="help-footer">
-          <p class="help-footer-text">Ready to set up your first scheduled task?</p>
-          <button class="help-open-recipes" onclick="playNormalClick(); openRecipesFromHelp()">
-            Browse Recipes
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="vertical-align: -2px; margin-left: 4px;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M7 7h10v10"/></svg>
-          </button>
+          <p class="help-footer-text">Ready to get started?</p>
+          <div class="help-footer-buttons">
+            <button class="help-open-recipes" onclick="playNormalClick(); openContentWriterFromHelp()">
+              Write a Blog Post
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="vertical-align: -2px; margin-left: 4px;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M7 7h10v10"/></svg>
+            </button>
+            <button class="help-open-recipes" onclick="playNormalClick(); openRecipesFromHelp()">
+              Browse Recipes
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="vertical-align: -2px; margin-left: 4px;"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M7 7h10v10"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -187,6 +187,16 @@
   background-color: var(--accent-hover);
 }
 
+/* Two-button footer row (Write a Blog Post + Browse Recipes). On narrow
+   widths .help-footer already gaps them; this just keeps them tight as
+   a unit on the right while the text stays on the left. */
+.help-footer-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 /* ─── Empty-state "What I Can Do" trigger button ──────────────────────── */
 /* Lives inside .empty-state, above the pixel-heart greeting. */
 
