@@ -254,6 +254,13 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     return SettingsManager.validateOpenAIKey(key);
   });
 
+  ipcMain.handle(
+    'settings:validateDataForSEO',
+    async (_, login: string, password: string) => {
+      return SettingsManager.validateDataForSEOKey(login, password);
+    }
+  );
+
   ipcMain.handle('settings:validateTelegram', async (_, token: string) => {
     return SettingsManager.validateTelegramToken(token);
   });

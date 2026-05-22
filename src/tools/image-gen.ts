@@ -75,11 +75,16 @@ function desktopPreviewPath(repoPath: string): string {
 // into any of these but nowhere else — prevents the agent from dropping
 // PNGs into random places on disk.
 //
-// 1. Each brand's site repo public/blog-images/ — where committed images live
+// 1. ~/Desktop/Blogs/ — the tester-facing default for the Content Writer
+//    sidebar feature. The agent creates per-article subfolders here
+//    (e.g. ~/Desktop/Blogs/2026-05-21-my-post/hero.png) so testers can
+//    find their generated posts without hunting through the filesystem.
+// 2. Each brand's site repo public/blog-images/ — where committed images live
 //    for blogs hosted on github-next (currently TSAI).
-// 2. The _brand-profiles/_inbox/ folder — where images for GHL-blog brands
+// 3. The _brand-profiles/_inbox/ folder — where images for GHL-blog brands
 //    (PMMA, brett-personal) land. Brett uploads from here.
 const ALLOWED_DIRS = [
+  path.resolve(process.env.HOME || '', 'Desktop/Blogs'),
   path.resolve(process.env.HOME || '', 'dev/TSAI-Site/public/blog-images'),
   path.resolve(
     process.env.HOME || '',

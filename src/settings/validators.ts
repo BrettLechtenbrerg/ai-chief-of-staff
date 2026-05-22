@@ -11,6 +11,11 @@ export interface TelegramValidationResult extends ValidationResult {
   botInfo?: unknown;
 }
 
+export interface DataForSEOValidationResult extends ValidationResult {
+  /** Account balance in USD, when validation succeeds. */
+  balance?: number;
+}
+
 interface ApiKeyValidationConfig {
   url: string;
   method: 'GET' | 'POST';
@@ -192,6 +197,63 @@ export async function validateMiniMaxKey(apiKey: string): Promise<ValidationResu
       messages: [{ role: 'user', content: 'Hi' }],
     },
   });
+}
+
+/**
+ * Validate a DataForSEO login + API password by hitting the user_data
+ * endpoint (a free GET that returns account balance + limits).
+ *
+ * DataForSEO uses HTTP Basic auth: `Authorization: Basic base64(login:password)`.
+ * Note: the API password is NOT the same as the dashboard login password —
+ * it's a separate secret shown on the API Access page in the DataForSEO
+ * dashboard. The walkthrough UI surfaces this distinction to testers.
+ *
+ * DataForSEO returns HTTP 200 even for application errors and conveys the
+ * real status via the JSON body's top-level `status_code` field. A
+ * successful response has `status_code === 20000`. We pull the balance
+ * from `tasks[0].result[0].money.balance` for display in the UI.
+ */
+export async function validateDataForSEOKey(
+  login: string,
+  password: string,
+): Promise<DataForSEOValidationResult> {
+  if (!login || !password) {
+    return { valid: false, error: 'Login and API password are both required' };
+  }
+  try {
+    const credentials = Buffer.from(`${login}:${password}`).toString('base64');
+    const response = await fetch('https://api.dataforseo.com/v3/appendix/user_data', {
+      method: 'GET',
+      headers: { Authorization: `Basic ${credentials}` },
+    });
+
+    if (response.status === 401) {
+      return {
+        valid: false,
+        error: 'Invalid login or API password. Make sure you\u2019re using your API password (not your dashboard login password).',
+      };
+    }
+
+    const data = (await response.json()) as Record<string, unknown>;
+    const statusCode = data.status_code as number | undefined;
+    if (statusCode !== 20000) {
+      const statusMessage = (data.status_message as string) || 'DataForSEO rejected the request';
+      return { valid: false, error: statusMessage };
+    }
+
+    const tasks = data.tasks as Array<Record<string, unknown>> | undefined;
+    const firstTask = tasks?.[0];
+    const result = (firstTask?.result as Array<Record<string, unknown>> | undefined)?.[0];
+    const money = result?.money as Record<string, unknown> | undefined;
+    const balance = typeof money?.balance === 'number' ? (money.balance as number) : undefined;
+
+    return { valid: true, balance };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
 }
 
 /**

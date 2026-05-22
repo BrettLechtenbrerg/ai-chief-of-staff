@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="chat/connections-panel.css">
   <link rel="stylesheet" href="chat/brain-panel.css">
   <link rel="stylesheet" href="chat/routines-panel.css">
+  <link rel="stylesheet" href="chat/content-writer-panel.css">
   <link rel="stylesheet" href="chat/personalize-panel.css">
   <link rel="stylesheet" href="chat/help-modal.css">
   <link rel="stylesheet" href="chat/onboarding.css">
@@ -70,6 +71,10 @@
       <button class="sidebar-btn" id="sidebar-routines-btn" title="Click here to schedule tasks">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2"/></g></svg>
         <span class="sidebar-btn-label">Click Here To Schedule Tasks</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-content-writer-btn" title="Content Writer">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M8 13h5"/><path d="M8 17h8"/><path d="M17 3l1.2 2.5L21 6.5l-2.5 1.2L17 10l-1.2-2.3L13 6.5l2.8-1Z"/></svg>
+        <span class="sidebar-btn-label">Content Writer</span>
       </button>
       <button class="sidebar-btn" id="sidebar-brain-btn" title="The Brain">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M16.998 7.127Q17.48 7 18 7a4 4 0 1 1-1.027 7.867m.025-7.74L17 7a4 4 0 0 0-7.91-.85m7.908.977A4 4 0 0 1 16.465 9m.508 5.867q.027-.18.027-.367a2.5 2.5 0 0 0-2-2.45m1.973 2.817A2.5 2.5 0 0 1 14.5 17H14a4 4 0 0 0-4 4M9.09 6.15a4 4 0 0 0-4.932 4.97M9.09 6.15A4 4 0 0 1 11.465 8m-7.306 3.12A3.001 3.001 0 0 0 5 17a3 3 0 0 0 2.83-2m-3.671-3.88q.136.467.376.88"/><path d="M11.836 11.744c-.51.491-1.383.576-2.129.157c-.746-.42-1.127-1.21-.972-1.901"/></g></svg>
@@ -1217,6 +1222,118 @@
     </div>
   </div><!-- #personalize-view -->
 
+  <!-- Content Writer View -->
+  <div id="content-writer-view">
+    <div class="cw-header">
+      <h1><span>Content Writer</span></h1>
+      <div class="cw-header-actions">
+        <button onclick="playNormalClick(); hideContentWriterPanel()">Back</button>
+      </div>
+    </div>
+    <div class="cw-container">
+      <p class="cw-intro">Three things, then we write your first post.</p>
+
+      <!-- Card 1: OpenAI -->
+      <section class="cw-card" data-card="openai">
+        <header class="cw-card-header">
+          <div class="cw-card-title">
+            <span class="cw-card-badge" id="cw-badge-openai">⚠</span>
+            <h2>OpenAI key</h2>
+            <span class="cw-card-status" id="cw-status-openai">Needed for images and writing</span>
+          </div>
+          <button class="cw-card-toggle" id="cw-toggle-openai" onclick="playNormalClick(); _cwToggleCard('openai')">Set up OpenAI →</button>
+        </header>
+        <div class="cw-card-body" id="cw-body-openai">
+          <ol class="cw-steps">
+            <li>Open the OpenAI API keys page and create a new secret key.
+              <button class="cw-link-btn" onclick="playNormalClick(); _cwOpenExternal('https://platform.openai.com/api-keys')">Open platform.openai.com/api-keys</button>
+            </li>
+            <li>Paste it here. I store it in your system keychain.</li>
+          </ol>
+          <div class="cw-form-row">
+            <label for="cw-input-openai">OpenAI API key</label>
+            <input type="password" id="cw-input-openai" placeholder="sk-…" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="cw-form-actions">
+            <button class="cw-primary-btn" id="cw-save-openai" onclick="playNormalClick(); _cwSaveOpenAI()">Save &amp; Test</button>
+            <span class="cw-form-message" id="cw-msg-openai"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 2: DataForSEO -->
+      <section class="cw-card" data-card="dataforseo">
+        <header class="cw-card-header">
+          <div class="cw-card-title">
+            <span class="cw-card-badge" id="cw-badge-dataforseo">⚠</span>
+            <h2>DataForSEO</h2>
+            <span class="cw-card-status" id="cw-status-dataforseo">Needed for keyword research</span>
+          </div>
+          <button class="cw-card-toggle" id="cw-toggle-dataforseo" onclick="playNormalClick(); _cwToggleCard('dataforseo')">Set up DataForSEO →</button>
+        </header>
+        <div class="cw-card-body" id="cw-body-dataforseo">
+          <ol class="cw-steps">
+            <li>Don't have an account? Sign up (a few dollars of credit lasts months).
+              <button class="cw-link-btn" onclick="playNormalClick(); _cwOpenExternal('https://app.dataforseo.com/register')">Open sign-up</button>
+            </li>
+            <li>Already signed up? Open the dashboard and go to <strong>API Access</strong>.
+              <button class="cw-link-btn" onclick="playNormalClick(); _cwOpenExternal('https://app.dataforseo.com')">Open dashboard</button>
+            </li>
+          </ol>
+          <div class="cw-warning">
+            <strong>Important:</strong> the <em>API password</em> is NOT your dashboard login password.
+            It's a separate secret shown on the <strong>API Access</strong> page of your DataForSEO dashboard.
+            If you use your login password here, the test will fail.
+          </div>
+          <div class="cw-form-row">
+            <label for="cw-input-dfs-login">Login (email)</label>
+            <input type="text" id="cw-input-dfs-login" placeholder="you@example.com" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="cw-form-row">
+            <label for="cw-input-dfs-password">API password</label>
+            <input type="password" id="cw-input-dfs-password" placeholder="From the API Access page" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="cw-form-actions">
+            <button class="cw-primary-btn" id="cw-save-dataforseo" onclick="playNormalClick(); _cwSaveDataForSEO()">Save &amp; Test</button>
+            <span class="cw-form-message" id="cw-msg-dataforseo"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 3: Brand book -->
+      <section class="cw-card" data-card="brandbook">
+        <header class="cw-card-header">
+          <div class="cw-card-title">
+            <span class="cw-card-badge" id="cw-badge-brandbook">⚠</span>
+            <h2>Brand book</h2>
+            <span class="cw-card-status" id="cw-status-brandbook">So I write in your voice, not mine</span>
+          </div>
+          <button class="cw-card-toggle" id="cw-toggle-brandbook" onclick="playNormalClick(); _cwToggleCard('brandbook')">Add brand book →</button>
+        </header>
+        <div class="cw-card-body" id="cw-body-brandbook">
+          <p class="cw-hint">Tip: copy what you already have from your brand guide, an old style doc, or a ChatGPT/Claude project instruction.</p>
+          <div class="cw-form-row">
+            <label for="cw-input-brand-style">Brand &amp; Style</label>
+            <textarea id="cw-input-brand-style" rows="8" placeholder="Paste your brand voice / tone guidelines.&#10;&#10;e.g. People-first language. No hype, no corporate buzzwords. Three audiences: business owners ready to scale, coaches and consultants, operators who want practical AI."></textarea>
+          </div>
+          <div class="cw-form-row">
+            <label for="cw-input-writing-rules">Writing Rules</label>
+            <textarea id="cw-input-writing-rules" rows="8" placeholder="Your writing rules — grammar, format, length, punctuation, sign-offs.&#10;&#10;e.g. Lowercase everywhere except proper nouns. No em-dashes. No periods at end of casual messages. Sign off emails as '— Brett'."></textarea>
+          </div>
+          <div class="cw-form-actions">
+            <button class="cw-primary-btn" id="cw-save-brandbook" onclick="playNormalClick(); _cwSaveBrandBook()">Save</button>
+            <span class="cw-form-message" id="cw-msg-brandbook"></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="cw-actions">
+        <button class="cw-start-btn" id="cw-start-btn" onclick="playNormalClick(); startContentWriter()" disabled>▶ Write My First Blog Post</button>
+        <p class="cw-actions-hint" id="cw-actions-hint">Complete the three steps above to unlock.</p>
+      </div>
+    </div>
+  </div><!-- #content-writer-view -->
+
   </div><!-- .main-content -->
 
   <!-- About Modal (outside main-content so it overlays all views) -->
@@ -1284,6 +1401,7 @@
   <script src="chat/connections-panel.js"></script>
   <script src="chat/brain-panel.js"></script>
   <script src="chat/routines-panel.js"></script>
+  <script src="chat/content-writer-panel.js"></script>
   <script src="chat/personalize-panel.js"></script>
   <script src="chat/help-modal.js"></script>
   <script src="chat/event-bindings.js"></script>

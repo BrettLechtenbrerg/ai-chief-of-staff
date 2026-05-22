@@ -196,6 +196,8 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   validate: {
     anthropicKey: (key: string) => ipcRenderer.invoke('settings:validateAnthropic', key),
     openAIKey: (key: string) => ipcRenderer.invoke('settings:validateOpenAI', key),
+    dataForSEOKey: (login: string, password: string) =>
+      ipcRenderer.invoke('settings:validateDataForSEO', login, password),
     moonshotKey: (key: string) => ipcRenderer.invoke('settings:validateMoonshot', key),
     glmKey: (key: string) => ipcRenderer.invoke('settings:validateGlm', key),
     xiaomiKey: (key: string) => ipcRenderer.invoke('settings:validateXiaomi', key),
@@ -620,6 +622,10 @@ declare global {
       validate: {
         anthropicKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
         openAIKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
+        dataForSEOKey: (
+          login: string,
+          password: string
+        ) => Promise<{ valid: boolean; error?: string; balance?: number }>;
         moonshotKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
         glmKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
         deepseekKey: (key: string) => Promise<{ valid: boolean; error?: string }>;

@@ -20,6 +20,7 @@ import {
   validateXiaomiKey,
   validateMiniMaxKey,
   validateDeepSeekKey,
+  validateDataForSEOKey,
 } from './validators';
 
 // Re-export types and schema so external consumers aren't broken
@@ -593,6 +594,18 @@ class SettingsManagerClass {
 
   async validateOpenAIKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
     return validateOpenAIKey(apiKey);
+  }
+
+  /**
+   * Validate a DataForSEO login + API password by hitting the user_data
+   * endpoint. Returns the account balance on success so the UI can
+   * surface it ("Connected — $4.12 balance").
+   */
+  async validateDataForSEOKey(
+    login: string,
+    password: string
+  ): Promise<{ valid: boolean; error?: string; balance?: number }> {
+    return validateDataForSEOKey(login, password);
   }
 
   async validateTelegramToken(
