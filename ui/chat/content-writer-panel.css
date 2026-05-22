@@ -324,3 +324,52 @@
   color: var(--text-muted);
   margin: 0;
 }
+
+/* ---- Inline action buttons under Content Writer assistant messages ---- */
+/* Rendered as a sibling div directly after the assistant bubble, NOT inside
+   #content-writer-view (that panel is hidden when chat is active). So the
+   selector is unscoped — .cw-action-row lives in #messages. */
+
+.cw-action-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 0 16px 16px;
+  margin-top: -4px;
+}
+
+.cw-action-row button {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+}
+
+.cw-action-row button.primary {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+}
+
+.cw-action-row button.primary:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.cw-action-row button.secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.cw-action-row button.secondary:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
+}
+
+.cw-action-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

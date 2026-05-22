@@ -65,17 +65,90 @@ const _CW_KICKOFF_PROMPT = [
   '800\u20131200 words. Follow my Brand & Style + Writing Rules exactly. Include a clear title, meta description (150\u2013160 chars), 3\u20135 H2 sections, and a closing CTA appropriate to my business.',
   '',
   'Step 8 — Post it inline in this chat for review.',
-  'Show me the full article rendered as markdown (title as H1, body with section headings, etc.) followed by the hero image as a markdown image reference (`![hero](file:///$HOME/Desktop/Blogs/YYYY-MM-DD-slug/hero.png)`). Then ask me: "Want any changes, or are we good to publish?"',
+  'Show me the full article rendered as markdown (title as H1, body with section headings, etc.) followed by the hero image as a markdown image reference (`![hero](file:///$HOME/Desktop/Blogs/YYYY-MM-DD-slug/hero.png)`).',
   '',
-  'Step 9 — Iterate or publish.',
-  '- If I ask for changes: edit in chat, regenerate the image if I want, repost. Loop until I\u2019m happy.',
-  '- If I say "publish" / "looks good" / "ship it" / similar approval: use the write tool to save the final article as $HOME/Desktop/Blogs/YYYY-MM-DD-slug/blog-post.md, then confirm with: "Done. Your article is in ~/Desktop/Blogs/YYYY-MM-DD-slug/. Paste blog-post.md into your blog editor and upload hero.png as the featured image."',
+  'Step 9 — Ask for approval.',
+  'After the article + image, write one short line: "Want any changes, or are we good to publish?"',
+  'Then end your message with EXACTLY this marker on its own final line (no text after it, no code fence, no quotes):',
+  '[[CW_STATE:ready_for_approval]]',
+  '',
+  'Step 10 — Handle the approval trigger `__CW_APPROVE__`.',
+  'When (and ONLY when) my next user message is the exact literal string `__CW_APPROVE__`, do all of the following in one turn:',
+  '  a) Use the write tool to save the final article markdown to $HOME/Desktop/Blogs/YYYY-MM-DD-slug/blog-post.md (same slug folder you created in Step 5).',
+  '  b) Reply with ONE short confirmation sentence, e.g. "Saved blog-post.md to ~/Desktop/Blogs/YYYY-MM-DD-slug/."',
+  '  c) End your message with EXACTLY this marker on its own final line:',
+  '[[CW_STATE:ready_for_spin]]',
+  '',
+  'If the user instead types feedback (anything other than the exact `__CW_APPROVE__` literal), treat it as revision: edit the article in chat, regenerate the image if asked, repost the full markdown + image, and end with `[[CW_STATE:ready_for_approval]]` again so the approval buttons reappear.',
+  '',
+  'Step 11 — Handle the social-spin trigger `__CW_SPIN__`.',
+  'When (and ONLY when) my next user message is the exact literal string `__CW_SPIN__`, do all of the following in one turn:',
+  '  a) Call generate_blog_image again with the SAME outputPath as the hero (e.g. $HOME/Desktop/Blogs/YYYY-MM-DD-slug/hero.png) and `generateSquare: true`. This produces hero-square.png (1080x1080) alongside the landscape hero. Use the SAME visual prompt as Step 6 so the square matches the hero.',
+  '  b) In ONE assistant message, write 5 platform-tailored posts inline, in this order, each separated by a `---` divider line and each labeled with the exact H3 heading shown:',
+  '       ### Google Business Profile',
+  '       ### Facebook',
+  '       ### Instagram',
+  '       ### LinkedIn',
+  '       ### Medium',
+  '     Follow the PLATFORM RULES block below for each one. The 5 posts must be visibly different from each other and from the blog — not the same text with different lengths.',
+  '  c) Use the write tool 5 times to save each platform post as its own markdown file in the SAME slug folder:',
+  '       gbp.md, facebook.md, instagram.md, linkedin.md, medium.md',
+  '  d) End your message with EXACTLY this marker on its own final line:',
+  '[[CW_STATE:done]]',
+  '',
+  '=== PLATFORM RULES (Step 11 — social spin) ===',
+  '',
+  '**Hard rule: Brand book Writing Rules (in your system prompt context) override platform rules in every conflict.** Platform rules govern LENGTH, STRUCTURE, FORMAT, and platform-specific conventions (hashtags, mentions, CTA style). Writing Rules govern VOICE.',
+  '',
+  '### Google Business Profile',
+  '- Audience: local searchers, ready-to-act.',
+  '- Length: 750 chars max (hard cap — GBP truncates beyond this).',
+  '- Voice: direct, value-first, no fluff. Lead with the most useful sentence.',
+  '- Format: 3–4 short paragraphs, no headers, no hashtags, no emoji.',
+  '- CTA: "Call/visit/book" — concrete next step with phone or appointment link if known.',
+  '- Image: reuse the hero. No regeneration needed.',
+  '',
+  '### Facebook',
+  '- Audience: casual scrollers + existing followers.',
+  '- Length: 150–300 words.',
+  '- Voice: conversational, like talking to a friend.',
+  '- Format: short paragraphs, line breaks for readability. 1–2 emoji max if they add warmth. NO hashtags.',
+  '- CTA: "Comment / DM / share if this resonates" — engagement-led.',
+  '- Image: reuse the hero.',
+  '',
+  '### Instagram',
+  '- Audience: visual-first, mobile-scrolling.',
+  '- Length: caption ~150–220 words. Hook in the first 1–2 lines (before the "more" cut).',
+  '- Voice: warm, story-first, personal.',
+  '- Format: hook line → line break → body in 3–5 short paragraphs separated by blank lines → line break → 5–10 relevant hashtags at the END.',
+  '- CTA: "Save this / share with a friend / DM me ‘XYZ’" — Instagram-native.',
+  '- Image: square 1080x1080. (You will generate this via generate_blog_image — see Step 11.)',
+  '',
+  '### LinkedIn',
+  '- Audience: professionals, decision-makers, peers.',
+  '- Length: 1300 chars max for the post body (LinkedIn truncates at ~1300 with "see more").',
+  '- Voice: insight-led, credible, specific. First-person.',
+  '- Format: punchy hook line as the FIRST sentence. Body in 3–5 short paragraphs. End with a single question to drive comments. 0 hashtags ideally, max 3 if topically relevant.',
+  '- CTA: "What’s been your experience?" or "Curious how others handle this." Engagement-first, not salesy.',
+  '- Image: reuse the hero.',
+  '',
+  '### Medium',
+  '- Audience: long-form readers, often searching for a specific topic.',
+  '- Length: full repost OR 400–500 word excerpt — your call based on the blog’s depth.',
+  '- Voice: same as the blog. Medium is closest to a re-post; you are not aggressively rewriting.',
+  '- Format: keep H2 sections from the blog. Add a 1-line italic intro at the very top: *Originally published at [brand site URL if known, else just "my blog"].* Keep all sub-headers and structure intact.',
+  '- CTA: "Clap if this resonated" — Medium-native engagement. Optional sign-off linking back to the original blog.',
+  '- Image: reuse the hero.',
+  '',
+  '=== END PLATFORM RULES ===',
   '',
   'Hard rules:',
-  '- NEVER post the article to any external service (no GHL, no WordPress, no GitHub). Output goes to ~/Desktop/Blogs/ only.',
-  '- NEVER skip my Brand & Style + Writing Rules. They override any default voice.',
+  '- NEVER post the article or any social post to any external service (no GHL, no WordPress, no GitHub, no Buffer, no autoposting). All output goes to ~/Desktop/Blogs/ only.',
+  '- NEVER skip my Brand & Style + Writing Rules. They override any default voice AND override platform rules on voice conflicts.',
   '- If DataForSEO isn\u2019t reachable, tell me and stop. Don\u2019t make up keyword stats.',
   '- If the brand book is empty, tell me "Add your brand book in Content Writer first" and stop.',
+  '- The state markers `[[CW_STATE:ready_for_approval]]`, `[[CW_STATE:ready_for_spin]]`, `[[CW_STATE:done]]` are required exactly as written. The UI scans for them to render action buttons. If you forget the marker, the user has to type approvals manually.',
+  '- Recognize the triggers `__CW_APPROVE__` and `__CW_SPIN__` ONLY in their exact double-underscore bracketed form. Words like "approve" or "go" or "ship it" typed by the user are NOT triggers — treat those as conversational feedback.',
   '',
   'Begin with Step 1 now.',
 ].join('\n');
@@ -512,6 +585,208 @@ async function startContentWriter() {
     if (startBtn) startBtn.disabled = false;
   }
 }
+
+// ---- Inline action buttons (Approve / Request changes / Create social) ----
+//
+// The agent emits one of three plain-text sentinels as the LAST line of an
+// assistant message:
+//   [[CW_STATE:ready_for_approval]] — show Approve + Request changes
+//   [[CW_STATE:ready_for_spin]]     — show Create social content
+//   [[CW_STATE:done]]               — terminal, no buttons (still strip the marker)
+//
+// `_cwHandleAssistantMessage` is called from messaging.js after every
+// assistant bubble lands. It is a no-op for sessions whose name is not
+// exactly "Content Writer" so it can’t leak buttons into other tabs.
+
+const _CW_MARKER_REGEX = /\[\[CW_STATE:(ready_for_approval|ready_for_spin|done)\]\]/;
+
+function _cwHandleAssistantMessage(text, sessionId) {
+  if (!text) return;
+  // Only fire inside the Content Writer session. `sessions` is the
+  // module-scope global from state.js shared across the ui/chat bundle.
+  let session = null;
+  try {
+    if (typeof sessions !== 'undefined' && Array.isArray(sessions)) {
+      session = sessions.find((s) => s && s.id === sessionId) || null;
+    }
+  } catch (err) {
+    console.warn('[CW] session lookup failed:', err);
+  }
+  if (!session || session.name !== 'Content Writer') return;
+
+  const match = text.match(_CW_MARKER_REGEX);
+  if (!match) return;
+  const state = match[1];
+
+  // Find the assistant bubble we were just attached to. The bubble was
+  // appended by addMessage() immediately before this hook fires, so it
+  // is the LAST .message.assistant in messagesDiv.
+  const bubbles = messagesDiv.querySelectorAll('.message.assistant');
+  const lastBubble = bubbles[bubbles.length - 1];
+  if (!lastBubble) return;
+
+  // Strip the marker from the rendered bubble. The marker is plain ASCII
+  // (DOMPurify/marked won’t alter the brackets/colon), so a literal
+  // string replace on innerHTML is safe. Belt-and-suspenders: also strip
+  // it from any inner <p>/<code> wrappers if marked happened to wrap it.
+  const markerLiteral = match[0];
+  if (lastBubble.innerHTML.includes(markerLiteral)) {
+    lastBubble.innerHTML = lastBubble.innerHTML.split(markerLiteral).join('');
+  }
+  // Clean up empty trailing <p></p> / <code></code> the strip may have left.
+  lastBubble.querySelectorAll('p, code, pre').forEach((el) => {
+    if (!el.textContent.trim() && !el.querySelector('img')) el.remove();
+  });
+
+  // Remove any earlier action rows from this session — only the most
+  // recent assistant message should have active buttons.
+  messagesDiv.querySelectorAll('.cw-action-row').forEach((row) => row.remove());
+
+  let buttons = [];
+  if (state === 'ready_for_approval') {
+    buttons = [
+      { label: '✓ Approve & Publish', kind: 'primary', onClick: () => _cwSendTrigger('✓ Approved', '__CW_APPROVE__', sessionId) },
+      { label: 'Request changes', kind: 'secondary', onClick: () => _cwRequestChanges() },
+    ];
+  } else if (state === 'ready_for_spin') {
+    buttons = [
+      { label: '⚡ Create social content', kind: 'primary', onClick: () => _cwSendTrigger('⚡ Generate social content', '__CW_SPIN__', sessionId) },
+    ];
+  } else {
+    // 'done' — terminal, no buttons. Marker already stripped above.
+    return;
+  }
+
+  _cwInjectActionRow(lastBubble, buttons);
+}
+
+function _cwInjectActionRow(messageEl, buttons) {
+  if (!messageEl || !buttons || buttons.length === 0) return;
+  const row = document.createElement('div');
+  row.className = 'cw-action-row';
+  for (const b of buttons) {
+    const btn = document.createElement('button');
+    btn.className = b.kind === 'secondary' ? 'secondary' : 'primary';
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => {
+      // Disable all buttons in this row immediately to prevent double-click.
+      row.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+      try {
+        b.onClick();
+      } catch (err) {
+        console.error('[CW] action button handler failed:', err);
+        // Re-enable so the user can retry.
+        row.querySelectorAll('button').forEach((x) => { x.disabled = false; });
+      }
+    });
+    row.appendChild(btn);
+  }
+  // Insert as a sibling immediately after the assistant bubble.
+  if (messageEl.parentNode) {
+    messageEl.parentNode.insertBefore(row, messageEl.nextSibling);
+  }
+}
+
+// Send a trigger message (`__CW_APPROVE__` / `__CW_SPIN__`) on behalf of
+// the user without going through sendMessage(). Mirrors the loading-state
+// dance in plan-approval.js's sendPlanResponse so the spinner + tab
+// indicator behave identically to a normal user turn.
+async function _cwSendTrigger(displayLabel, triggerText, sessionId) {
+  // Visible bubble shows the friendly label; the cryptic trigger text
+  // is what we actually send to the agent.
+  addMessage('user', displayLabel, true);
+
+  isLoadingBySession.set(sessionId, true);
+  renderTabs();
+  if (currentSessionId === sessionId) {
+    setButtonState(true);
+  }
+  const statusEl = addStatusIndicator('*stretches paws* thinking...');
+  statusElBySession.set(sessionId, statusEl);
+  ensureStatusListener(sessionId);
+  scrollToBottom();
+
+  try {
+    const result = await window.pocketAgent.agent.send(triggerText, sessionId);
+
+    // Cleanup status indicator + loading state
+    const currentStatusEl = statusElBySession.get(sessionId);
+    if (currentStatusEl) {
+      currentStatusEl.remove();
+      statusElBySession.delete(sessionId);
+    }
+    toolCountBySession.delete(sessionId);
+    isLoadingBySession.set(sessionId, false);
+    renderTabs();
+    if (currentSessionId === sessionId) {
+      setButtonState(false);
+    }
+
+    // Remove streaming bubble if the agent streamed partials.
+    const streamBubble = streamingBubbleBySession.get(sessionId);
+    if (streamBubble) {
+      streamBubble.remove();
+      streamingBubbleBySession.delete(sessionId);
+    }
+    streamingTextBySession.delete(sessionId);
+    const pendingRaf = streamingRafBySession.get(sessionId);
+    if (pendingRaf) {
+      cancelAnimationFrame(pendingRaf);
+      streamingRafBySession.delete(sessionId);
+    }
+
+    if (currentSessionId === sessionId) {
+      if (result && result.success && result.response) {
+        addMessage('assistant', result.response, true, [], null, true, result.media);
+        // Re-run the marker hook so the next state’s buttons appear.
+        _cwHandleAssistantMessage(result.response, sessionId);
+        if (result.suggestedPrompt) {
+          setSuggestion(result.suggestedPrompt);
+        }
+      } else if (result && result.error) {
+        const errorMsg = result.error || '';
+        if (!errorMsg.includes('stopped') && !errorMsg.includes('aborted')) {
+          addMessage('error', errorMsg);
+        }
+      }
+      updateStats();
+      scrollToBottom();
+    }
+  } catch (err) {
+    console.error('[CW] trigger send failed:', err);
+    const currentStatusEl = statusElBySession.get(sessionId);
+    if (currentStatusEl) {
+      currentStatusEl.remove();
+      statusElBySession.delete(sessionId);
+    }
+    isLoadingBySession.set(sessionId, false);
+    renderTabs();
+    if (currentSessionId === sessionId) {
+      setButtonState(false);
+      addMessage('error', err.message || 'Failed to send action');
+      scrollToBottom();
+    }
+  }
+}
+
+// Focus the message input and prefill it. No automatic send — the user
+// types their feedback like a normal turn.
+function _cwRequestChanges() {
+  const input = document.getElementById('message-input');
+  if (!input) return;
+  input.value = 'Please make these changes: ';
+  input.focus();
+  // Move caret to end so they can start typing.
+  try {
+    const len = input.value.length;
+    input.setSelectionRange(len, len);
+  } catch (_) { /* not all input types support setSelectionRange */ }
+}
+
+// Expose to messaging.js / external-messages.js. Keeping it on window
+// matches the existing cross-module visibility pattern used elsewhere
+// (e.g. window._sidebarEnterPanelMode).
+window._cwHandleAssistantMessage = _cwHandleAssistantMessage;
 
 // ---- Expose to inline onclick handlers ----
 // (panel funcs are already global function declarations; nothing more needed)
