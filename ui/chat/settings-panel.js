@@ -17,6 +17,7 @@ function _dismissOtherPanels(keepId) {
     'routines-view': 'sidebar-routines-btn',
     'personalize-view': 'sidebar-personalize-btn',
     'content-writer-view': 'sidebar-content-writer-btn',
+    'connect-tools-view': 'sidebar-connect-tools-btn',
   };
   for (const [viewId, btnId] of Object.entries(panels)) {
     if (viewId === keepId) continue;

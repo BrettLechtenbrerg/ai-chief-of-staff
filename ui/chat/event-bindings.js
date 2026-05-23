@@ -32,6 +32,7 @@ bindClick('sidebar-new-chat', () => { playNormalClick(); createNewSession(); });
 bindClick('sidebar-personalize-btn', () => { playNormalClick(); togglePersonalizePanel(); });
 bindClick('sidebar-routines-btn', () => { playNormalClick(); toggleRoutinesPanel(); });
 bindClick('sidebar-content-writer-btn', () => { playNormalClick(); toggleContentWriterPanel(); });
+bindClick('sidebar-connect-tools-btn', () => { playNormalClick(); toggleConnectToolsPanel(); });
 bindClick('sidebar-brain-btn', () => { playNormalClick(); toggleBrainPanel(); });
 bindClick('sidebar-docs-btn', () => { playNormalClick(); openDocs(); });
 bindClick('sidebar-settings-btn', () => { playNormalClick(); toggleSettingsPanel(); });

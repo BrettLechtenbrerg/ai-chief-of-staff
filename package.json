@@ -146,6 +146,16 @@
       {
         "from": ".claude/",
         "to": "app/.claude/"
+      },
+      {
+        "from": "vendor/",
+        "to": "vendor/",
+        "filter": [
+          "**/*",
+          "!**/*.map",
+          "!**/__pycache__/**",
+          "!**/.DS_Store"
+        ]
       }
     ]
   },

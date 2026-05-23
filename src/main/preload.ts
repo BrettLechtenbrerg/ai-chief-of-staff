@@ -307,6 +307,39 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     openConfigFile: () => ipcRenderer.invoke('connections:openConfigFile'),
   },
 
+  // ─── Google OAuth (Connect Tools) ──────────────────────────
+  // Drives the “Connect with Google” card in the Connect Tools panel.
+  // Implementation: src/main/ipc/google-oauth-ipc.ts. Tokens live at
+  // <userData>/google-tokens.json so the bundled Flo MCP servers can read
+  // them via FLO_TOKEN_PATH.
+  googleOAuth: {
+    start: () => ipcRenderer.invoke('google-oauth:start'),
+    status: () => ipcRenderer.invoke('google-oauth:status'),
+    disconnect: () => ipcRenderer.invoke('google-oauth:disconnect'),
+    ensureValid: () => ipcRenderer.invoke('google-oauth:ensureValid'),
+    onExpired: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on('google-oauth:expired', listener);
+      return () => ipcRenderer.removeListener('google-oauth:expired', listener);
+    },
+  },
+
+  // ─── Connect Tools panel ─────────────────────────────────
+  // Curated marketplace of supported integrations. Friendly layer on top
+  // of the connections IPC; writes _acos_managed entries to
+  // mcp-servers.json. Implementation: src/main/ipc/connect-tools-ipc.ts.
+  connectTools: {
+    listSupported: () => ipcRenderer.invoke('connectTools:listSupported'),
+    getStatus: () => ipcRenderer.invoke('connectTools:getStatus'),
+    connect: (toolId: string, payload?: unknown) =>
+      ipcRenderer.invoke('connectTools:connect', toolId, payload),
+    disconnect: (toolId: string) => ipcRenderer.invoke('connectTools:disconnect', toolId),
+    diagnostics: () => ipcRenderer.invoke('connectTools:diagnostics'),
+    detectMigratable: () => ipcRenderer.invoke('connectTools:detectMigratable'),
+    adoptManagedFlag: (toolId: string) =>
+      ipcRenderer.invoke('connectTools:adoptManagedFlag', toolId),
+  },
+
   // ─── Permissions (macOS) ─────────────────────────────────────────────
   permissions: {
     isMacOS: () => ipcRenderer.invoke('permissions:isMacOS'),
@@ -740,6 +773,51 @@ declare global {
           config: unknown,
         ) => Promise<{ ok: boolean; toolCount?: number; tools?: string[]; error?: string }>;
         openConfigFile: () => Promise<{ success: boolean; path: string }>;
+      };
+
+      googleOAuth: {
+        start: () => Promise<{ success: boolean; error?: string; email?: string }>;
+        status: () => Promise<{
+          connected: boolean;
+          email: string | null;
+          expiresAt: number | null;
+          scopes: string[];
+          needsReconnect: boolean;
+        }>;
+        disconnect: () => Promise<{ success: boolean }>;
+        ensureValid: () => Promise<{ ok: boolean }>;
+        onExpired: (callback: () => void) => () => void;
+      };
+
+      connectTools: {
+        listSupported: () => Promise<Array<{
+          id: string;
+          name: string;
+          category: 'google' | 'crm' | 'research' | 'browser';
+          description: string;
+          authType: 'google-oauth' | 'api-key' | 'two-field' | 'auto';
+          fields?: Array<{ key: string; label: string; secret: boolean; placeholder?: string }>;
+          mcpServerName: string;
+          unavailableOnWindows?: boolean;
+        }>>;
+        getStatus: () => Promise<Array<{
+          id: string;
+          status: 'not-connected' | 'connecting' | 'connected' | 'failed' | 'reconnect-needed';
+          email?: string;
+          toolCount: number;
+          lastError: string | null;
+          managedByAcos: boolean;
+          externallyManaged: boolean;
+        }>>;
+        connect: (toolId: string, payload?: unknown) => Promise<{ success: boolean; error?: string }>;
+        disconnect: (toolId: string) => Promise<{ success: boolean; error?: string }>;
+        diagnostics: () => Promise<Record<string, unknown>>;
+        detectMigratable: () => Promise<Array<{
+          toolId: string;
+          mcpServerName: string;
+          currentCommand: string;
+        }>>;
+        adoptManagedFlag: (toolId: string) => Promise<{ success: boolean; error?: string }>;
       };
 
       permissions: {

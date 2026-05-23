@@ -64,6 +64,34 @@ exports.default = async function(context) {
     cleanDirectory(nodeModulesPath, ['.md', '.markdown']);
   }
 
+  // 4. Symlink native deps that @flo/shared imports but vendor/package.json
+  //    doesn't declare (better-sqlite3, bindings, file-uri-to-path). They
+  //    live in the main app node_modules already (Electron-rebuilt for the
+  //    right ABI), so we just point the vendor tree at them.
+  //    Documented in vendor/VENDORED.md.
+  const vendorNm = path.join(resourcesPath, 'vendor', 'flo-mcp-servers', 'node_modules');
+  const mainNm = path.join(appPath, 'node_modules');
+  if (fs.existsSync(vendorNm) && fs.existsSync(mainNm)) {
+    for (const pkg of ['better-sqlite3', 'bindings', 'file-uri-to-path']) {
+      const target = path.join(mainNm, pkg);
+      const link = path.join(vendorNm, pkg);
+      if (!fs.existsSync(target)) {
+        console.log(`[afterPack] WARN: ${pkg} not in main node_modules; flo servers may fail at runtime`);
+        continue;
+      }
+      try {
+        if (fs.existsSync(link)) fs.rmSync(link, { recursive: true, force: true });
+        // Use a RELATIVE symlink so the .app bundle stays self-contained
+        // when moved (e.g. into /Applications or to a tester's machine).
+        const relTarget = path.relative(vendorNm, target);
+        fs.symlinkSync(relTarget, link, 'dir');
+        console.log(`[afterPack] linked ${pkg} → ${relTarget}`);
+      } catch (err) {
+        console.warn(`[afterPack] symlink ${pkg} failed: ${err.message}`);
+      }
+    }
+  }
+
   console.log('[afterPack] Cleanup complete');
 
   // 4. macOS only: apply a proper ad-hoc codesign if electron-builder skipped
