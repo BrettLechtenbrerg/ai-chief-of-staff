@@ -8,3 +8,5 @@ export { registerMiscIPC } from './misc-ipc';
 export { registerContextIPC } from './context-ipc';
 export { registerAudioIPC } from './audio-ipc';
 export { registerConnectionsIPC } from './connections-ipc';
+export { registerGoogleOAuthIPC } from './google-oauth-ipc';
+export { registerConnectToolsIPC } from './connect-tools-ipc';

@@ -83,6 +83,35 @@ if (cp.status !== 0) fail('cp -R failed');
 log('Stripping quarantine attribute...');
 spawnSync('xattr', ['-dr', 'com.apple.quarantine', dest], { stdio: 'ignore' });
 
+// Symlink native deps that @flo/shared needs but aren't declared in
+// vendor/flo-mcp-servers/package.json (better-sqlite3, bindings, file-uri-to-path).
+// The main ACOS node_modules has them Electron-rebuilt; the bundled flo
+// servers spawn via Electron's binary so they need to resolve to the same
+// ABI-matched copy. Documented in vendor/VENDORED.md.
+const vendorNm = path.join(
+  dest,
+  'Contents',
+  'Resources',
+  'vendor',
+  'flo-mcp-servers',
+  'node_modules',
+);
+const appNm = path.join(dest, 'Contents', 'Resources', 'app', 'node_modules');
+if (fs.existsSync(vendorNm) && fs.existsSync(appNm)) {
+  for (const pkg of ['better-sqlite3', 'bindings', 'file-uri-to-path']) {
+    const target = path.join(appNm, pkg);
+    const link = path.join(vendorNm, pkg);
+    if (!fs.existsSync(target)) continue;
+    try {
+      fs.rmSync(link, { recursive: true, force: true });
+      fs.symlinkSync(target, link, 'dir');
+    } catch (err) {
+      log(`Warning: could not symlink ${pkg}: ${err.message}`);
+    }
+  }
+  log('Symlinked native deps for vendored Flo servers');
+}
+
 // Print verification info
 try {
   const plist = path.join(dest, 'Contents', 'Info.plist');

@@ -22,6 +22,15 @@ function openRecipesFromHelp() {
   }
 }
 
+// Footer button: close the help modal, then open the Content Writer panel
+// so users can run the one-click blog + social-spin pipeline.
+function openContentWriterFromHelp() {
+  hideHelpModal();
+  if (typeof showContentWriterPanel === 'function') {
+    showContentWriterPanel();
+  }
+}
+
 // Dismiss on backdrop click — matches the pattern other overlays use.
 document.addEventListener('DOMContentLoaded', () => {
   const overlay = document.getElementById('help-modal');

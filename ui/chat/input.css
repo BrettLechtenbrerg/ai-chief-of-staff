@@ -430,9 +430,10 @@
 
 /* Voice-input button — three visual states (idle / recording / transcribing).
    The button shows two stacked SVGs (a mic and a stop square) and toggles
-   their visibility via the `.is-*` state class. A red dot pulses while
-   recording so the user has an unmistakable "you are live" cue, and a small
-   spinner appears while we wait on Whisper. */
+   their visibility via the `.is-*` state class. A green dot pulses while
+   recording so the user has an unmistakable "I'm listening" cue (green =
+   go/active, matching the user's mental model of mic-on = ready), and a
+   small spinner appears while we wait on Whisper for the final pass. */
 #voice-btn .voice-icon-idle,
 #voice-btn .voice-icon-recording,
 #voice-btn .voice-spinner,
@@ -447,10 +448,12 @@
   display: block;
 }
 #voice-btn.is-recording {
-  /* Red tint while live so the state is obvious peripherally. */
-  color: #f87171;
-  border-color: color-mix(in srgb, #f87171 45%, transparent);
-  background: color-mix(in srgb, #f87171 12%, transparent);
+  /* Green tint while live so the state reads as "go / I'm listening"
+     rather than "warning / something is wrong". Matches user mental model
+     of mic-on = active/safe. */
+  color: #4ade80;
+  border-color: color-mix(in srgb, #4ade80 45%, transparent);
+  background: color-mix(in srgb, #4ade80 12%, transparent);
 }
 #voice-btn.is-transcribing .voice-spinner {
   display: block;
@@ -466,7 +469,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f87171;
+  background: #4ade80;
   animation: voice-rec-pulse 1.1s ease-in-out infinite;
 }
 @keyframes voice-rec-pulse {

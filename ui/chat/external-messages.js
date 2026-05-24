@@ -80,6 +80,7 @@ function handleSchedulerMessage(data) {
 
   // Add the agent's response
   addMessage('assistant', data.response, !streamBubble);
+  if (typeof _cwHandleAssistantMessage === 'function') _cwHandleAssistantMessage(data.response, sessionId);
 
   // Remove streaming bubble after final message is added
   if (streamBubble) {
@@ -131,6 +132,7 @@ function handleTelegramMessage(data) {
 
   // Add the agent's response (with media if present)
   addMessage('assistant', data.response, true, [], null, true, data.media);
+  if (typeof _cwHandleAssistantMessage === 'function') _cwHandleAssistantMessage(data.response, (data.sessionId || currentSessionId));
 
   // Show compaction notice if conversation was compacted
   if (data.wasCompacted) {

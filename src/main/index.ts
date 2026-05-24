@@ -29,6 +29,8 @@ import {
   registerContextIPC,
   registerAudioIPC,
   registerConnectionsIPC,
+  registerGoogleOAuthIPC,
+  registerConnectToolsIPC,
 } from './ipc';
 import type { IPCDependencies } from './ipc';
 
@@ -453,6 +455,18 @@ function setupIPC(): void {
   registerContextIPC();
   registerAudioIPC();
   registerConnectionsIPC(() => app.getPath('userData'));
+  registerGoogleOAuthIPC();
+  registerConnectToolsIPC(
+    () => app.getPath('userData'),
+    () => ({
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
+      // In dev the compiled main lives in dist/main/index.js, so the
+      // project root is two levels up. In packaged mode this is unused
+      // (isPackaged=true → resourcesPath/vendor wins).
+      projectRoot: path.join(__dirname, '../..'),
+    }),
+  );
 }
 
 // ============ Agent Lifecycle ============
@@ -675,6 +689,13 @@ app.whenReady().then(async () => {
   console.log('[Main] App ready, starting initialization...');
 
   try {
+    // Ensure the synthesized google-credentials.json exists at <userData>.
+    // This is the file the bundled Flo MCP servers will read via
+    // FLO_CREDENTIALS_PATH (see plan §3 / §8). Idempotent + cheap; safely
+    // no-ops when running against placeholder credentials.
+    const { GoogleOAuth } = await import('../auth/google-oauth');
+    GoogleOAuth.ensureCredentialsFile();
+
     // Initialize the browser manager with an Electron-supplied downloads dir
     // so the CDP tier doesn't fall back to `process.cwd()` (which points at
     // the app bundle in a packaged build). The browser module itself never

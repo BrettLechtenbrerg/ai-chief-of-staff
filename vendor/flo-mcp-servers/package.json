@@ -1,0 +1,12 @@
+{
+  "name": "@acos-vendor/flo-mcp-servers",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Vendored compiled output of the four Flo MCP servers (gmail, calendar, docs, bookmarks) bundled into AI Chief of Staff via electron-builder extraResources. See VENDORED.md for provenance, patch deltas, and refresh procedure. Do not edit the index.js files directly — refresh from upstream and re-apply the documented patches.",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "googleapis": "^128.0.0",
+    "zod": "^3.22.4"
+  }
+}

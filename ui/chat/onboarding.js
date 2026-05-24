@@ -593,13 +593,67 @@ async function obSaveConnectorsChoice() {
 }
 
 async function obConnectGoogleMockup() {
-  _obToast("Coming soon — we'll save your interest.", 'success');
-  await obSaveConnectorsChoice();
+  // Legacy entry point kept for backwards-compat with any cached HTML.
+  // Redirects to the real flow below.
+  return obConnectGoogleReal();
 }
 
 async function obConnectGhlMockup() {
-  _obToast("Coming soon — we'll save your interest.", 'success');
+  return obOpenConnectToolsForGhl();
+}
+
+/**
+ * Real Google OAuth from onboarding — kicks the system browser flow
+ * via the Connect Tools IPC (which writes the gmail entry on success).
+ * Soft: user can cancel the browser tab and keep walking through onboarding.
+ */
+async function obConnectGoogleReal() {
+  const btn = document.getElementById('ob-google-connect-btn');
+  const status = document.getElementById('ob-google-status');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Connecting…';
+  }
+  if (status) status.textContent = 'Waiting for browser sign-in…';
+  try {
+    // Connect Gmail first — the same Google tokens cover Calendar + Drive,
+    // so we flip those on right after without a second OAuth round-trip.
+    const result = await window.pocketAgent.connectTools.connect('gmail');
+    if (!result.success) {
+      _obToast(result.error || 'Google sign-in failed.', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Connect with Google'; }
+      if (status) status.textContent = 'Not connected';
+      return;
+    }
+    // Best-effort fire-and-forget Calendar + Drive entries.
+    window.pocketAgent.connectTools.connect('calendar').catch(() => undefined);
+    window.pocketAgent.connectTools.connect('drive').catch(() => undefined);
+    _obToast('Google connected. Calendar and Drive are coming online too.', 'success');
+    if (status) status.textContent = 'Connected';
+    if (btn) { btn.disabled = false; btn.textContent = 'Connected ✓'; }
+  } catch (err) {
+    console.error('[Onboarding] Google connect failed:', err);
+    _obToast('Google sign-in failed. Try again or skip and connect later.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Connect with Google'; }
+    if (status) status.textContent = 'Not connected';
+  }
+}
+
+/**
+ * Finish onboarding, then jump the user directly into the Connect Tools
+ * panel where they can paste their GHL Private Integration Token + Location
+ * ID without a cramped onboarding form. We persist the connectorsSeen flag
+ * so onboarding doesn't replay on next launch.
+ */
+async function obOpenConnectToolsForGhl() {
   await obSaveConnectorsChoice();
+  // Defer briefly so the onboarding modal has time to dismiss before we
+  // open the panel underneath.
+  setTimeout(() => {
+    if (typeof showConnectToolsPanel === 'function') {
+      showConnectToolsPanel();
+    }
+  }, 250);
 }
 
 function obSkipToSuccess() {
