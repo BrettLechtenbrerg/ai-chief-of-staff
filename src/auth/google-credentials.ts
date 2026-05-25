@@ -1,38 +1,40 @@
 /**
  * TSAI Google Cloud project OAuth credentials.
  *
- * Plan §1 (Architecture) calls for a dedicated TSAI Google Cloud project
- * `tsai-ai-chief-of-staff` in External + Testing mode. The Desktop-app
- * client_id is baked into the binary; the client_secret for a Desktop client
- * is acknowledged by Google's installed-app docs as not-truly-secret (PKCE
- * is the actual protection). We still treat it as moderately sensitive —
- * never log it, never commit a real value.
+ * The real `client_id` and `client_secret` for the `tsai-ai-chief-of-staff`
+ * Desktop OAuth client are NEVER committed to source. They are injected at
+ * build time by `scripts/inject-google-credentials.cjs`, which reads either
+ *   - process env (`ACOS_GOOGLE_CLIENT_ID`, `ACOS_GOOGLE_CLIENT_SECRET`), or
+ *   - a gitignored `.env.production` file at the repo root,
+ * and rewrites the compiled `dist/auth/google-credentials.js` so the values
+ * are baked into the shipped Electron bundle.
  *
- * STATUS — placeholder values pending Step 2 of the approved plan:
- *   "TSAI creates the new tsai-ai-chief-of-staff Google Cloud project in
- *    Testing mode … downloads the Desktop-app credentials JSON, hands it
- *    to Brett."
+ * Why this dance: the repo is PUBLIC. Google's own Desktop-app OAuth docs
+ * acknowledge that the client_secret cannot be kept confidential on user
+ * devices (PKCE is the real protection) — but a secret committed to a public
+ * GitHub repo is still scanned, indexed, and auto-revoked by Google's
+ * abuse-detection. So: placeholders in source, real values in the artifact.
  *
- * When the real project exists, swap PLACEHOLDER_* with the real client_id
- * and client_secret from the downloaded JSON. The OAuth flow code in
- * `google-oauth.ts` and all unit tests are written against this module's
- * shape and do not need to change.
+ * To set up locally:
+ *   1. `cp .env.production.example .env.production`
+ *   2. Fill in the values from the Desktop-app OAuth client JSON
+ *      (Google Cloud Console → APIs & Services → Credentials).
+ *   3. `npm run build` — `inject-google-credentials.cjs` runs automatically.
+ *   4. `dist:signed` / `dist:local` / `dist:win` all pick up the injected values.
  *
  * Scopes mirror `flo-assistant/shared/src/oauth.ts` lines 5–12 so the four
  * bundled Flo MCP servers (gmail / calendar / docs / bookmarks) accept the
  * tokens unchanged once their oauth.ts honors FLO_TOKEN_PATH / FLO_CREDENTIALS_PATH.
  */
 
-// Real credentials for TSAI Google Cloud project `tsai-ai-chief-of-staff`,
-// downloaded from the Desktop-app OAuth client created on May 23, 2026.
-// Owner: brettlechtenberg@gmail.com. Project ID: tsai-ai-chief-of-staff.
-// Override via env vars at build time for forks/clones.
+// These two constants are rewritten in-place in the compiled output by
+// scripts/inject-google-credentials.cjs. At source time they MUST stay as
+// PLACEHOLDER_* strings so GitHub Secret Scanning never flags a push.
 export const GOOGLE_OAUTH_CLIENT_ID =
-  process.env.ACOS_GOOGLE_CLIENT_ID ||
-  '746746276451-0frebau8jtuerrvo8sbaiotldbv73f4t.apps.googleusercontent.com';
+  process.env.ACOS_GOOGLE_CLIENT_ID || 'PLACEHOLDER_CLIENT_ID';
 
 export const GOOGLE_OAUTH_CLIENT_SECRET =
-  process.env.ACOS_GOOGLE_CLIENT_SECRET || 'GOCSPX-REDACTED_OLD_ROTATED_2026_05_25';
+  process.env.ACOS_GOOGLE_CLIENT_SECRET || 'PLACEHOLDER_CLIENT_SECRET';
 
 /** Scopes — keep identical to flo-assistant/shared/src/oauth.ts SCOPES. */
 export const GOOGLE_OAUTH_SCOPES = [
