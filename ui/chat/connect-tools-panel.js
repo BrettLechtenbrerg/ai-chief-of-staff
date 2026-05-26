@@ -211,21 +211,29 @@ function _ctRenderCard(tool, status) {
   body.appendChild(_ctRenderDescription(tool));
 
   if (status.externallyManaged) {
+    // When the entry is hand-managed in mcp-servers.json the only fix-action
+    // is to edit/remove it from Settings → Connections. Folding any live
+    // lastError into the same warning avoids the confusing double-status
+    // line (yellow hand-managed + red error) reported during the May 23
+    // smoke test. ACOS-managed entries still render lastError separately
+    // because their fix-action is Reconnect/Disconnect, not file editing.
     const warn = document.createElement('p');
     warn.className = 'ct-warning';
-    warn.textContent =
+    const base =
       'This connection is hand-managed in mcp-servers.json. Edit or remove it from Settings → Connections instead.';
+    warn.textContent = status.lastError
+      ? `${base} Current error: ${status.lastError}`
+      : base;
     body.appendChild(warn);
   } else {
     body.appendChild(_ctRenderFields(tool, status));
     body.appendChild(_ctRenderActions(tool, status));
-  }
-
-  if (status.lastError) {
-    const err = document.createElement('p');
-    err.className = 'ct-error';
-    err.textContent = status.lastError;
-    body.appendChild(err);
+    if (status.lastError) {
+      const err = document.createElement('p');
+      err.className = 'ct-error';
+      err.textContent = status.lastError;
+      body.appendChild(err);
+    }
   }
   card.appendChild(body);
   return card;
