@@ -549,7 +549,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 8l1.84 1.85c.773.778 1.16 1.167 1.16 1.65s-.387.872-1.16 1.65L17 15M7 8L5.16 9.85C4.387 10.628 4 11.017 4 11.5s.387.872 1.16 1.65L7 15m7.5-11l-5 16"/></svg>
         </button>
         <div id="background-tasks-area" class="hidden">
-          <button class="background-tasks-toggle" id="bg-tasks-toggle-btn">
+          <button class="background-tasks-toggle" id="bg-tasks-toggle-btn" data-tip="View tasks running in the background" aria-label="View background tasks">
             <span class="bg-task-pulse"></span>
             <span class="bg-task-count">0</span>
             <span>Background</span>
@@ -564,14 +564,14 @@
             <div id="background-tasks-list"></div>
           </div>
         </div>
-        <select class="mode-select" id="mode-select">
+        <select class="mode-select" id="mode-select" title="Agent mode — changes how I respond and which tools I use" aria-label="Agent mode">
           <option value="general">General</option>
           <option value="coder" selected>Coder</option>
           <option value="researcher">Researcher</option>
           <option value="writer">Writer</option>
           <option value="therapist">Therapist</option>
         </select>
-        <select id="model-badge" class="model-badge"></select>
+        <select id="model-badge" class="model-badge" title="Claude model used for this conversation" aria-label="Claude model"></select>
       </div>
       <button id="send-btn" title="Pounce! 🐾">
         <svg class="send-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
