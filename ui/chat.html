@@ -375,7 +375,13 @@
     <div class="ob-step" id="ob-step-connectors">
       <div class="ob-step-label">Connect your tools</div>
       <div class="ob-step-desc">Connecting Google takes ~60 seconds in your browser. You can skip and do this later from the Connect Tools sidebar.</div>
-      <div class="ob-step-desc" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Google may show a yellow “unverified app” warning — that’s normal for our private beta. Click <b>Advanced</b> → <b>Continue to AI Chief of Staff (TSAI)</b>.</div>
+      <div class="ob-unverified-callout" role="note">
+        <div class="ob-unverified-callout-icon" aria-hidden="true">⚠️</div>
+        <div class="ob-unverified-callout-body">
+          <div class="ob-unverified-callout-title">Expected: “Google hasn’t verified this app” warning</div>
+          <div class="ob-unverified-callout-text">This is normal during our private beta — it just means Google’s public-verification review hasn’t finished yet. When you see the yellow screen, click <strong>Advanced</strong>, then <strong>Go to AI Chief of Staff (TSAI) (unsafe)</strong>. The app is safe; the warning is about Google’s review process, not the app itself.</div>
+        </div>
+      </div>
       <div class="connector-card-list">
         <div class="connector-card" onclick="obConnectGoogleReal()">
           <div class="connector-card-logo" aria-hidden="true">
@@ -1054,6 +1060,23 @@
         </details>
 
         <details class="help-section">
+          <summary><span class="help-section-icon">🔌</span> Connect Tools — Gmail, Calendar, Drive &amp; more</summary>
+          <div class="help-section-body">
+            <p>Click <strong>Connect Tools</strong> in the sidebar to wire me up to the apps you already use. One screen, card-based, no config files.</p>
+            <p><strong>Google in one click.</strong> Click <strong>Connect with Google</strong> on the Gmail card and a single sign-in connects Gmail, Calendar, and Drive together — about 60 seconds total.</p>
+            <ol class="help-steps">
+              <li>Your browser opens to Google’s sign-in page.</li>
+              <li>Pick the account you want me to use.</li>
+              <li>You’ll see a yellow <em>“Google hasn’t verified this app”</em> screen — this is expected during our private beta. Click <strong>Advanced</strong>, then <strong>Go to AI Chief of Staff (TSAI) (unsafe)</strong>. It’s safe; Google’s verification is a separate review process we’re working through.</li>
+              <li>Check the boxes for the permissions you want me to have (Gmail, Calendar, Drive) and click <strong>Continue</strong>.</li>
+              <li>You’ll see a “✓ Connected” page. Close the tab and come back — all three cards now show your email.</li>
+            </ol>
+            <p><strong>Other tools on the same screen:</strong> GoHighLevel (paste your Private Integration Token + Location ID), DataForSEO (for keyword research in Content Writer), Firecrawl (for web scraping), and Chrome bookmarks.</p>
+            <p>Connections persist across launches. If Google ever revokes the grant, the card flips to <strong>Reconnect needed</strong> and you click <strong>Reconnect</strong> — no re-setup, just a quick re-auth.</p>
+          </div>
+        </details>
+
+        <details class="help-section">
           <summary><span class="help-section-icon">⏰</span> Scheduled Tasks — things I do on a schedule</summary>
           <div class="help-section-body">
             <p>Scheduled Tasks are prompts I run automatically — a morning briefing at 6 AM, a Friday review at 4:30 PM, hydration nudges through the workday. Here’s how to make one:</p>
@@ -1105,7 +1128,15 @@
         <details class="help-section">
           <summary><span class="help-section-icon">📱</span> Connect Telegram (mobile)</summary>
           <div class="help-section-body">
-            <p>You can chat with me from your phone via Telegram — same memory, same context, anywhere you are. Open <strong>Personalize → Connectors</strong> (or your settings panel) and follow the Telegram setup steps.</p>
+            <p>You can chat with me from your phone via Telegram — same memory, same context, anywhere you are.</p>
+            <ol class="help-steps">
+              <li>Open Telegram and message <strong>@BotFather</strong>.</li>
+              <li>Send <code>/newbot</code> and follow the prompts to name your bot.</li>
+              <li>Copy the bot token BotFather gives you.</li>
+              <li>In AI Chief of Staff, open <strong>Settings → Telegram</strong> and paste the token.</li>
+              <li>Message your bot from your phone — same memory, same tools.</li>
+            </ol>
+            <p>For group chats, add the bot and use <code>/link &lt;session&gt;</code> to connect that group to a specific session.</p>
           </div>
         </details>
 

@@ -737,6 +737,54 @@ body:not(.onboarding-active) #chat-view {
   animation: obTextIn 0.5s ease 0.2s both;
 }
 
+/* Unverified-app warning callout shown on the Connect-your-tools step. Loud
+ * enough that testers don’t miss it when Google’s yellow screen lands, but
+ * scoped to the onboarding view so it doesn’t leak into chat. */
+.ob-unverified-callout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  text-align: left;
+  max-width: 520px;
+  margin: 0 auto 24px;
+  padding: 14px 16px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  border-left: 4px solid #eab308;
+  border-radius: 10px;
+  animation: obTextIn 0.35s ease both;
+}
+
+.ob-unverified-callout-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ob-unverified-callout-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ob-unverified-callout-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.ob-unverified-callout-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.ob-unverified-callout-text strong {
+  color: var(--text-primary);
+}
+
 /* Auth options simple (stacked buttons) */
 .ob-auth-options-simple {
   display: flex;
