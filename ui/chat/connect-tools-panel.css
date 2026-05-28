@@ -158,6 +158,46 @@
   margin: 0;
 }
 
+#connect-tools-view .ct-helper {
+  font-size: 13px;
+  color: var(--text-primary);
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+#connect-tools-view .ct-helper code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+#connect-tools-view .ct-helper-links {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 10px;
+  flex-wrap: wrap;
+}
+
+#connect-tools-view .ct-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+#connect-tools-view .ct-link-btn:hover {
+  text-decoration: underline;
+}
+
 #connect-tools-view .ct-field-row {
   display: flex;
   flex-direction: column;
@@ -182,6 +222,41 @@
 #connect-tools-view .ct-field-row input:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+/* Secret-field wrapper holds the input + eye toggle on one row. Toggle
+ * lets testers reveal what they pasted so they can verify it before
+ * Save & Test — the #1 fix for "wrong password" footguns. */
+#connect-tools-view .ct-secret-input {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+#connect-tools-view .ct-secret-input input {
+  flex: 1;
+  padding-right: 40px;
+}
+
+#connect-tools-view .ct-secret-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+#connect-tools-view .ct-secret-toggle:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 #connect-tools-view .ct-actions {

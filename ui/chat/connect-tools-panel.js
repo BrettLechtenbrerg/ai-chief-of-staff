@@ -153,10 +153,23 @@ async function _ctRefresh() {
     const statuses = await window.pocketAgent.connectTools.getStatus();
     _ctStatuses = {};
     for (const s of statuses || []) _ctStatuses[s.id] = s;
+    // If the user is actively typing into one of our inputs, defer the
+    // re-render — wiping #ct-cards.innerHTML mid-keystroke yanks focus and
+    // makes the form unusable. The next 5s poll picks up where we left off,
+    // and _ctConnect / _ctDisconnect call _ctRefresh directly so the user
+    // never waits on a status update they triggered.
+    if (_ctIsCardInputFocused()) return;
     _ctRender();
   } catch (err) {
     console.error('[ConnectTools] getStatus failed:', err);
   }
+}
+
+function _ctIsCardInputFocused() {
+  const el = document.activeElement;
+  if (!el || !el.tagName) return false;
+  if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return false;
+  return !!el.closest && !!el.closest('#ct-cards');
 }
 
 // ---- Rendering ------------------------------------------------------------
@@ -211,6 +224,16 @@ function _ctRenderCard(tool, status) {
   body.appendChild(_ctRenderDescription(tool));
 
   if (status.externallyManaged) {
+    // Hand-managed entries skip helper links / callouts — the only fix
+    // action is to edit mcp-servers.json directly.
+  } else {
+    const links = _ctRenderHelperLinks(tool);
+    if (links) body.appendChild(links);
+    const helper = _ctRenderHelper(tool);
+    if (helper) body.appendChild(helper);
+  }
+
+  if (status.externallyManaged) {
     // When the entry is hand-managed in mcp-servers.json the only fix-action
     // is to edit/remove it from Settings → Connections. Folding any live
     // lastError into the same warning avoids the confusing double-status
@@ -242,6 +265,17 @@ function _ctRenderCard(tool, status) {
 function _ctHeaderLine(tool, status) {
   if (status.status === 'connected') {
     if (status.email) return `Connected as ${status.email}`;
+    // Surface validator-supplied meta when we have it (firecrawl credits,
+    // dataforseo balance) so testers immediately see proof of life.
+    const meta = status.validatorMeta;
+    if (meta) {
+      if (tool.id === 'firecrawl' && typeof meta.remainingCredits === 'number') {
+        return `Connected — ${meta.remainingCredits} credits`;
+      }
+      if (tool.id === 'dataforseo' && typeof meta.balance === 'number') {
+        return `Connected — $${meta.balance} credit`;
+      }
+    }
     if (status.toolCount > 0) return `Connected — ${status.toolCount} tools available`;
     return 'Connected';
   }
@@ -251,12 +285,75 @@ function _ctHeaderLine(tool, status) {
   return tool.description;
 }
 
+// Open a URL in the system browser via the same IPC the Content Writer uses.
+// Falls back to window.open if the preload isn't available (e.g. tests).
+function _ctOpenExternal(url) {
+  try {
+    if (
+      window.pocketAgent &&
+      window.pocketAgent.app &&
+      typeof window.pocketAgent.app.openExternal === 'function'
+    ) {
+      window.pocketAgent.app.openExternal(url);
+      return;
+    }
+  } catch (err) {
+    console.warn('[ConnectTools] openExternal failed:', err);
+  }
+  try {
+    window.open(url, '_blank');
+  } catch (err) {
+    console.warn('[ConnectTools] window.open failed:', err);
+  }
+}
+
+function _ctRenderHelperLinks(tool) {
+  if (!tool.signupUrl && !tool.dashboardUrl) return null;
+  const row = document.createElement('div');
+  row.className = 'ct-helper-links';
+  if (tool.signupUrl) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ct-link-btn';
+    btn.textContent = 'Open sign-up';
+    btn.setAttribute('data-href', tool.signupUrl);
+    btn.addEventListener('click', () => _ctOpenExternal(tool.signupUrl));
+    row.appendChild(btn);
+  }
+  if (tool.dashboardUrl) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ct-link-btn';
+    btn.textContent = 'Open dashboard';
+    btn.setAttribute('data-href', tool.dashboardUrl);
+    btn.addEventListener('click', () => _ctOpenExternal(tool.dashboardUrl));
+    row.appendChild(btn);
+  }
+  return row;
+}
+
+function _ctRenderHelper(tool) {
+  if (!tool.helperHtml) return null;
+  const p = document.createElement('p');
+  p.className = 'ct-helper';
+  // Trusted innerHTML: the source is the SupportedTool config we ship and
+  // review in src/main/ipc/connect-tools-ipc.ts, never user input.
+  p.innerHTML = tool.helperHtml;
+  return p;
+}
+
 function _ctRenderDescription(tool) {
   const p = document.createElement('p');
   p.className = 'ct-card-description';
   p.textContent = tool.description;
   return p;
 }
+
+// Per-card state for the show/hide-secret eye toggle. Keyed by
+// `${tool.id}.${field.key}`. Defaults to hidden (false). Stored in module
+// scope (not on the field input) because re-renders rebuild the DOM and we
+// want the toggle state to survive a poll-skipped re-render.
+const _ctRevealedSecrets = {};
 
 function _ctRenderFields(tool, status) {
   const wrapper = document.createElement('div');
@@ -268,17 +365,58 @@ function _ctRenderFields(tool, status) {
     const row = document.createElement('div');
     row.className = 'ct-field-row';
     const id = `ct-field-${tool.id}-${field.key}`;
-    row.innerHTML = `
-      <label for="${id}">${_ctEscape(field.label)}</label>
-      <input
-        id="${id}"
-        type="${field.secret ? 'password' : 'text'}"
-        placeholder="${_ctEscape(field.placeholder || '')}"
-        autocomplete="off"
-        spellcheck="false"
-        value="${_ctEscape(draft[field.key] || '')}"
-      />
-    `;
+    const revealKey = `${tool.id}.${field.key}`;
+    const revealed = !!_ctRevealedSecrets[revealKey];
+    const inputType = field.secret && !revealed ? 'password' : 'text';
+    if (field.secret) {
+      row.innerHTML = `
+        <label for="${id}">${_ctEscape(field.label)}</label>
+        <div class="ct-secret-input">
+          <input
+            id="${id}"
+            type="${inputType}"
+            placeholder="${_ctEscape(field.placeholder || '')}"
+            autocomplete="off"
+            spellcheck="false"
+            value="${_ctEscape(draft[field.key] || '')}"
+          />
+          <button
+            type="button"
+            class="ct-secret-toggle"
+            data-reveal-key="${_ctEscape(revealKey)}"
+            aria-label="${revealed ? 'Hide' : 'Show'} ${_ctEscape(field.label)}"
+            title="${revealed ? 'Hide' : 'Show'}"
+          >${revealed ? '🙈' : '👁️'}</button>
+        </div>
+      `;
+      const toggleBtn = row.querySelector('.ct-secret-toggle');
+      toggleBtn.addEventListener('click', () => {
+        _ctRevealedSecrets[revealKey] = !_ctRevealedSecrets[revealKey];
+        const inputEl = row.querySelector('input');
+        const nowRevealed = _ctRevealedSecrets[revealKey];
+        inputEl.type = nowRevealed ? 'text' : 'password';
+        toggleBtn.textContent = nowRevealed ? '🙈' : '👁️';
+        toggleBtn.setAttribute('title', nowRevealed ? 'Hide' : 'Show');
+        toggleBtn.setAttribute(
+          'aria-label',
+          `${nowRevealed ? 'Hide' : 'Show'} ${field.label}`,
+        );
+        // Keep focus on the input so the user can keep typing.
+        inputEl.focus();
+      });
+    } else {
+      row.innerHTML = `
+        <label for="${id}">${_ctEscape(field.label)}</label>
+        <input
+          id="${id}"
+          type="text"
+          placeholder="${_ctEscape(field.placeholder || '')}"
+          autocomplete="off"
+          spellcheck="false"
+          value="${_ctEscape(draft[field.key] || '')}"
+        />
+      `;
+    }
     row.querySelector('input').addEventListener('input', (e) => {
       _ctDrafts[tool.id] = _ctDrafts[tool.id] || {};
       _ctDrafts[tool.id][field.key] = e.target.value;
@@ -335,6 +473,27 @@ async function _ctConnect(tool) {
   _ctRender();
 
   const payload = _ctDrafts[tool.id] || {};
+
+  // Pre-flight: for firecrawl / dataforseo, hit the validator BEFORE we
+  // persist anything. This catches "used login password instead of API
+  // password" style mistakes inline and surfaces the live balance/credits.
+  let validatorMeta = null;
+  try {
+    const pre = await _ctPreflight(tool, payload);
+    if (pre && pre.valid === false) {
+      _ctShowToast(pre.error || `${tool.name} credentials didn’t validate`, 'error');
+      // Restore the prior status so the card doesn't get stuck on "connecting".
+      await _ctRefresh();
+      return;
+    }
+    if (pre && pre.valid === true) {
+      validatorMeta = pre.meta || null;
+    }
+  } catch (err) {
+    console.warn('[ConnectTools] pre-flight validator failed:', err);
+    // Don't block on validator transport errors — fall through to connect.
+  }
+
   try {
     const result = await window.pocketAgent.connectTools.connect(tool.id, payload);
     if (!result.success) {
@@ -343,11 +502,55 @@ async function _ctConnect(tool) {
       _ctShowToast(`${tool.name} connected.`, 'success');
       // Wipe the draft on success so secrets don't linger in memory.
       delete _ctDrafts[tool.id];
+      // Stash validator meta so the next _ctRender() can surface credits /
+      // balance in the header line. _ctRefresh() rebuilds _ctStatuses from
+      // IPC, so we re-apply after.
+      if (validatorMeta) {
+        await _ctRefresh();
+        if (_ctStatuses[tool.id]) {
+          _ctStatuses[tool.id].validatorMeta = validatorMeta;
+          _ctRender();
+        }
+        return;
+      }
     }
   } catch (err) {
     _ctShowToast(err.message || `Failed to connect ${tool.name}`, 'error');
   }
   await _ctRefresh();
+}
+
+// Run the tool-specific pre-flight validator (if any). Returns:
+//   { valid: true,  meta?: {...} }   — ok to proceed
+//   { valid: false, error: string }  — abort with inline error
+//   null                              — no validator for this tool, proceed
+async function _ctPreflight(tool, payload) {
+  if (!window.pocketAgent || !window.pocketAgent.validate) return null;
+  if (tool.id === 'firecrawl') {
+    const apiKey = (payload.apiKey || '').trim();
+    if (!apiKey) return { valid: false, error: 'API key is required' };
+    const r = await window.pocketAgent.validate.firecrawlKey(apiKey);
+    if (!r || r.valid !== true) {
+      return { valid: false, error: (r && r.error) || 'Firecrawl key didn’t validate' };
+    }
+    return {
+      valid: true,
+      meta: { remainingCredits: r.remainingCredits, planCredits: r.planCredits },
+    };
+  }
+  if (tool.id === 'dataforseo') {
+    const username = (payload.username || '').trim();
+    const password = payload.password || '';
+    if (!username || !password) {
+      return { valid: false, error: 'Username and API password are required' };
+    }
+    const r = await window.pocketAgent.validate.dataForSEOKey(username, password);
+    if (!r || r.valid !== true) {
+      return { valid: false, error: (r && r.error) || 'DataForSEO didn’t validate' };
+    }
+    return { valid: true, meta: { balance: r.balance } };
+  }
+  return null;
 }
 
 async function _ctDisconnect(tool) {
