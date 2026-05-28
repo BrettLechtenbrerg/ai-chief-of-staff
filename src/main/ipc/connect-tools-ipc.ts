@@ -69,6 +69,16 @@ export interface SupportedTool {
    * (plan Risk 4 — GHL needs Python, which we don't bundle yet).
    */
   unavailableOnWindows?: boolean;
+  /**
+   * Optional UX helpers used by the Connect Tools panel to give testers a
+   * one-click path to the provider's sign-up page and dashboard, plus a
+   * short inline callout above the input fields. helperHtml is rendered
+   * as trusted innerHTML by the panel — it comes from this file (which we
+   * ship and review), never from user input.
+   */
+  signupUrl?: string;
+  dashboardUrl?: string;
+  helperHtml?: string;
 }
 
 export interface ToolStatus {
@@ -175,6 +185,10 @@ function getSupportedTools(): SupportedTool[] {
         { key: 'password', label: 'API password', secret: true },
       ],
       mcpServerName: 'dataforseo-mcp-server',
+      signupUrl: 'https://app.dataforseo.com/register',
+      dashboardUrl: 'https://app.dataforseo.com',
+      helperHtml:
+        '<strong>Important:</strong> the <em>API password</em> is NOT your dashboard login password. It is a separate secret shown on the <strong>API Access</strong> page of your DataForSEO dashboard. If you use your login password here, the test will fail.',
     },
     {
       id: 'firecrawl',
@@ -184,6 +198,10 @@ function getSupportedTools(): SupportedTool[] {
       authType: 'api-key',
       fields: [{ key: 'apiKey', label: 'API key', secret: true, placeholder: 'fc-...' }],
       mcpServerName: 'firecrawl-mcp',
+      signupUrl: 'https://www.firecrawl.dev/app',
+      dashboardUrl: 'https://www.firecrawl.dev/app/api-keys',
+      helperHtml:
+        '<strong>Free tier:</strong> Firecrawl gives 500 credits/month free — no card required. Find your API key on the <strong>API Keys</strong> page of your dashboard. It starts with <code>fc-</code>.',
     },
   ];
 }

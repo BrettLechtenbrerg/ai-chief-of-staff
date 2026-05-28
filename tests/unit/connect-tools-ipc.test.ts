@@ -175,6 +175,36 @@ describe('connect-tools-ipc', () => {
     });
   });
 
+  describe('UX helper fields (signupUrl / dashboardUrl / helperHtml)', () => {
+    it('populates sign-up + dashboard + helper for dataforseo', () => {
+      const tools = __test__.getSupportedTools();
+      const dfs = tools.find((t) => t.id === 'dataforseo')!;
+      expect(dfs.signupUrl).toBe('https://app.dataforseo.com/register');
+      expect(dfs.dashboardUrl).toBe('https://app.dataforseo.com');
+      expect(dfs.helperHtml).toMatch(/API password/i);
+      expect(dfs.helperHtml).toMatch(/login password/i);
+    });
+
+    it('populates sign-up + dashboard + helper for firecrawl', () => {
+      const tools = __test__.getSupportedTools();
+      const fc = tools.find((t) => t.id === 'firecrawl')!;
+      expect(fc.signupUrl).toBe('https://www.firecrawl.dev/app');
+      expect(fc.dashboardUrl).toBe('https://www.firecrawl.dev/app/api-keys');
+      expect(fc.helperHtml).toMatch(/Free tier/i);
+      expect(fc.helperHtml).toMatch(/fc-/);
+    });
+
+    it('leaves UX helper fields undefined for tools that do not need them', () => {
+      const tools = __test__.getSupportedTools();
+      for (const id of ['gmail', 'calendar', 'drive', 'bookmarks', 'ghl'] as const) {
+        const t = tools.find((x) => x.id === id)!;
+        expect(t.signupUrl).toBeUndefined();
+        expect(t.dashboardUrl).toBeUndefined();
+        expect(t.helperHtml).toBeUndefined();
+      }
+    });
+  });
+
   describe('makeToolStatus', () => {
     it('reports reconnect-needed when google is disconnected but entry exists', () => {
       const tools = __test__.getSupportedTools();
