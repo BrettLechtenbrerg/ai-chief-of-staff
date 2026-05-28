@@ -21,6 +21,7 @@ import {
   validateMiniMaxKey,
   validateDeepSeekKey,
   validateDataForSEOKey,
+  validateFirecrawlKey,
 } from './validators';
 
 // Re-export types and schema so external consumers aren't broken
@@ -606,6 +607,16 @@ class SettingsManagerClass {
     password: string
   ): Promise<{ valid: boolean; error?: string; balance?: number }> {
     return validateDataForSEOKey(login, password);
+  }
+
+  /**
+   * Validate a Firecrawl API key by hitting the credit-usage endpoint.
+   * Returns remaining + plan credits on success so the UI can surface them.
+   */
+  async validateFirecrawlKey(
+    apiKey: string
+  ): Promise<{ valid: boolean; error?: string; remainingCredits?: number; planCredits?: number }> {
+    return validateFirecrawlKey(apiKey);
   }
 
   async validateTelegramToken(

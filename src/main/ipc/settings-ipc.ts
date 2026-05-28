@@ -261,6 +261,10 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     }
   );
 
+  ipcMain.handle('settings:validateFirecrawl', async (_, apiKey: string) => {
+    return SettingsManager.validateFirecrawlKey(apiKey);
+  });
+
   ipcMain.handle('settings:validateTelegram', async (_, token: string) => {
     return SettingsManager.validateTelegramToken(token);
   });

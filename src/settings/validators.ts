@@ -16,6 +16,13 @@ export interface DataForSEOValidationResult extends ValidationResult {
   balance?: number;
 }
 
+export interface FirecrawlValidationResult extends ValidationResult {
+  /** Credits remaining on the Firecrawl account, when validation succeeds. */
+  remainingCredits?: number;
+  /** Total credits included in the current plan, when validation succeeds. */
+  planCredits?: number;
+}
+
 interface ApiKeyValidationConfig {
   url: string;
   method: 'GET' | 'POST';
@@ -248,6 +255,76 @@ export async function validateDataForSEOKey(
     const balance = typeof money?.balance === 'number' ? (money.balance as number) : undefined;
 
     return { valid: true, balance };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
+}
+
+/**
+ * Validate a Firecrawl API key by hitting the credit-usage endpoint.
+ *
+ * The credit-usage endpoint is the cheapest authenticated GET Firecrawl
+ * exposes — it returns the account's remaining + plan credits without
+ * burning any quota. We surface those numbers so the Connect Tools panel
+ * can show "Connected — 487 / 500 credits left" instead of a bare check.
+ *
+ * Status code mapping:
+ *  - 200 + { success: true }: valid, with credits surfaced
+ *  - 401: bad API key
+ *  - 402: out of credits (key is technically valid, but unusable)
+ *  - 429: rate limited (don't lie to the tester that the key is bad)
+ *  - anything else: generic HTTP error so we don't swallow surprises
+ */
+export async function validateFirecrawlKey(
+  apiKey: string,
+): Promise<FirecrawlValidationResult> {
+  if (!apiKey) {
+    return { valid: false, error: 'API key is required' };
+  }
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v2/team/credit-usage', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (response.status === 401) {
+      return {
+        valid: false,
+        error: 'Invalid API key. Make sure you copied it from firecrawl.dev/app → API Keys.',
+      };
+    }
+    if (response.status === 402) {
+      return {
+        valid: false,
+        error: 'Out of Firecrawl credits. Add credit at firecrawl.dev/app or wait for next month’s free quota.',
+      };
+    }
+    if (response.status === 429) {
+      return {
+        valid: false,
+        error: 'Firecrawl rate limit hit. Wait a minute and retry.',
+      };
+    }
+
+    if (response.status !== 200) {
+      return { valid: false, error: `Firecrawl returned HTTP ${response.status}` };
+    }
+
+    const data = (await response.json()) as Record<string, unknown>;
+    if (data.success !== true) {
+      return { valid: false, error: `Firecrawl returned HTTP ${response.status}` };
+    }
+
+    const inner = data.data as Record<string, unknown> | undefined;
+    const remainingCredits =
+      typeof inner?.remainingCredits === 'number' ? (inner.remainingCredits as number) : undefined;
+    const planCredits =
+      typeof inner?.planCredits === 'number' ? (inner.planCredits as number) : undefined;
+
+    return { valid: true, remainingCredits, planCredits };
   } catch (error) {
     return {
       valid: false,
