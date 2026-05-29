@@ -103,7 +103,9 @@
     } else if (next === STATE.TRANSCRIBING) {
       btn.setAttribute('data-tip', 'Transcribing\u2026');
     } else {
-      btn.setAttribute('data-tip', 'Record voice note (needs OpenAI key)');
+      // The button is only ever un-hidden when an OpenAI key is configured
+      // (see init()), so the idle hint must not imply a key is missing.
+      btn.setAttribute('data-tip', 'Record voice note');
     }
   }
 
