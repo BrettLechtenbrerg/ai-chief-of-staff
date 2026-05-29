@@ -78,20 +78,28 @@ const WIN = {
 function getAgentWorkspace(): string {
   const documentsPath = app.getPath('documents');
   const workspace = path.join(documentsPath, 'AI Chief of Staff');
+  const fallback = path.join(app.getPath('userData'), 'workspace');
 
-  // Verify the Documents path is actually reachable on disk.
-  // On macOS with iCloud Drive, ~/Documents can be a symlink to
-  // ~/Library/Mobile Documents/com~apple~CloudDocs/Documents/ which may
-  // not exist if iCloud hasn't fully set up or the symlink is broken.
+  // Verify the Documents path is actually USABLE — not just present.
+  // On macOS with iCloud Drive, ~/Documents is synced; iCloud can evict or
+  // permission-lock files at any time, so a directory that exists and is
+  // readable can still throw EPERM on write (the May 28 incident, where every
+  // agent turn crashed writing .pocket-version). mkdirSync({recursive:true})
+  // succeeds on an existing dir without testing writability, so it cannot
+  // catch this. We do a real write-probe instead. If Documents is unusable
+  // — unreachable, broken iCloud symlink, or permission-locked — fall back to
+  // the non-synced userData workspace.
   try {
     fs.mkdirSync(workspace, { recursive: true });
+    const probe = path.join(workspace, '.write-probe');
+    fs.writeFileSync(probe, String(Date.now()));
+    fs.rmSync(probe, { force: true });
     return workspace;
-  } catch {
-    // Documents path is unreachable — fall back to Electron's userData directory
-    // (~/Library/Application Support/AI Chief of Staff/ on macOS)
-    const fallback = path.join(app.getPath('userData'), 'workspace');
+  } catch (err) {
     console.warn(
-      `[Main] Documents path unreachable (${documentsPath}), using fallback: ${fallback}`
+      `[Main] Documents workspace unusable (${documentsPath}): ${
+        err instanceof Error ? err.message : String(err)
+      }. Using non-synced fallback: ${fallback}`
     );
     fs.mkdirSync(fallback, { recursive: true });
     return fallback;
