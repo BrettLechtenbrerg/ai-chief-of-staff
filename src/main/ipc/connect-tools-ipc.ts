@@ -102,9 +102,8 @@ export interface ToolStatus {
   externallyManaged: boolean;
 }
 
-interface ConnectPayloadGoogle {
-  /* No fields — flow uses the system browser. */
-}
+/** No fields — the Google flow uses the system browser. */
+type ConnectPayloadGoogle = Record<string, never>;
 interface ConnectPayloadApiKey {
   apiKey: string;
 }

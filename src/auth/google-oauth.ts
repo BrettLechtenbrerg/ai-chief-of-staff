@@ -208,7 +208,7 @@ class GoogleOAuthManager {
         });
         return server;
       } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
+        const code = (err as { code?: string }).code;
         if (code !== 'EADDRINUSE') throw err;
         // Try another port.
       }
