@@ -6,7 +6,7 @@
   "main": "dist/main/index.js",
   "scripts": {
     "sync-version": "node scripts/sync-version.cjs",
-    "prebuild": "npm run sync-version && npm update @kenkaiiii/gg-agent @kenkaiiii/gg-ai",
+    "prebuild": "npm run sync-version",
     "build": "tsc && tsc -p tsconfig.preload.json && node scripts/fix-esm-imports.cjs && node scripts/inject-google-credentials.cjs",
     "start": "npm run build && npm run electron",
     "dev": "node scripts/sync-version.cjs && tsc && tsc -p tsconfig.preload.json && node scripts/fix-esm-imports.cjs && npm run electron",
@@ -166,8 +166,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.94.0",
-    "@kenkaiiii/gg-agent": "^4.3.140",
-    "@kenkaiiii/gg-ai": "^4.3.140",
+    "@kenkaiiii/gg-agent": "4.3.151",
+    "@kenkaiiii/gg-ai": "4.3.151",
     "@kenkaiiii/ggcoder": "^4.3.140",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^12.6.2",
