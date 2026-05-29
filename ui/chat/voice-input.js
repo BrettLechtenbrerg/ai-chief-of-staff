@@ -53,11 +53,27 @@
   // opus/48kHz is typically 6-12KB.
   const MIN_AUDIO_BYTES = 2048;
 
+  // Stronger silence guard: a MUTED or permission-denied input stream still
+  // produces a valid opus/webm container whose header + keepalive frames can
+  // exceed MIN_AUDIO_BYTES, sneaking a silent blob into Whisper which then
+  // hallucinates a phantom "you". Real speech yields roughly 6-12 KB/sec at
+  // opus/48kHz; a silent stream yields a few hundred bytes/sec at most. So if
+  // the recording ran for at least MIN_DURATION_MS but averaged below this
+  // bytes-per-second floor, treat it as silence rather than transcribing it.
+  // This catches the macOS "unsigned bundle -> denied mic -> empty stream"
+  // failure mode (see beta.14 voice-input incident) without false-positiving
+  // on genuinely quiet but real speech.
+  const MIN_BYTES_PER_SEC = 1200;
+  const MIN_DURATION_MS = 600;
+
   let state = STATE.IDLE;
   let mediaRecorder = null;
   let mediaStream = null;
   let chunks = [];
   let recordedFormat = 'webm';
+  // Wall-clock start of the current MediaRecorder session, used by the
+  // bytes-per-second silence heuristic in onstop.
+  let recordStartMs = 0;
 
   // --- Live interim transcription (Web Speech API) ---
   // We keep a snapshot of the input value at the moment recording starts so
@@ -312,7 +328,17 @@
       // nothing. Don't roll back the interim text — the user might have
       // gotten useful preview text from Web Speech even if Whisper
       // would have struggled.
-      if (totalSize < MIN_AUDIO_BYTES) {
+      const durationMs = recordStartMs ? Date.now() - recordStartMs : 0;
+      const bytesPerSec = durationMs > 0 ? (totalSize / durationMs) * 1000 : Infinity;
+      // Silent-stream guard: tiny blob OR (recorded long enough but the
+      // average byte-rate is below what real speech produces). The second
+      // clause catches a muted / permission-denied input that still emits a
+      // valid-but-empty opus container above the raw byte floor.
+      const looksSilent =
+        totalSize < MIN_AUDIO_BYTES ||
+        (durationMs >= MIN_DURATION_MS && bytesPerSec < MIN_BYTES_PER_SEC);
+
+      if (looksSilent) {
         setBtnState(STATE.IDLE);
         // If interim caught nothing either, fully roll back so the input
         // returns to whatever the user had typed before clicking the mic.
@@ -320,7 +346,7 @@
           writeToInput('', 'replace-interim');
         }
         toast(
-          'Didn\u2019t hear anything. Speak a bit louder or check that your mic is on, then try again.'
+          'Didn\u2019t hear anything. Check that the mic has permission (System Settings \u2192 Privacy & Security \u2192 Microphone) and try again.'
         );
         return;
       }
@@ -344,6 +370,7 @@
     // 1000ms timeslice = MediaRecorder flushes a chunk every second.
     // Without this, some Chromium builds emit a single malformed chunk
     // at stop time, which Whisper "transcribes" as "you".
+    recordStartMs = Date.now();
     mediaRecorder.start(1000);
     setBtnState(STATE.RECORDING);
   }
