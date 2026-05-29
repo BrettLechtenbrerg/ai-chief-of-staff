@@ -284,15 +284,34 @@ async function _cwLoadState() {
     _cwState.brandbook = 'missing';
   }
 
-  // DataForSEO — connection exists in mcp-servers.json
+  // DataForSEO — connection exists in mcp-servers.json. Match is rename-proof:
+  // the May 28 recovery renamed the entry `dataforseo` -> `dataforseo-mcp-server`
+  // so its Connect Tools card would resolve, which silently broke this card's
+  // exact-name lookup. Detect by credential env var + known names/args instead
+  // so any future rename can't regress it again.
   try {
     const { servers } = await window.pocketAgent.connections.list();
-    const found = (servers || []).find((s) => s.name === 'dataforseo');
+    const found = (servers || []).find(_cwIsDataForSEOServer);
     _cwState.dataforseo = found ? 'ok' : 'missing';
   } catch (err) {
     console.warn('[CW] Failed to list MCP connections:', err);
     _cwState.dataforseo = 'missing';
   }
+}
+
+// True if an MCP connection summary is a DataForSEO server, regardless of the
+// key it's stored under. Checks (in order of reliability): the DataForSEO
+// credential env var, then the known package name in command/args, then the
+// historical entry names. ConnectionSummary doesn't expose _acos_tool_id, so
+// env/args are the durable signals.
+function _cwIsDataForSEOServer(s) {
+  if (!s) return false;
+  const env = s.env || {};
+  if (env.DATAFORSEO_USERNAME || env.DATAFORSEO_PASSWORD) return true;
+  const haystack = [s.command || '', ...(s.args || [])].join(' ').toLowerCase();
+  if (haystack.includes('dataforseo-mcp-server') || haystack.includes('dataforseo')) return true;
+  const name = String(s.name || '').toLowerCase();
+  return name === 'dataforseo' || name === 'dataforseo-mcp-server';
 }
 
 // ---- Rendering ----
@@ -487,19 +506,24 @@ async function _cwSaveDataForSEO() {
     };
 
     // List-first so we update an existing connection instead of failing
-    // with "already exists" on testers who set it up before.
+    // with "already exists" on testers who set it up before. Match is
+    // rename-proof (see _cwIsDataForSEOServer) so an entry stored under
+    // `dataforseo-mcp-server` is updated in place rather than duplicated.
     let existing = null;
     try {
       const { servers } = await window.pocketAgent.connections.list();
-      existing = (servers || []).find((s) => s.name === 'dataforseo') || null;
+      existing = (servers || []).find(_cwIsDataForSEOServer) || null;
     } catch (err) {
       console.warn('[CW] connections.list failed; will try add:', err);
     }
 
     if (existing) {
-      await window.pocketAgent.connections.update('dataforseo', 'dataforseo', mcpConfig);
+      // Preserve the existing entry's name so we don't orphan the running
+      // server or create a second copy under a different key.
+      await window.pocketAgent.connections.update(existing.name, existing.name, mcpConfig);
     } else {
-      await window.pocketAgent.connections.add('dataforseo', mcpConfig);
+      // Fresh setup uses the canonical name the Connect Tools card expects.
+      await window.pocketAgent.connections.add('dataforseo-mcp-server', mcpConfig);
     }
 
     const balanceNote =
