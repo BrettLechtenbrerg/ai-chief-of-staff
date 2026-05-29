@@ -203,10 +203,19 @@ describe('connect-tools-ipc', () => {
         expect(t.helperHtml).toBeUndefined();
       }
     });
+
+    it('exposes GHL alias server names so hand-managed entries are recognized for status', () => {
+      const ghl = __test__.getSupportedTools().find((t) => t.id === 'ghl')!;
+      expect(ghl.mcpServerName).toBe('ghl-mcp');
+      expect(ghl.aliasServerNames).toEqual(['flo-ghl', 'flo-ghl-brett']);
+    });
   });
 
   describe('makeToolStatus', () => {
-    it('reports reconnect-needed when google is disconnected but entry exists', () => {
+    it('reports connected when the live server is ready, even if ACOS google OAuth is disconnected', () => {
+      // The bundled/Flo Google servers authenticate off their own token file,
+      // not ACOS google-tokens.json. A live, tool-serving server must show as
+      // connected regardless of ACOS OAuth state (the May 28 false-alarm fix).
       const tools = __test__.getSupportedTools();
       const gmail = tools.find((t) => t.id === 'gmail')!;
       const status = __test__.makeToolStatus(
@@ -216,6 +225,21 @@ describe('connect-tools-ipc', () => {
         false,
         null,
         { status: 'ready', toolCount: 13, lastError: null },
+      );
+      expect(status.status).toBe('connected');
+      expect(status.toolCount).toBe(13);
+    });
+
+    it('reports reconnect-needed only when google OAuth is disconnected AND the server is down', () => {
+      const tools = __test__.getSupportedTools();
+      const gmail = tools.find((t) => t.id === 'gmail')!;
+      const status = __test__.makeToolStatus(
+        gmail,
+        { command: 'node', args: ['gmail/index.js'] },
+        { _acos_managed: true } as Record<string, unknown>,
+        false,
+        null,
+        { status: 'stopped', toolCount: 0, lastError: null },
       );
       expect(status.status).toBe('reconnect-needed');
     });

@@ -65,6 +65,16 @@ export interface SupportedTool {
   fields?: SupportedToolField[];
   mcpServerName: string;
   /**
+   * Alternate `mcp-servers.json` entry names this card should also recognize
+   * for STATUS display. Some users hand-manage a tool under a different name
+   * (e.g. GHL as `flo-ghl` / `flo-ghl-brett` instead of the canonical
+   * `ghl-mcp`, or run multiple locations). When the canonical entry is
+   * absent, status resolution falls back to the first present alias so the
+   * card reflects the real running server instead of showing blank. The
+   * connect/disconnect write path always uses the canonical `mcpServerName`.
+   */
+  aliasServerNames?: string[];
+  /**
    * Windows-only: when true, this tool is hidden on Windows builds in v1
    * (plan Risk 4 — GHL needs Python, which we don't bundle yet).
    */
@@ -172,6 +182,9 @@ function getSupportedTools(): SupportedTool[] {
         { key: 'locationId', label: 'Location ID', secret: false, placeholder: 'Uj6CJxW...' },
       ],
       mcpServerName: 'ghl-mcp',
+      // Recognize the common hand-managed names (and the per-location variant)
+      // so the card shows Connected when an existing GHL server is live.
+      aliasServerNames: ['flo-ghl', 'flo-ghl-brett'],
       unavailableOnWindows: true,
     },
     {
@@ -334,9 +347,22 @@ function makeToolStatus(
       externallyManaged: false,
     };
   }
-  // Google tools also reflect OAuth state, since the entry can exist but
-  // tokens may have been revoked.
-  if (tool.authType === 'google-oauth' && !googleConnected) {
+  // The live MCP server is the source of truth for "is this working right
+  // now". A server that is `ready` with tools IS connected, regardless of
+  // ACOS's own Google OAuth state — hand-managed Google entries (e.g. the
+  // bundled Flo servers) authenticate off their own token file
+  // (~/.flo/tokens.json) rather than ACOS's google-tokens.json. Keying the
+  // card off ACOS OAuth alone produced a false "Reconnect needed" badge on
+  // working connections (the May 28 incident). So we derive status from the
+  // live server first, and only fall back to ACOS OAuth state when the server
+  // is NOT already up.
+  const liveState = liveStatus?.status;
+  const serverIsUp = liveState === 'ready' && (liveStatus?.toolCount ?? 0) > 0;
+
+  // Surface a Google reconnect prompt only when the server is genuinely down
+  // AND ACOS's own OAuth is disconnected. A live, tool-serving server is never
+  // "reconnect-needed" no matter which token file it uses.
+  if (tool.authType === 'google-oauth' && !googleConnected && !serverIsUp) {
     return {
       id: tool.id,
       status: 'reconnect-needed',
@@ -346,7 +372,7 @@ function makeToolStatus(
       externallyManaged,
     };
   }
-  const liveState = liveStatus?.status;
+
   let status: ToolStatus['status'] = 'not-connected';
   if (liveState === 'ready') status = 'connected';
   else if (liveState === 'starting' || liveState === 'idle') status = 'connecting';
@@ -410,16 +436,23 @@ export function registerConnectToolsIPC(
       liveStatuses.set(s.serverName, { status: s.status, toolCount: s.toolCount, lastError: s.lastError });
     }
     const googleStatus = GoogleOAuth.getStatus();
-    return tools.map((t) =>
-      makeToolStatus(
+    return tools.map((t) => {
+      // Resolve the backing entry by canonical name first, then by any
+      // recognized alias (e.g. a GHL server hand-managed as `flo-ghl`). The
+      // resolved name is used consistently for entry, raw flags, and live
+      // status so the card reflects whichever server is actually present.
+      const candidateNames = [t.mcpServerName, ...(t.aliasServerNames ?? [])];
+      const resolvedName =
+        candidateNames.find((n) => file.mcpServers[n]) ?? t.mcpServerName;
+      return makeToolStatus(
         t,
-        file.mcpServers[t.mcpServerName],
-        rawServers[t.mcpServerName],
+        file.mcpServers[resolvedName],
+        rawServers[resolvedName],
         googleStatus.connected,
         googleStatus.email,
-        liveStatuses.get(t.mcpServerName),
-      ),
-    );
+        liveStatuses.get(resolvedName),
+      );
+    });
   });
 
   ipcMain.handle(
@@ -501,22 +534,34 @@ export function registerConnectToolsIPC(
     async (): Promise<
       Array<{ toolId: SupportedToolId; mcpServerName: string; currentCommand: string }>
     > => {
-      // An existing entry is "migratable" when it shares a name with one of
-      // our supported tools AND lacks the _acos_managed flag. Brett's dev
-      // machine has hand-curated entries; testers have none, so this is a
-      // no-op for them.
+      // An existing entry is "migratable" only when it shares a name with one
+      // of our supported tools, lacks the _acos_managed flag, AND its server
+      // is not already up and serving tools. We resolve by canonical name
+      // first then aliases (e.g. GHL as flo-ghl) so a hand-managed tool that
+      // is already working never re-triggers the migration prompt. Brett's
+      // dev machine has hand-curated entries; testers have none.
       const dir = getUserDataDir();
       const file = loadMCPConfig(dir);
       const raw = readRawConfig(dir) || {};
+      const liveStatuses = new Map<string, { status: string; toolCount: number }>();
+      for (const s of getMCPManager().getServerStatuses()) {
+        liveStatuses.set(s.serverName, { status: s.status, toolCount: s.toolCount });
+      }
       const matches: Array<{ toolId: SupportedToolId; mcpServerName: string; currentCommand: string }> = [];
       for (const tool of getSupportedTools()) {
-        const entry = file.mcpServers[tool.mcpServerName];
-        const rawEntry = raw[tool.mcpServerName];
+        const candidateNames = [tool.mcpServerName, ...(tool.aliasServerNames ?? [])];
+        const resolvedName = candidateNames.find((n) => file.mcpServers[n]) ?? tool.mcpServerName;
+        const entry = file.mcpServers[resolvedName];
+        const rawEntry = raw[resolvedName];
         if (!entry) continue;
+        // Already adopted by Connect Tools — nothing to migrate.
         if (rawEntry && rawEntry[ACOS_MANAGED_FLAG] === true) continue;
+        // Already running and serving tools — it works as-is; don't nag.
+        const live = liveStatuses.get(resolvedName);
+        if (live && live.status === 'ready' && live.toolCount > 0) continue;
         matches.push({
           toolId: tool.id,
-          mcpServerName: tool.mcpServerName,
+          mcpServerName: resolvedName,
           currentCommand: entry.command,
         });
       }
