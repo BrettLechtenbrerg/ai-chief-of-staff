@@ -20,3 +20,7 @@ release/
 app.json
 filterAndSort.js
 blurb/
+
+# Transient session working notes (kept local, not in the public repo)
+RESTORE-PLAN-*.md
+ACOS-RESUME-*.md
