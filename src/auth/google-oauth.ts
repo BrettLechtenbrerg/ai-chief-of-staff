@@ -157,7 +157,14 @@ class GoogleOAuthManager {
       response_type: 'code',
       scope: GOOGLE_OAUTH_SCOPES.join(' '),
       access_type: 'offline',
-      prompt: 'consent',
+      // 'select_account consent' forces Google to always show the account
+      // chooser AND ask for fresh consent, even if the user has only one
+      // account signed in or has approved before. Without select_account,
+      // Google silently re-uses the last-authorized account on subsequent
+      // OAuth rounds — which traps users with multiple Google accounts on
+      // the wrong one (the May 28 'brett@brettlechtenberg.com vs
+      // brettlechtenberg@gmail.com' incident).
+      prompt: 'select_account consent',
       code_challenge: pkce.challenge,
       code_challenge_method: 'S256',
       state: pkce.state,
