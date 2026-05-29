@@ -110,7 +110,7 @@ describe('GoogleOAuthManager', () => {
   });
 
   describe('authorize URL', () => {
-    it('contains client_id, S256 challenge_method, prompt=consent, access_type=offline', () => {
+    it('contains client_id, S256 challenge_method, prompt=select_account consent, access_type=offline', () => {
       const mgr = newManager();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pkce = (mgr as any).generatePKCE();
@@ -120,7 +120,9 @@ describe('GoogleOAuthManager', () => {
       expect(parsed.searchParams.get('client_id')).toBe(REAL_CLIENT_ID);
       expect(parsed.searchParams.get('code_challenge_method')).toBe('S256');
       expect(parsed.searchParams.get('code_challenge')).toBe(pkce.challenge);
-      expect(parsed.searchParams.get('prompt')).toBe('consent');
+      // 'select_account consent' forces the account chooser AND fresh consent
+      // so multi-account users are never silently bound to the wrong account.
+      expect(parsed.searchParams.get('prompt')).toBe('select_account consent');
       expect(parsed.searchParams.get('access_type')).toBe('offline');
       expect(parsed.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:12345/callback');
       expect(parsed.searchParams.get('state')).toBe(pkce.state);
