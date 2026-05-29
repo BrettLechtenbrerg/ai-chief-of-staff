@@ -233,6 +233,40 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
+### Next session — pick up here (added May 28, evening — READY TO SHIP beta.14)
+
+**Status: 4 fixes committed on `main` (NOT pushed, NOT shipped). All hot-copied into the local installed app and verified working. Ship beta.14 tomorrow.**
+
+**What happened May 28 (recovery session):** Brett's agent broke after a prior session deleted 3 MCP connections, wiped the Gmail token, and (root cause) left the agent workspace in the iCloud-synced `~/Documents/AI Chief of Staff` which threw EPERM on every turn. Recovered fully:
+
+1. **Restored MCP connections** from `mcp-servers.json.backup-20260528` — all 8 servers (Gmail/Calendar/Docs/Bookmarks via Flo at `~/flo-assistant`, GHL x2, DataForSEO, Firecrawl) back and verified spawning with tools. Re-pointed `flo-gmail` to the original Flo install (`node ~/flo-assistant/servers/gmail/dist/index.js`) so all 4 Google connectors use `~/.flo/tokens.json` (brett@brettlechtenberg.com, valid refresh token). **No re-auth needed.**
+2. **Renamed config entries** `dataforseo` -> `dataforseo-mcp-server`, `firecrawl` -> `firecrawl-mcp` so their Connect Tools cards resolve.
+3. **Fixed the iCloud workspace EPERM** on Brett's machine: moved workspace to non-synced `~/Library/Application Support/ai-chief-of-staff/workspace` and symlinked `~/Documents/AI Chief of Staff` -> it. Old dir parked at `~/Documents/AI Chief of Staff.icloud-bak-20260528-172636`.
+
+**4 code fixes committed (local `main`, in order):**
+- `731c94d` fix(google-oauth): `prompt: 'select_account consent'` — kills the wrong-account trap.
+- `1b58adf` test(google-oauth): expect the new prompt value.
+- `0ce257b` fix(connect-tools): cards now derive status from the **live MCP server**, not ACOS's `google-tokens.json`. Adds `SupportedTool.aliasServerNames` (GHL recognizes `flo-ghl`/`flo-ghl-brett`). `detectMigratable` no longer prompts for already-managed/already-running tools (kills the repeated migration popup). Tests updated, 17 pass.
+- `cab95d6` fix(workspace): write-probe `~/Documents` workspace; fall back to non-synced `userData/workspace` when unusable (the real root-cause fix for the EPERM, so testers never hit it).
+- `c05b016` chore: lockfile version sync (beta.12->beta.13 leftover).
+
+**Verification done:** typecheck clean; 55 affected tests pass (`connect-tools-ipc`, `google-oauth`, `connections-ipc`, `mcp-config-save`); telemetry guard clean (no gg-pixel/buzzbeamaustralia). Full suite: 997 pass / 206 fail — all 206 are the pre-existing `better-sqlite3` NODE_MODULE_VERSION ABI mismatch (vitest Node vs Electron), unrelated to these edits. All 4 cards Brett saw broken now show green/Connected with correct tool counts (Gmail 13, Calendar 10, Drive 17, Bookmarks 5, GHL 91, DataForSEO 83, Firecrawl 20).
+
+**SHIP PLAN FOR TOMORROW (beta.14) — prerequisites all verified green May 28 eve:**
+1. Bump `package.json` to `1.0.0-beta.14`, `npm run sync-version`, commit.
+2. `npm run dist:signed` (Developer ID 2HQTY95NHD present; AC_PASSWORD notarytool profile working) — verify `latest-mac.yml` patched by `patch-latest-mac-yml.cjs`.
+3. `npm run dist:win` (Docker Desktop confirmed running).
+4. `git push origin main` (active gh account = BrettLechtenbrerg, confirmed) + push tag.
+5. `gh release create v1.0.0-beta.14` with all assets (prerelease).
+6. Bump landing page in `~/dev/TSAI-Site`, Vercel `--prod`.
+7. Re-run telemetry guard before tagging.
+
+**Watch-outs:** `prebuild` script runs `npm update @kenkaiiii/gg-agent @kenkaiiii/gg-ai` (footgun — pin these, still open). `dist:signed` runs the full `build` which re-injects Google credentials via `inject-google-credentials.cjs` (expected). Working note with full detail: `RESTORE-PLAN-2026-05-28.md` (untracked, repo root). Local installed app is on hot-copied dist files — a DMG reinstall before beta.14 ships would revert them, so ship before any reinstall.
+
+**Still-open carryovers (unchanged):** cron-stop bug; pin gg-agent/gg-ai; tray single-click flake; upstream the Flo oauth.js patch + retire vendor fork; Google verification milestone at 80 testers; DMG size; GHL Node port. Bottom-bar tooltips: DONE in an earlier beta (composer controls have title tooltips per `0c7d04b`); the tool/status icon row tooltip item may still be partial — re-confirm during beta.14 smoke test.
+
+---
+
 ### Next session — pick up here (added May 23, evening, after live smoke test)
 
 **Status: Connect Tools marketplace WORKING END-TO-END on Brett's dev Mac.** Live OAuth smoke test passed; Gmail / Calendar / Drive all connect under the new `tsai-ai-chief-of-staff` Google Cloud project. Bundled `flo-gmail` server confirmed spawning + listing all 13 tools (including `gmail_get_message`) via the new credentials. **Not yet shipped** — `dist:signed` + `gh release create` + landing-page bump still pending Brett's authorization. Project source-of-truth: `/Users/brettlechtenberg/.gg/plans/acos-connect-tools-marketplace.md`.
