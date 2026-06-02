@@ -160,4 +160,6 @@ See [`CLAUDE.md`](CLAUDE.md) for project conventions and [`RECOVERY.md`](RECOVER
 
 AI Chief of Staff is an MIT-licensed rebrand of **[Pocket Agent](https://github.com/KenKaiii/pocket-agent)** by **[Ken Kai](https://youtube.com/@kenkaidoesai)** (`KenKaiii`). All the heavy lifting on the core agent, memory system, browser automation, scheduler, and Telegram integration is his work. Total Success AI rebrands, distributes, and supports this build for our clients — please support the original by [subscribing to Ken's channel](https://youtube.com/@kenkaidoesai) and [joining his Skool community](https://skool.com/kenkai).
 
+The **Voice mode** realtime stack (OpenAI Realtime over WebRTC, barge-in, and the response-coordination state machines) is ported from **Brah** by `KenKaiii`, also MIT-licensed. Its original notice is preserved in the source headers of the ported modules.
+
 Released under the [MIT License](LICENSE). The original copyright (© 2025 KenKaiii) is preserved in the `LICENSE` file as required.

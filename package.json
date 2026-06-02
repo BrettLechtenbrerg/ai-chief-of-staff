@@ -75,7 +75,7 @@
       "identity": "Brett Lechtenberg (2HQTY95NHD)",
       "notarize": true,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "AI Chief of Staff uses the microphone to transcribe voice notes into the chat composer when you tap the mic button."
+        "NSMicrophoneUsageDescription": "AI Chief of Staff uses the microphone to transcribe voice notes into the chat composer, and — when you enable Voice mode — for a hands-free live conversation with your assistant."
       }
     },
     "win": {
