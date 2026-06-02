@@ -235,6 +235,7 @@ function _stgPopulateFields() {
 function _stgUpdateToggles() {
   const toggleMap = {
     'telegram.enabled': { toggle: 'telegram.enabled-toggle', config: 'telegram-config' },
+    'voice.enabled': { toggle: 'voice.enabled-toggle' },
     'browser.enabled': { toggle: 'browser.enabled-toggle', config: 'browser-config' },
     'browser.useMyBrowser': { toggle: 'browser.useMyBrowser-toggle' },
     'pocketCli.autoCheck': { toggle: 'pocketCli.autoCheck-toggle', defaultTrue: true },

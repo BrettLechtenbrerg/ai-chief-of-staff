@@ -19,6 +19,12 @@
 
   let session = null;
   let active = false;
+  // Guards the async gap between a start click and session.start(): toggle() now
+  // awaits the voice.enabled read before starting, so without this a rapid
+  // double-click could pass the active/session check twice and spawn two
+  // sessions. Set true the moment a start begins, cleared once the session is
+  // created (or the start is rejected).
+  let starting = false;
   // Latest status text and latest usage snapshot are rendered together into the
   // single status span so they don't clobber each other (gate #3 usage
   // visibility alongside the status line).
@@ -86,9 +92,8 @@
     }
   }
 
-  function toggle() {
-    // start() flips active=true synchronously (via onActiveChange) before it
-    // yields, so a second click always sees active===true.
+  async function toggle() {
+    // Active call: a click ends it (unless mid-handshake — see below).
     if (active && session) {
       // Ignore clicks only during the brief connect handshake (minting the
       // secret, acquiring the mic, posting the SDP). Routing such a click to
@@ -102,43 +107,65 @@
       void session.stop();
       return;
     }
-    // Voice always uses a dedicated, persistent 'voice' session — deliberately
-    // NOT the active chat tab. Voice (short spoken turns) and typed chat (long
-    // threads with tool output, code, attachments) are different modes; keeping
-    // them separate stops voice history from polluting chat context and vice
-    // versa, and makes the session deterministic instead of depending on which
-    // chat tab happens to be open. Multi-turn voice context still works because
-    // every turn loads this same session's history (verified: gate #2).
-    const sessionId = 'voice';
 
-    session = window.AcosRealtime.createRealtimeSession({
-      sessionId,
-      remoteAudioElement: remoteAudioEl,
-      onUsage: setUsage,
-      onStatus: setStatus,
-      onActiveChange: setActive,
-    });
-    // Fire and forget: the retry loop inside start() runs in the background and
-    // reports progress via onStatus; awaiting it would block a cancel click
-    // during a retry-backoff wait.
-    void session.start();
+    // Starting a call. toggle() awaits the voice.enabled read before the session
+    // exists, so `active`/`session` aren't set yet during that gap — guard with
+    // `starting` so a rapid double-click can't spawn two sessions. Always reset
+    // it in finally.
+    if (starting) {
+      return;
+    }
+    starting = true;
+    try {
+      // Voice mode is off by default. The button is always visible (so it's
+      // discoverable), but starting a call is gated on `voice.enabled`: if it's
+      // off, tell the user how to turn it on instead of connecting. This
+      // replaces hide/show visibility logic.
+      let enabled;
+      try {
+        enabled = await window.pocketAgent.settings.get('voice.enabled');
+      } catch {
+        setStatus('Voice mode unavailable — check Settings.');
+        return;
+      }
+      if (String(enabled) !== 'true') {
+        setStatus('Turn on Voice mode in Settings → LLM to start a call.');
+        return;
+      }
+
+      // Voice always uses a dedicated, persistent 'voice' session — deliberately
+      // NOT the active chat tab. Voice (short spoken turns) and typed chat (long
+      // threads with tool output, code, attachments) are different modes;
+      // keeping them separate stops the two histories from polluting each other
+      // and makes the session deterministic. Multi-turn voice context still
+      // works because every turn loads this same session's history (gate #2).
+      session = window.AcosRealtime.createRealtimeSession({
+        sessionId: 'voice',
+        remoteAudioElement: remoteAudioEl,
+        onUsage: setUsage,
+        onStatus: setStatus,
+        onActiveChange: setActive,
+      });
+      // Fire and forget: the retry loop inside start() runs in the background
+      // and reports progress via onStatus; awaiting it would block a cancel
+      // click during a retry-backoff wait.
+      void session.start();
+    } finally {
+      starting = false;
+    }
   }
 
   button.addEventListener('click', () => {
     void toggle();
   });
 
-  // Gate the Voice button on BOTH the off-by-default `voice.enabled` toggle AND
-  // OpenAI key availability (same key probe as the mic button). With the toggle
-  // off — the default — the button stays hidden and the whole voice path is
-  // inert, so existing chat/voice-note behavior is unaffected.
+  // Show the Voice button whenever an OpenAI key is configured (same probe as
+  // the voice-note mic button). The off-by-default `voice.enabled` setting is
+  // NOT a visibility gate — it gates the click behavior instead (see toggle()),
+  // so the button is discoverable and tells the user how to turn it on rather
+  // than silently not existing.
   async function gateVisibility() {
     try {
-      const enabled = await window.pocketAgent.settings.get('voice.enabled');
-      if (String(enabled) !== 'true') {
-        button.hidden = true;
-        return;
-      }
       const result = await window.pocketAgent.audio.isAvailable();
       button.hidden = !(result && result.available);
     } catch {
