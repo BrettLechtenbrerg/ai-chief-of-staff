@@ -179,6 +179,54 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     type: 'string',
   },
   {
+    key: 'voice.enabled',
+    defaultValue: 'false',
+    encrypted: false,
+    category: 'agent',
+    label: 'Voice mode (beta)',
+    description:
+      'Enable hands-free Voice mode — a live call with your chief of staff ' +
+      '(OpenAI Realtime for speech, Claude for answers). Off by default. ' +
+      'Requires an OpenAI API key and a microphone.',
+    type: 'boolean',
+  },
+  {
+    key: 'agent.voiceModel',
+    defaultValue: 'claude-sonnet-4-6',
+    encrypted: false,
+    category: 'agent',
+    label: 'Voice Model',
+    description:
+      'Claude model used for spoken (Realtime voice) turns. A faster model than ' +
+      'the default lowers time-to-first-word. Falls back to the default model if ' +
+      'its provider has no key.',
+    type: 'string',
+  },
+  {
+    key: 'voice.maxCallMinutes',
+    defaultValue: '15',
+    encrypted: false,
+    category: 'agent',
+    label: 'Voice: max call length (minutes)',
+    description:
+      'Hard ceiling on a single hands-free voice call. Voice runs two paid ' +
+      'models per turn (OpenAI Realtime + Claude); when this wall-clock limit is ' +
+      'reached the call says so and ends cleanly. 0 disables the time cap.',
+    type: 'string',
+  },
+  {
+    key: 'voice.maxCallTurns',
+    defaultValue: '40',
+    encrypted: false,
+    category: 'agent',
+    label: 'Voice: max turns per call',
+    description:
+      'Hard ceiling on how many spoken question/answer turns a single voice call ' +
+      'may use, as a cost guardrail. When reached the call says so and ends ' +
+      'cleanly. 0 disables the turn cap.',
+    type: 'string',
+  },
+  {
     key: 'agent.mode',
     defaultValue: 'general',
     encrypted: false,

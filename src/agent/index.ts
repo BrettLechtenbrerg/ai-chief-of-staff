@@ -276,7 +276,8 @@ class AgentManagerClass extends EventEmitter {
     channel: string = 'default',
     sessionId: string = 'default',
     images?: ImageContent[],
-    attachmentInfo?: AttachmentInfo
+    attachmentInfo?: AttachmentInfo,
+    modelOverride?: string
   ): Promise<ProcessResult> {
     if (!this.memory) {
       throw new Error('AgentManager not initialized - call initialize() first');
@@ -291,7 +292,8 @@ class AgentManagerClass extends EventEmitter {
       channel,
       sessionId,
       images,
-      attachmentInfo
+      attachmentInfo,
+      modelOverride
     );
 
     // Store context usage for stats display

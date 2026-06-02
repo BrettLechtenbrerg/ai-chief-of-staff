@@ -17,7 +17,7 @@ import type {
   StreamResponse,
 } from '@kenkaiiii/gg-ai';
 import { MemoryManager, type Message as MemoryMessage } from '../memory';
-import { ToolsConfig, setCurrentSessionId, runWithSessionId } from '../tools';
+import { ToolsConfig, runWithSessionId } from '../tools';
 import { SettingsManager } from '../settings';
 import { SYSTEM_GUIDELINES } from '../config/system-guidelines';
 import { getModeConfig, buildRoutingInstructions } from './agent-modes';
@@ -147,6 +147,7 @@ export class ChatEngine {
       channel: string;
       images?: ImageContent[];
       attachmentInfo?: AttachmentInfo;
+      modelOverride?: string;
       resolve: (result: ProcessResult) => void;
       reject: (error: Error) => void;
     }>
@@ -207,12 +208,27 @@ export class ChatEngine {
     channel: string,
     sessionId: string = 'default',
     images?: ImageContent[],
-    attachmentInfo?: AttachmentInfo
+    attachmentInfo?: AttachmentInfo,
+    modelOverride?: string
   ): Promise<ProcessResult> {
     if (this.processingBySession.get(sessionId)) {
-      return this.queueMessage(userMessage, channel, sessionId, images, attachmentInfo);
+      return this.queueMessage(
+        userMessage,
+        channel,
+        sessionId,
+        images,
+        attachmentInfo,
+        modelOverride
+      );
     }
-    return this.executeMessage(userMessage, channel, sessionId, images, attachmentInfo);
+    return this.executeMessage(
+      userMessage,
+      channel,
+      sessionId,
+      images,
+      attachmentInfo,
+      modelOverride
+    );
   }
 
   private queueMessage(
@@ -220,14 +236,15 @@ export class ChatEngine {
     channel: string,
     sessionId: string,
     images?: ImageContent[],
-    attachmentInfo?: AttachmentInfo
+    attachmentInfo?: AttachmentInfo,
+    modelOverride?: string
   ): Promise<ProcessResult> {
     return new Promise((resolve, reject) => {
       if (!this.messageQueueBySession.has(sessionId)) {
         this.messageQueueBySession.set(sessionId, []);
       }
       const queue = this.messageQueueBySession.get(sessionId)!;
-      queue.push({ message: userMessage, channel, images, attachmentInfo, resolve, reject });
+      queue.push({ message: userMessage, channel, images, attachmentInfo, modelOverride, resolve, reject });
 
       this.emitStatus({
         type: 'queued',
@@ -257,7 +274,8 @@ export class ChatEngine {
         next.channel,
         sessionId,
         next.images,
-        next.attachmentInfo
+        next.attachmentInfo,
+        next.modelOverride
       );
       next.resolve(result);
     } catch (error) {
@@ -273,11 +291,22 @@ export class ChatEngine {
     channel: string,
     sessionId: string,
     images?: ImageContent[],
-    attachmentInfo?: AttachmentInfo
+    attachmentInfo?: AttachmentInfo,
+    modelOverride?: string
   ): Promise<ProcessResult> {
-    setCurrentSessionId(sessionId);
+    // NOTE: deliberately NOT calling setCurrentSessionId() here. That sets a
+    // single PROCESS-GLOBAL fallback session id, which is a race when sessions
+    // run concurrently (voice + a scheduled/background job): the last writer
+    // wins, so status events (e.g. partial_text in status-processing.ts) that
+    // resolve their session via the global fallback can be mis-tagged with the
+    // wrong session — bleeding one turn's composed text into another's stream
+    // (observed as unrelated content surfacing mid-answer in a voice reply).
+    // runWithSessionId() below propagates the correct id via AsyncLocalStorage
+    // through all async continuations, which is the authoritative source; the
+    // global fallback only ever returns 'default' now, which downstream filters
+    // reject rather than misattribute.
     return runWithSessionId(sessionId, () =>
-      this.executeMessageInner(userMessage, channel, sessionId, images, attachmentInfo)
+      this.executeMessageInner(userMessage, channel, sessionId, images, attachmentInfo, modelOverride)
     );
   }
 
@@ -289,7 +318,8 @@ export class ChatEngine {
     channel: string,
     sessionId: string,
     images?: ImageContent[],
-    attachmentInfo?: AttachmentInfo
+    attachmentInfo?: AttachmentInfo,
+    modelOverride?: string
   ): Promise<ProcessResult> {
     this.processingBySession.set(sessionId, true);
     this.pendingMediaBySession.set(sessionId, []);
@@ -301,7 +331,11 @@ export class ChatEngine {
       // Get model early — needed for context-window-aware message limits and token-based compaction.
       // resolveModel() guarantees we pick a model whose provider has a key, even if `agent.model`
       // is stale (e.g. user removed an Anthropic key but the setting still says claude-opus-4-7).
-      const model = resolveModel(SettingsManager.get('agent.model'));
+      //
+      // A per-call `modelOverride` (used by voice turns to pick a faster model for
+      // lower time-to-first-word) takes precedence over the stored default, but is
+      // still passed through resolveModel so it falls back if its provider has no key.
+      const model = resolveModel(modelOverride || SettingsManager.get('agent.model'));
 
       // Load or get conversation history
       if (!this.conversationsBySession.has(sessionId)) {

@@ -31,6 +31,7 @@ import {
   registerConnectionsIPC,
   registerGoogleOAuthIPC,
   registerConnectToolsIPC,
+  registerRealtimeIPC,
 } from './ipc';
 import type { IPCDependencies } from './ipc';
 
@@ -475,6 +476,10 @@ function setupIPC(): void {
       projectRoot: path.join(__dirname, '../..'),
     }),
   );
+  // Voice mode (Realtime ears+mouth, Claude brain). Handlers are inert unless
+  // the renderer opens a session, which is gated off-by-default by the
+  // voice.enabled setting + the Voice button visibility.
+  registerRealtimeIPC(deps);
 }
 
 // ============ Agent Lifecycle ============

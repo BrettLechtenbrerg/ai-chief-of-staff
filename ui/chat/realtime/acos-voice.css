@@ -1,0 +1,66 @@
+/* Voice mode control styling.
+   Reuses AICOS theme tokens (--accent, --text-*, --border) so it inherits the
+   tsai navy/silver skin and every other skin automatically. */
+
+.acos-voice-btn {
+  position: relative;
+}
+
+.acos-voice-btn.is-active {
+  color: var(--accent);
+  background: var(--accent-shadow, rgba(0, 0, 0, 0.06));
+}
+
+/* Pulsing dot shown only while a call is active. */
+.acos-voice-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s ease;
+}
+
+.acos-voice-btn.is-active .acos-voice-dot {
+  opacity: 1;
+  animation: acos-voice-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes acos-voice-pulse {
+  0%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.acos-voice-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 24px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary, var(--bg-secondary));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* When the status is a click-to-fix affordance (e.g. mic denied -> open OS
+   privacy settings), make it look interactive. */
+.acos-voice-status--action {
+  cursor: pointer;
+  text-decoration: underline;
+  color: var(--text-primary, var(--text-secondary));
+}

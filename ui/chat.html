@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; img-src 'self' data: https:; connect-src 'self' wss://pocket-agent-chat-production.up.railway.app https://pocket-agent-chat-production.up.railway.app https://cdn.jsdelivr.net;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; img-src 'self' data: https:; connect-src 'self' wss://pocket-agent-chat-production.up.railway.app https://pocket-agent-chat-production.up.railway.app https://cdn.jsdelivr.net https://api.openai.com;">
   <title>AI Chief of Staff</title>
 
 
@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="chat/connect-tools-panel.css">
   <link rel="stylesheet" href="chat/personalize-panel.css">
   <link rel="stylesheet" href="chat/help-modal.css">
+  <link rel="stylesheet" href="chat/realtime/acos-voice.css">
   <link rel="stylesheet" href="chat/onboarding.css">
   <script src="shared/theme-loader.js"></script>
   <script src="shared/ipc-error-handler.js"></script>
@@ -492,6 +493,8 @@
   </div>
 
   <div id="input-area">
+    <!-- Voice mode: remote audio sink for the Realtime assistant's voice. -->
+    <audio id="acos-remote-audio" autoplay hidden></audio>
     <div class="input-container">
       <div id="slide-up-panel" class="slide-up-panel">
         <div id="search-panel" class="slide-panel-content hidden">
@@ -551,6 +554,12 @@
         <button class="input-toolbar-btn" id="search-toolbar-btn" data-tip="Search this conversation" aria-label="Search conversation">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 17l4 4m-2-10a8 8 0 1 0-16 0a8 8 0 0 0 16 0"/></svg>
         </button>
+        <!-- Voice mode (realtime hands-free call). Hidden until Voice mode is enabled + an OpenAI key is present. -->
+        <button class="input-toolbar-btn acos-voice-btn" id="acos-voice-btn" data-tip="Voice mode — hands-free call with your chief of staff" aria-label="Voice mode" aria-pressed="false" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.6 10.8a4 4 0 0 1-7.2 0M5 9a7 7 0 0 0 14 0M3 5l3.5 2M21 5l-3.5 2M12 14v5m-3 0h6"/></svg>
+          <span class="acos-voice-dot" aria-hidden="true"></span>
+        </button>
+        <span id="acos-voice-status" class="acos-voice-status" hidden></span>
         <button class="input-toolbar-btn" id="workflows-toolbar-btn" data-tip="Slash-command workflows" aria-label="Workflows">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m17 8l1.84 1.85c.773.778 1.16 1.167 1.16 1.65s-.387.872-1.16 1.65L17 15M7 8L5.16 9.85C4.387 10.628 4 11.017 4 11.5s.387.872 1.16 1.65L7 15m7.5-11l-5 16"/></svg>
         </button>
@@ -1488,6 +1497,11 @@
   <script src="chat/connect-tools-panel.js"></script>
   <script src="chat/personalize-panel.js"></script>
   <script src="chat/help-modal.js"></script>
+  <!-- Voice mode: realtime voice modules (load before the UI controller). -->
+  <script src="chat/realtime/realtime-playback.js"></script>
+  <script src="chat/realtime/realtime-response-queue.js"></script>
+  <script src="chat/realtime/realtime-session.js"></script>
+  <script src="chat/realtime/acos-voice-ui.js"></script>
   <script src="chat/event-bindings.js"></script>
   <script src="chat/init.js"></script>
 

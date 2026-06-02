@@ -153,6 +153,44 @@ contextBridge.exposeInMainWorld('pocketAgent', {
       ipcRenderer.invoke('audio:transcribe', { data, format, language }),
   },
 
+  // ─── Realtime voice (Voice mode) ──────────────────────────────
+  // `mintSecret` mints an ephemeral OpenAI Realtime client_secret in the main
+  // process (from the stored OpenAI API key) so the renderer can open a WebRTC
+  // session. `askChief` is THE BRIDGE: a completed spoken turn is routed to the
+  // Claude Agent SDK and the text reply comes back for the Realtime model to
+  // speak. See src/main/ipc/realtime-ipc.ts. Gated off-by-default by the
+  // voice.enabled setting (Voice button visibility).
+  realtime: {
+    mintSecret: (options?: { model?: string; voice?: string; instructions?: string }) =>
+      ipcRenderer.invoke('realtime:mintSecret', options),
+    askChief: (transcript: string, sessionId?: string, callId?: string) =>
+      ipcRenderer.invoke('realtime:askChief', { transcript, sessionId, callId }),
+    onChiefDelta: (
+      callback: (payload: {
+        sessionId?: string;
+        callId?: string;
+        sentence?: string;
+        error?: string;
+        done?: boolean;
+        tokensUsed?: number;
+      }) => void
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: {
+          sessionId?: string;
+          callId?: string;
+          sentence?: string;
+          error?: string;
+          done?: boolean;
+          tokensUsed?: number;
+        }
+      ) => callback(payload);
+      ipcRenderer.on('realtime:chiefDelta', listener);
+      return () => ipcRenderer.removeListener('realtime:chiefDelta', listener);
+    },
+  },
+
   // ─── Location & Timezone ─────────────────────────────────────────────
   location: {
     lookup: (query: string) => ipcRenderer.invoke('location:lookup', query),
@@ -490,6 +528,35 @@ declare global {
       attachments: {
         save: (name: string, dataUrl: string) => Promise<string>;
         extractText: (filePath: string) => Promise<string>;
+      };
+
+      realtime: {
+        mintSecret: (options?: {
+          model?: string;
+          voice?: string;
+          instructions?: string;
+        }) => Promise<{
+          success: boolean;
+          value?: string;
+          expiresAt?: number;
+          error?: string;
+          limits?: { maxCallMs: number; maxTurns: number };
+        }>;
+        askChief: (
+          transcript: string,
+          sessionId?: string,
+          callId?: string,
+        ) => Promise<{ success: boolean; response?: string; error?: string; streaming?: boolean }>;
+        onChiefDelta: (
+          callback: (payload: {
+            sessionId?: string;
+            callId?: string;
+            sentence?: string;
+            error?: string;
+            done?: boolean;
+            tokensUsed?: number;
+          }) => void
+        ) => () => void;
       };
 
       sessions: {
