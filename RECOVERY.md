@@ -42,6 +42,33 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 
 ---
 
+## Queued for next release (UNSHIPPED — will become the beta.16 rollback row)
+
+- **GHL tester-connect, Python-free (code-complete, dev-verified).** The GoHighLevel
+  Connect Tools card now spawns a **vendored Node MCP server**
+  (`vendor/ghl-mcp-node/index.js`) via Electron's bundled Node
+  (`process.execPath` + `ELECTRON_RUN_AS_NODE=1`), the same model as the Flo
+  servers — **no Python runtime required**, and **GHL is now available on Windows**
+  (`unavailableOnWindows` removed). The Node port reproduces **all 91 GHL tools**
+  (identical names/args/endpoints/bodies/headers + 25k truncation + error
+  passthrough) ported 1:1 from `vendor/ghl-mcp/main.py`; the Python tree is kept
+  on disk as reference only and is no longer referenced by app code. SDK
+  (`@modelcontextprotocol/sdk@^0.5.0`) vendored into
+  `ghl-mcp-node/node_modules` (pure JS, no native modules → no afterPack symlink,
+  doesn't touch the better-sqlite3 seal issue). Brett's hand-managed
+  `flo-ghl` / `flo-ghl-brett` venv entries still resolve to "Connected" (aliases
+  preserved). Changes: `vendor/ghl-mcp-node/` (server + `refresh.sh`),
+  `src/mcp/bundled-paths.ts` (`resolveGhlNodePath`),
+  `src/main/ipc/connect-tools-ipc.ts` (Node-spawn `ghl` entry),
+  `vendor/VENDORED.md`, tests (`bundled-paths`, `connect-tools-ipc`, new
+  `ghl-node-server`). `npm test` green (1219 tests); typecheck + lint clean.
+  **Pending before ship:** live dev connect (real `pit-…` + Location ID → 91
+  tools, one live read + one live write); signed-build smoke that
+  `vendor/ghl-mcp-node/` is inside the notarized `.app`; live Windows pass
+  (deferred with voice — no Windows hardware).
+
+---
+
 ## Rollback tags
 
 | Tag | Date | Description |
