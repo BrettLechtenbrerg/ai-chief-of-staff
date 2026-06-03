@@ -122,6 +122,18 @@
   opacity: 0;
 }
 
+/* "+ New Chat" at the open-tab cap: stays visible but reads as unavailable.
+   Clicking still fires createNewSession(), which shows an explanatory toast. */
+.sidebar-btn.at-max {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sidebar-btn.at-max:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
 .sidebar-btn.active {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, var(--bg-primary));

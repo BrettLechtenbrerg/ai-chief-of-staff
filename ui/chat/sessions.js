@@ -1,5 +1,24 @@
 // ============ SESSION MANAGEMENT ============
 
+// Lazily-created Notyf instance for session toasts (bottom-right, matching the
+// Brain/Routines panels). Notyf is loaded globally via CDN in chat.html.
+let _sessionNotyf = null;
+function _sessionShowToast(message, type) {
+  if (typeof Notyf === 'undefined') return; // CDN unavailable — fail silent
+  if (!_sessionNotyf) {
+    _sessionNotyf = new Notyf({
+      duration: 3500,
+      position: { x: 'right', y: 'bottom' },
+      dismissible: true,
+      types: [
+        { type: 'success', background: '#4ade80' },
+        { type: 'error', background: '#f87171' },
+      ],
+    });
+  }
+  _sessionNotyf[type === 'error' ? 'error' : 'success'](message);
+}
+
 async function loadSessions() {
   try {
     sessions = await window.pocketAgent.sessions.list();
@@ -120,9 +139,19 @@ function renderTabs() {
     tabsContainer.appendChild(tab);
   });
 
-  // Hide new chat button in sidebar when at max
+  // Keep the "+ New Chat" button visible at the cap (previously it was hidden,
+  // which looked like the feature had disappeared). Instead mark it disabled
+  // with an explanatory tooltip; clicking it still fires createNewSession,
+  // which shows a toast when the limit is reached.
   const newChatBtn = document.getElementById('sidebar-new-chat');
-  if (newChatBtn) newChatBtn.classList.toggle('hidden', sessions.length >= MAX_TABS);
+  if (newChatBtn) {
+    const atMax = sessions.length >= MAX_TABS;
+    newChatBtn.classList.remove('hidden');
+    newChatBtn.classList.toggle('at-max', atMax);
+    newChatBtn.title = atMax
+      ? `Max ${MAX_TABS} chats open — close one to start a new chat`
+      : 'New chat';
+  }
 }
 
 function updateSessionsOrder() {
@@ -280,8 +309,11 @@ function getNextSessionName() {
 }
 
 async function createNewSession() {
-  // Check tab limit
+  // Check tab limit. At the cap the "+ New Chat" button is also hidden
+  // (renderTabs), but a keyboard shortcut or stale click can still reach here,
+  // so surface a toast instead of silently doing nothing.
   if (sessions.length >= MAX_TABS) {
+    _sessionShowToast(`You have ${MAX_TABS} chats open (the max). Close one to start a new chat.`, 'error');
     return;
   }
   returnToChatView();
