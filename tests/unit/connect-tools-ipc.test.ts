@@ -50,6 +50,10 @@ function makeFakeVendor(): { resourcesPath: string; projectRoot: string } {
     fs.writeFileSync(path.join(root, `vendor/flo-mcp-servers/${id}/index.js`), '// stub');
   }
   fs.writeFileSync(path.join(root, 'vendor/ghl-mcp/main.py'), '# stub');
+  // The Node port is what the GHL card now spawns; resolveGhlNodePath checks
+  // for it on disk, so the fake bundle must include it.
+  fs.mkdirSync(path.join(root, 'vendor/ghl-mcp-node'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'vendor/ghl-mcp-node/index.js'), '// stub');
   return { resourcesPath: root, projectRoot: root };
 }
 
@@ -122,7 +126,7 @@ describe('connect-tools-ipc', () => {
       expect((entry as Record<string, unknown>)._acos_tool_id).toBe('drive');
     });
 
-    it('builds GHL entry with python3 + env vars', () => {
+    it('builds GHL entry with Electron-Node + env vars (no Python)', () => {
       const tools = __test__.getSupportedTools();
       const ghl = tools.find((t) => t.id === 'ghl')!;
       const entry = __test__.buildEntry(
@@ -130,8 +134,12 @@ describe('connect-tools-ipc', () => {
         { privateToken: 'pit-xyz', locationId: 'LOC-1' },
         paths,
       );
-      expect(entry.command).toBe('python3');
-      expect(entry.args![0]).toContain('ghl-mcp/main.py');
+      // Spawns the bundled Node port via Electron's own Node — would run on a
+      // machine with no python3 at all.
+      expect(entry.command).toBe(process.execPath);
+      expect(entry.args![0]).toContain('ghl-mcp-node/index.js');
+      expect(entry.command).not.toBe('python3');
+      expect(entry.env!.ELECTRON_RUN_AS_NODE).toBe('1');
       expect(entry.env!.GHL_PRIVATE_TOKEN).toBe('pit-xyz');
       expect(entry.env!.GHL_LOCATION_ID).toBe('LOC-1');
     });
@@ -208,6 +216,24 @@ describe('connect-tools-ipc', () => {
       const ghl = __test__.getSupportedTools().find((t) => t.id === 'ghl')!;
       expect(ghl.mcpServerName).toBe('ghl-mcp');
       expect(ghl.aliasServerNames).toEqual(['flo-ghl', 'flo-ghl-brett']);
+    });
+  });
+
+  describe('Windows availability', () => {
+    it('GHL is no longer filtered out on Windows (Python dependency removed)', () => {
+      // listSupported hides any tool flagged unavailableOnWindows when
+      // process.platform === 'win32'. GHL now ships as a Node server, so it
+      // must NOT carry that flag and must survive the win32 filter.
+      const tools = __test__.getSupportedTools();
+      const ghl = tools.find((t) => t.id === 'ghl')!;
+      expect(ghl.unavailableOnWindows).toBeUndefined();
+      const winVisible = tools.filter((t) => !t.unavailableOnWindows);
+      expect(winVisible.some((t) => t.id === 'ghl')).toBe(true);
+    });
+
+    it('no supported tool is hidden on Windows anymore', () => {
+      const tools = __test__.getSupportedTools();
+      expect(tools.every((t) => !t.unavailableOnWindows)).toBe(true);
     });
   });
 

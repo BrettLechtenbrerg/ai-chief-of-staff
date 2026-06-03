@@ -14,6 +14,7 @@ import {
   resolveVendorRoot,
   resolveFloServerPath,
   resolveGhlMainPath,
+  resolveGhlNodePath,
   resolveGhlRequirementsPath,
   VENDOR_SUBDIRS,
 } from '../../src/mcp/bundled-paths';
@@ -51,6 +52,9 @@ function makeFakeBundle(): { resourcesPath: string } {
   fs.mkdirSync(path.dirname(ghlMain), { recursive: true });
   fs.writeFileSync(ghlMain, '# stub\n');
   fs.writeFileSync(ghlReq, 'httpx\n');
+  const ghlNode = path.join(root, 'vendor', VENDOR_SUBDIRS.ghlNode.main);
+  fs.mkdirSync(path.dirname(ghlNode), { recursive: true });
+  fs.writeFileSync(ghlNode, '// stub\n');
   return { resourcesPath: root };
 }
 
@@ -74,6 +78,12 @@ describe('bundled-paths', () => {
       const p = resolveGhlMainPath(deps);
       expect(fs.existsSync(p)).toBe(true);
       expect(p.endsWith('main.py')).toBe(true);
+    });
+
+    it('resolves the GHL Node server against the real vendor tree', () => {
+      const p = resolveGhlNodePath(deps);
+      expect(fs.existsSync(p)).toBe(true);
+      expect(p.endsWith(`ghl-mcp-node${path.sep}index.js`)).toBe(true);
     });
   });
 
@@ -113,6 +123,20 @@ describe('bundled-paths', () => {
       const empty = tmp();
       const deps = { isPackaged: true, resourcesPath: empty, projectRoot: '/ignored' };
       expect(() => resolveGhlMainPath(deps)).toThrow(/corrupted|reinstall/i);
+    });
+
+    it('resolves the GHL Node server from the fake bundle', () => {
+      const { resourcesPath } = makeFakeBundle();
+      const deps = { isPackaged: true, resourcesPath, projectRoot: '/ignored' };
+      const p = resolveGhlNodePath(deps);
+      expect(p.startsWith(path.join(resourcesPath, 'vendor'))).toBe(true);
+      expect(fs.existsSync(p)).toBe(true);
+    });
+
+    it('throws a corrupt-install error when the GHL Node server is missing', () => {
+      const empty = tmp();
+      const deps = { isPackaged: true, resourcesPath: empty, projectRoot: '/ignored' };
+      expect(() => resolveGhlNodePath(deps)).toThrow(/corrupted|reinstall/i);
     });
   });
 });

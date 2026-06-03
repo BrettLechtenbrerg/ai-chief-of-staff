@@ -12,14 +12,38 @@ upstream Flo or hand-install Python packages globally.
 | `flo-mcp-servers/bookmarks/index.js` | `~/flo-assistant/servers/bookmarks/dist/index.js` | Compiled JS (ESM) | TSAI-internal |
 | `flo-mcp-servers/node_modules/@flo/shared/dist/*.js` | `~/flo-assistant/shared/dist/*.js` | Compiled JS (ESM) | TSAI-internal |
 | `flo-mcp-servers/node_modules/{googleapis,@modelcontextprotocol/sdk,zod,...}` | npm | Runtime deps | Apache-2.0 / MIT |
-| `ghl-mcp/main.py` | `~/ghl-mcp/main.py` | Python (FastMCP) | TSAI-internal |
-| `ghl-mcp/requirements.txt` | `~/ghl-mcp/requirements.txt` | pip requirements | — |
+| `ghl-mcp-node/index.js` | Node port of `~/ghl-mcp/main.py` (originally based on the tenfoldmarc GHL server) | JS (ESM) | TSAI-internal |
+| `ghl-mcp-node/node_modules/@modelcontextprotocol/sdk` | npm | Runtime dep | MIT |
+| `ghl-mcp/main.py` | `~/ghl-mcp/main.py` | Python (FastMCP) — **reference only / superseded by `ghl-mcp-node`** | TSAI-internal |
+| `ghl-mcp/requirements.txt` | `~/ghl-mcp/requirements.txt` | pip requirements — **reference only** | — |
 
 ## Why vendor
 
 Testers don't have `~/flo-assistant/` or `~/ghl-mcp/` on their machines. Vendoring
 ships a single self-contained bundle. Resolved at runtime by
 `src/mcp/bundled-paths.ts` and started by the Connect Tools IPC layer.
+
+### GHL: Node port (no Python)
+
+`ghl-mcp-node/index.js` is a hand-maintained Node (ESM) port of the Python
+`ghl-mcp/main.py`. It exposes the **same 91 tools** (identical names, args, REST
+endpoints, bodies, `Version: 2021-07-28` header, `locationId` injection, 25k
+truncation, and `HTTP <code>: <body[:500]>` error passthrough). It is spawned via
+Electron's bundled Node (`process.execPath` + `ELECTRON_RUN_AS_NODE=1`) exactly
+like the Flo servers, so a fresh-install tester needs **no Python runtime** and it
+works on **macOS and Windows**.
+
+The Python `ghl-mcp/` tree is kept on disk as provenance/reference for this round
+but is **no longer referenced by app code** — `connect-tools-ipc.ts` now writes a
+Node-spawn entry. It will be pruned in a later cleanup once the Node server is
+field-proven.
+
+**Keep `ghl-mcp-node/index.js` in lockstep with `ghl-mcp/main.py`.** When the
+Python tool set changes, mirror it in the Node port and re-run the parity gate:
+`npx vitest run tests/unit/ghl-node-server.test.ts`. Runtime dep install:
+`vendor/ghl-mcp-node/refresh.sh`. The server has **no native modules** (pure JS +
+global `fetch`), so it needs no afterPack symlink and does not affect the
+better-sqlite3 seal handling.
 
 ## Patches applied
 
@@ -88,8 +112,10 @@ CI does not re-vendor automatically — bump deliberately.
 |---|---|
 | `flo-mcp-servers/` (4 servers + shared) | ~280 KB |
 | `flo-mcp-servers/node_modules/` (`googleapis` dominates) | ~113 MB |
-| `ghl-mcp/main.py` | ~70 KB |
-| **Total vendored** | **~113 MB** |
+| `ghl-mcp/main.py` (reference only) | ~70 KB |
+| `ghl-mcp-node/index.js` | ~60 KB |
+| `ghl-mcp-node/node_modules/` (`@modelcontextprotocol/sdk`) | ~7.5 MB |
+| **Total vendored** | **~121 MB** |
 
 Plan §Risks #7 acknowledges the bundle-size growth and lists falling back
 to standalone `@google/*` packages if DMG growth becomes objectionable.

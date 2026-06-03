@@ -1,0 +1,10 @@
+{
+  "name": "@acos-vendor/ghl-mcp-node",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Vendored Node (ESM) port of the GoHighLevel sub-account MCP server. Hand-maintained from vendor/ghl-mcp/main.py — same 91 tools, same GHL REST contract — so testers can connect their own GHL sub-account with no Python runtime. See ../VENDORED.md for provenance and refresh.sh for the dep-install procedure. Spawned via Electron's bundled Node (ELECTRON_RUN_AS_NODE=1), mirroring flo-mcp-servers.",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  }
+}

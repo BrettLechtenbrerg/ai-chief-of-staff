@@ -38,6 +38,10 @@ export const VENDOR_SUBDIRS = {
     main: path.join('ghl-mcp', 'main.py'),
     requirements: path.join('ghl-mcp', 'requirements.txt'),
   },
+  ghlNode: {
+    root: 'ghl-mcp-node',
+    main: path.join('ghl-mcp-node', 'index.js'),
+  },
 } as const;
 
 export type FloServerId = keyof typeof VENDOR_SUBDIRS.flo.servers;
@@ -101,4 +105,22 @@ export function resolveGhlMainPath(deps: BundledPathsDeps): string {
 export function resolveGhlRequirementsPath(deps: BundledPathsDeps): string {
   const vendor = resolveVendorRoot(deps);
   return path.join(vendor, VENDOR_SUBDIRS.ghl.requirements);
+}
+
+/**
+ * Resolve the bundled GHL Node server (`ghl-mcp-node/index.js`). This is the
+ * Python-free port spawned via Electron's bundled Node — it exposes the same
+ * 91 GHL tools as the original `main.py` and works on macOS + Windows with no
+ * runtime to install. Throws on missing file (same corrupt-install semantics
+ * as resolveFloServerPath).
+ */
+export function resolveGhlNodePath(deps: BundledPathsDeps): string {
+  const vendor = resolveVendorRoot(deps);
+  const abs = path.join(vendor, VENDOR_SUBDIRS.ghlNode.main);
+  if (!fs.existsSync(abs)) {
+    throw new Error(
+      `Bundled GHL Node server not found at ${abs}. The .app bundle may be corrupted — reinstall AI Chief of Staff.`,
+    );
+  }
+  return abs;
 }

@@ -34,7 +34,7 @@ import type { ExternalMCPServerConfig } from '../../mcp/types';
 import { GoogleOAuth } from '../../auth/google-oauth';
 import {
   resolveFloServerPath,
-  resolveGhlMainPath,
+  resolveGhlNodePath,
   type FloServerId,
 } from '../../mcp/bundled-paths';
 
@@ -75,8 +75,11 @@ export interface SupportedTool {
    */
   aliasServerNames?: string[];
   /**
-   * Windows-only: when true, this tool is hidden on Windows builds in v1
-   * (plan Risk 4 — GHL needs Python, which we don't bundle yet).
+   * When true, this tool is hidden on Windows builds. Historically set on GHL
+   * because it required a Python runtime we didn't bundle. GHL now ships as a
+   * Python-free Node server (vendor/ghl-mcp-node) spawned via Electron's own
+   * Node, so it is available on Windows — no tool currently sets this flag, but
+   * it remains for any future platform-gated connector.
    */
   unavailableOnWindows?: boolean;
   /**
@@ -182,9 +185,11 @@ function getSupportedTools(): SupportedTool[] {
       ],
       mcpServerName: 'ghl-mcp',
       // Recognize the common hand-managed names (and the per-location variant)
-      // so the card shows Connected when an existing GHL server is live.
+      // so the card shows Connected when an existing GHL server is live. Brett's
+      // hand-built Python venv entries (flo-ghl / flo-ghl-brett) keep resolving
+      // to "Connected" on his machine; testers connect via the bundled Node
+      // server written under the canonical `ghl-mcp` name.
       aliasServerNames: ['flo-ghl', 'flo-ghl-brett'],
-      unavailableOnWindows: true,
     },
     {
       id: 'dataforseo',
@@ -257,11 +262,15 @@ function buildEntry(
     }
     case 'ghl': {
       const p = payload as ConnectPayloadGhl;
-      const mainPath = resolveGhlMainPath(paths);
+      // Python-free: spawn the vendored Node port via Electron's bundled Node
+      // (ELECTRON_RUN_AS_NODE=1), exactly like the Flo servers. Same 91 GHL
+      // tools, no runtime to install, works on macOS + Windows.
+      const scriptPath = resolveGhlNodePath(paths);
       return {
-        command: 'python3',
-        args: [mainPath],
+        command: process.execPath,
+        args: [scriptPath],
         env: {
+          ELECTRON_RUN_AS_NODE: '1',
           GHL_PRIVATE_TOKEN: p.privateToken,
           GHL_LOCATION_ID: p.locationId,
         },
