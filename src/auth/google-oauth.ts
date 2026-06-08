@@ -463,6 +463,29 @@ class GoogleOAuthManager {
   }
 
   /**
+   * Return a fresh, valid access token for callers that need to hit a Google
+   * REST API directly (e.g. the SEO Search Console tool). Runs
+   * `ensureValidToken()` first so the returned token is non-expired, then
+   * reads it off disk. Returns null when not connected or refresh failed.
+   */
+  async getAccessToken(): Promise<string | null> {
+    const ok = await this.ensureValidToken();
+    if (!ok) return null;
+    return this.readTokens()?.access_token ?? null;
+  }
+
+  /**
+   * True when the stored grant includes the Search Console read-only scope.
+   * Lets tools surface a clear "reconnect Google and approve Search Console"
+   * message instead of failing with an opaque 403.
+   */
+  hasSearchConsoleScope(): boolean {
+    return this.getStatus().scopes.includes(
+      'https://www.googleapis.com/auth/webmasters.readonly',
+    );
+  }
+
+  /**
    * Persist tokens atomically: write to .tmp, fsync, rename. Same pattern
    * used by `saveMCPConfig` (mcp/config.ts).
    */

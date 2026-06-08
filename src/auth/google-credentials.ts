@@ -44,6 +44,11 @@ export const GOOGLE_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/drive.metadata.readonly',
   'https://www.googleapis.com/auth/drive.file',
   'https://www.googleapis.com/auth/documents',
+  // webmasters.readonly powers the SEO tool (src/tools/seo-report.ts): it pulls
+  // Google Search Console searchAnalytics data read-only. Adding this scope
+  // requires Brett to re-consent once (Google shows the new Search Console
+  // permission) — nothing breaks if he delays; the SEO tool degrades gracefully.
+  'https://www.googleapis.com/auth/webmasters.readonly',
   // userinfo.email is needed to display "Connected as <email>" in the panel.
   'https://www.googleapis.com/auth/userinfo.email',
   'openid',

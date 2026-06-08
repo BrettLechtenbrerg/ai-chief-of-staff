@@ -27,6 +27,10 @@ import {
   getWriteDailyPostingPacketToolDefinition,
   handleWriteDailyPostingPacketTool,
 } from './daily-posting-packet';
+import {
+  getFetchSeoDataToolDefinition,
+  handleFetchSeoDataTool,
+} from './seo-report';
 
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
@@ -216,6 +220,17 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: packetDef.description,
     input_schema: packetDef.input_schema as Record<string, unknown>,
     handler: handleWriteDailyPostingPacketTool,
+  });
+
+  // fetch_seo_data — pulls Google Search Console data (read-only) for the
+  // brand sites for the weekly SEO report cron. Always registered; it self-
+  // gates on Google auth + the Search Console scope at call time.
+  const seoDef = getFetchSeoDataToolDefinition();
+  tools.push({
+    name: seoDef.name,
+    description: seoDef.description,
+    input_schema: seoDef.input_schema as Record<string, unknown>,
+    handler: handleFetchSeoDataTool,
   });
 
   // Project tools

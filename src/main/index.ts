@@ -17,6 +17,7 @@ import { initializeUpdater, setupUpdaterIPC, setSettingsWindow, setChatWindow } 
 import { createWindow, getWindow } from './windows';
 import { fixPathForPackagedApp } from './node-paths';
 import { setupBirthdayCronJobs } from './birthday';
+import { setupSeoCronJobs } from './seo-crons';
 import { createTray, updateTrayMenu, initTray } from './tray';
 import { getMCPManager } from '../mcp/manager';
 import {
@@ -612,6 +613,10 @@ async function initializeAgent(): Promise<void> {
     if (birthday) {
       await setupBirthdayCronJobs(birthday, scheduler);
     }
+
+    // Set up SEO automation crons (weekly Search Console report + daily/monthly
+    // local-SEO reminders). Idempotent — re-seeded on every launch.
+    await setupSeoCronJobs(scheduler);
   }
 
   // Initialize Telegram
