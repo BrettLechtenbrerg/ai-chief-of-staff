@@ -27,12 +27,14 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { GoogleOAuth } from '../auth/google-oauth';
+import {
+  floTokenExists,
+  floHasSearchConsoleScope,
+  getFloAccessToken,
+} from '../auth/flo-google-token';
 
 /** Root holding the per-brand profile.json files (single source of truth). */
 const BRAND_PROFILES_ROOT = path.join(os.homedir(), 'dev', '_brand-profiles');
-
-/** The read-only Search Console scope this tool requires. */
-const SEARCH_CONSOLE_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
 
 /**
  * Slug the model may pass → the brand-profile folder name. We expose short,
@@ -58,6 +60,15 @@ interface BrandSite {
   shortName: string;
   /** Property string normalized for the API: URL-prefix form WITH trailing slash. */
   siteUrl: string;
+  /**
+   * Both the www and non-www URL-prefix variants (trailing slash), in priority
+   * order. Search Console properties are registered inconsistently — e.g. PMMA
+   * is registered as `personalmasterymartialarts.com` (no www) while the brand
+   * profile and live site use `www`. We try each candidate until one returns
+   * data (or a non-access error), so a www/non-www mismatch never silently
+   * yields an empty report.
+   */
+  siteUrlCandidates: string[];
 }
 
 /** A single row as returned by searchAnalytics/query. */
@@ -135,6 +146,30 @@ function normalizeSiteUrl(url: string): string {
 }
 
 /**
+ * Produce both the www and non-www URL-prefix property candidates (trailing
+ * slash, www variant first), deduped. Lets us tolerate inconsistent Search
+ * Console property registration without changing the brand profile's site.url
+ * (which other features — blog links etc. — depend on).
+ */
+function siteUrlCandidates(url: string): string[] {
+  const normalized = normalizeSiteUrl(url);
+  let host: string;
+  try {
+    host = new URL(normalized).host;
+  } catch {
+    return [normalized];
+  }
+  const withWww = host.startsWith('www.')
+    ? normalized
+    : normalized.replace(`://${host}`, `://www.${host}`);
+  const noWww = host.startsWith('www.')
+    ? normalized.replace(`://${host}`, `://${host.slice(4)}`)
+    : normalized;
+  // www first (matches our profiles + most live sites), then bare domain.
+  return Array.from(new Set([withWww, noWww]));
+}
+
+/**
  * Read a brand profile and return its site identity, or null if the profile
  * is missing/malformed/has no site URL (skipped with a note rather than thrown).
  */
@@ -150,10 +185,12 @@ function readBrandSite(slug: string): BrandSite | null {
     };
     const url = parsed.site?.url;
     if (!url || typeof url !== 'string') return null;
+    const candidates = siteUrlCandidates(url);
     return {
       slug,
       shortName: parsed.shortName || slug.toUpperCase(),
-      siteUrl: normalizeSiteUrl(url),
+      siteUrl: candidates[0],
+      siteUrlCandidates: candidates,
     };
   } catch {
     return null;
@@ -241,6 +278,42 @@ function noteForApiError(shortName: string, status: number, detail: string): str
   return `${shortName}: Search Console returned ${status}. ${detail}`.trim();
 }
 
+/**
+ * Pick the URL-prefix property variant (www vs non-www) that this account can
+ * actually read, by issuing a cheap query against each candidate. Returns the
+ * working URL plus its rows, or the last error if none worked. Avoids a
+ * www/non-www mismatch silently producing an empty report.
+ */
+async function resolveWorkingProperty(
+  accessToken: string,
+  site: BrandSite,
+  window: { startDate: string; endDate: string },
+): Promise<
+  | { siteUrl: string; rows: SearchAnalyticsRow[] }
+  | { error: string; status: number }
+> {
+  let lastError: { error: string; status: number } = {
+    error: 'no candidates',
+    status: 0,
+  };
+  for (const candidate of site.siteUrlCandidates) {
+    const res = await querySearchAnalytics(accessToken, candidate, {
+      startDate: window.startDate,
+      endDate: window.endDate,
+      dimensions: ['query'],
+      rowLimit: ROW_LIMIT,
+    });
+    if (!('error' in res)) {
+      return { siteUrl: candidate, rows: res.rows };
+    }
+    lastError = res;
+    // 403 (no access) / 404 (not found) → try the other variant. Any other
+    // status (network, quota) is unlikely to differ by variant, so stop.
+    if (res.status !== 403 && res.status !== 404) break;
+  }
+  return lastError;
+}
+
 /** Build the full report for one site. */
 async function buildBrandReport(
   accessToken: string,
@@ -258,20 +331,18 @@ async function buildBrandReport(
     notes: [],
   };
 
-  // Current-window queries.
-  const queryRes = await querySearchAnalytics(accessToken, site.siteUrl, {
-    startDate: window.startDate,
-    endDate: window.endDate,
-    dimensions: ['query'],
-    rowLimit: ROW_LIMIT,
-  });
-  if ('error' in queryRes) {
-    report.notes.push(noteForApiError(site.shortName, queryRes.status, queryRes.error));
+  // Resolve which property variant works, and reuse it for all later queries.
+  const resolved = await resolveWorkingProperty(accessToken, site, window);
+  if ('error' in resolved) {
+    report.notes.push(noteForApiError(site.shortName, resolved.status, resolved.error));
     return report;
   }
+  const resolvedUrl = resolved.siteUrl;
+  report.siteUrl = resolvedUrl;
+  const queryRes = { rows: resolved.rows };
 
   // Previous-window queries (for week-over-week click delta).
-  const prevRes = await querySearchAnalytics(accessToken, site.siteUrl, {
+  const prevRes = await querySearchAnalytics(accessToken, resolvedUrl, {
     startDate: window.prevStartDate,
     endDate: window.prevEndDate,
     dimensions: ['query'],
@@ -279,7 +350,7 @@ async function buildBrandReport(
   });
 
   // Current-window pages.
-  const pageRes = await querySearchAnalytics(accessToken, site.siteUrl, {
+  const pageRes = await querySearchAnalytics(accessToken, resolvedUrl, {
     startDate: window.startDate,
     endDate: window.endDate,
     dimensions: ['page'],
@@ -359,22 +430,43 @@ export async function fetchSeoData(input: FetchSeoDataInput): Promise<FetchSeoDa
     };
   }
 
-  // Auth gate — graceful, never throws.
-  const accessToken = await GoogleOAuth.getAccessToken();
-  if (!accessToken) {
-    return {
-      ok: false,
-      status: 'not_connected',
-      message:
-        'Google is not connected. Open Settings → Connections → Google and connect the account that owns the Search Console properties (personalmastery1@gmail.com), then re-run the SEO report.',
-    };
+  // Auth gate — graceful, never throws. Two possible Google token sources:
+  //   1. ACOS's own OAuth (what testers use): <userData>/google-tokens.json
+  //   2. The legacy flo token (Brett's personal machine): ~/.flo/tokens.json
+  // We prefer ACOS's own token when it has the Search Console scope, and fall
+  // back to the flo token otherwise. This lets the SEO report work on Brett's
+  // flo-based setup WITHOUT converting it to the new system (which has broken
+  // things before), while still working out-of-the-box for testers.
+  const acosConnected = GoogleOAuth.getStatus().connected;
+  const acosHasScope = acosConnected && GoogleOAuth.hasSearchConsoleScope();
+
+  let accessToken: string | null = null;
+  if (acosHasScope) {
+    accessToken = await GoogleOAuth.getAccessToken();
+  } else if (floTokenExists() && floHasSearchConsoleScope()) {
+    accessToken = await getFloAccessToken();
   }
-  if (!GoogleOAuth.hasSearchConsoleScope()) {
+
+  if (!accessToken) {
+    // Distinguish "nothing connected at all" from "connected but missing scope"
+    // so the message tells Brett exactly what to do.
+    const anyGoogleConnected = acosConnected || floTokenExists();
+    if (!anyGoogleConnected) {
+      return {
+        ok: false,
+        status: 'not_connected',
+        message:
+          'Google is not connected. Connect the Google account that owns the Search Console properties (brett@brettlechtenberg.com), then re-run the SEO report.',
+      };
+    }
     return {
       ok: false,
       status: 'missing_scope',
       message:
-        'Google is connected but the Search Console (read-only) permission has not been granted yet. Open Settings → Connections → Google → Reconnect, and approve the new "Search Console" permission Google shows. Until then, no SEO data can be pulled.',
+        'Google is connected but the Search Console (read-only) permission has not been granted yet. ' +
+        'On Brett\'s machine: re-run flo authentication (cd ~/flo-assistant && node scripts/authenticate.js) and approve the new Search Console permission. ' +
+        'For tester builds: Settings → Connections → Google → Reconnect and approve "Search Console". ' +
+        'Until then, no SEO data can be pulled.',
     };
   }
 
