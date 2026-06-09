@@ -85,15 +85,16 @@ export function registerSessionsIPC(deps: IPCDependencies): void {
     return getMemory()?.getSessions() || [];
   });
 
-  ipcMain.handle('sessions:create', async (_, name: string) => {
+  ipcMain.handle('sessions:create', async (_, name: string, kind?: 'chat' | 'automation') => {
     try {
       const safeName = sanitizeSessionName(name);
       const memory = getMemory();
       const mode = AgentManager.getMode();
+      const sessionKind = kind === 'automation' ? 'automation' : 'chat';
       console.log(
-        `[Sessions] Creating session "${safeName}" mode=${mode} workingDirectory=null (deferred)`
+        `[Sessions] Creating session "${safeName}" mode=${mode} kind=${sessionKind} workingDirectory=null (deferred)`
       );
-      const session = memory?.createSession(safeName, mode, null);
+      const session = memory?.createSession(safeName, mode, null, sessionKind);
       return { success: true, session };
     } catch (err) {
       return { success: false, error: (err as Error).message };

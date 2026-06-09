@@ -90,7 +90,7 @@ async function startSeoReport() {
     }
 
     if (!sessionId) {
-      const result = await window.pocketAgent.sessions.create('SEO Report');
+      const result = await window.pocketAgent.sessions.create('SEO Report', 'automation');
       if (!result || !result.success || !result.session) {
         _seoShowToast(result?.error || 'Failed to create session', 'error');
         return;

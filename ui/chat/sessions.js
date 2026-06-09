@@ -40,109 +40,180 @@ async function loadSessions() {
 let draggedTab = null;
 let draggedSessionId = null;
 
+// Sidebar session groups. 'chat' threads (normal conversations) stay at the
+// top; 'automation' threads (SEO Report, Content Writer, the content crons,
+// Phone requests) cluster below so the output of a button-click or a cron
+// autorun is always easy to find. Classification is the durable session.kind
+// stamped at creation — NOT the name — so renaming a thread never moves it.
+const SESSION_GROUPS = [
+  { kind: 'chat', label: 'Chats' },
+  { kind: 'automation', label: 'Automations & Reports' },
+];
+
+// Collapse state per group, persisted so a folded group stays folded across
+// launches. Default (no stored value) is expanded — groups are open by default.
+function _isGroupCollapsed(kind) {
+  return localStorage.getItem(`sidebarGroupCollapsed:${kind}`) === '1';
+}
+function _setGroupCollapsed(kind, collapsed) {
+  localStorage.setItem(`sidebarGroupCollapsed:${kind}`, collapsed ? '1' : '0');
+}
+
+function sessionKindOf(session) {
+  return session && session.kind === 'automation' ? 'automation' : 'chat';
+}
+
+function _buildGroupHeader(group, count) {
+  const collapsed = _isGroupCollapsed(group.kind);
+  const header = document.createElement('div');
+  header.className = 'sidebar-group-header' + (collapsed ? ' collapsed' : '');
+  header.dataset.groupKind = group.kind;
+
+  const chevron = document.createElement('span');
+  chevron.className = 'sidebar-group-chevron';
+  chevron.innerHTML =
+    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  header.appendChild(chevron);
+
+  const label = document.createElement('span');
+  label.className = 'sidebar-group-label';
+  label.textContent = group.label;
+  header.appendChild(label);
+
+  const countEl = document.createElement('span');
+  countEl.className = 'sidebar-group-count';
+  countEl.textContent = String(count);
+  header.appendChild(countEl);
+
+  header.onclick = () => {
+    _setGroupCollapsed(group.kind, !_isGroupCollapsed(group.kind));
+    renderTabs();
+  };
+  return header;
+}
+
 function renderTabs() {
-  // Clear existing session items
-  const existingTabs = tabsContainer.querySelectorAll('.sidebar-session');
-  existingTabs.forEach(tab => tab.remove());
+  // Clear everything we render (headers + session rows); the "+ New Chat"
+  // button lives outside tabsContainer so it is untouched.
+  tabsContainer.innerHTML = '';
 
-  sessions.forEach((session, index) => {
-    const tab = document.createElement('div');
-    const isActive = session.id === currentSessionId;
-    const isLoading = isLoadingBySession.get(session.id);
-    tab.className = 'sidebar-session' + (isActive ? ' active' : '') + (isLoading ? ' loading' : '');
-    tab.dataset.sessionId = session.id;
-    tab.dataset.index = index;
-    tab.draggable = true;
-    // Native tooltip on hover — makes the rename gesture discoverable
-    // (upstream wired double-click but never surfaced it in the UI).
-    tab.title = 'Double-click to rename — drag to reorder';
+  SESSION_GROUPS.forEach((group) => {
+    const groupSessions = sessions.filter((s) => sessionKindOf(s) === group.kind);
+    // Always show the Chats header (so an empty-but-expected group reads as
+    // intentional); hide the Automations header only when it has no threads yet.
+    if (group.kind === 'automation' && groupSessions.length === 0) return;
 
-    tab.onclick = (e) => {
-      if (!e.target.closest('.sidebar-session-close') && !e.target.closest('.tab-name-input')) {
-        playNormalClick();
-        returnToChatView();
-        switchSession(session.id);
-      }
-    };
-    tab.ondblclick = () => startRenameSession(session.id);
+    tabsContainer.appendChild(_buildGroupHeader(group, groupSessions.length));
+    if (_isGroupCollapsed(group.kind)) return;
 
-    // Drag events (vertical)
-    tab.ondragstart = (e) => {
-      draggedTab = tab;
-      draggedSessionId = session.id;
-      setTimeout(() => tab.classList.add('dragging'), 0);
-      e.dataTransfer.effectAllowed = 'move';
-    };
-
-    tab.ondragend = () => {
-      if (draggedTab) {
-        draggedTab.classList.remove('dragging');
-      }
-      draggedTab = null;
-      draggedSessionId = null;
-    };
-
-    tab.ondragover = (e) => {
-      e.preventDefault();
-      if (!draggedTab || draggedSessionId === session.id) return;
-
-      const targetTab = tab;
-      const rect = targetTab.getBoundingClientRect();
-      const midpoint = rect.top + rect.height / 2;
-
-      if (e.clientY < midpoint) {
-        if (targetTab.previousElementSibling !== draggedTab) {
-          tabsContainer.insertBefore(draggedTab, targetTab);
-          updateSessionsOrder();
-        }
-      } else {
-        if (targetTab.nextElementSibling !== draggedTab) {
-          tabsContainer.insertBefore(draggedTab, targetTab.nextElementSibling);
-          updateSessionsOrder();
-        }
-      }
-    };
-
-    // Chat icon — only visible when the sidebar is collapsed (CSS handles the toggle).
-    const icon = document.createElement('span');
-    icon.className = 'sidebar-session-icon';
-    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7.5 8.5h9m-9 4H13m-11-2c0-.77.013-1.523.04-2.25c.083-2.373.125-3.56 1.09-4.533c.965-.972 2.186-1.024 4.626-1.129A100 100 0 0 1 12 2.5c1.48 0 2.905.03 4.244.088c2.44.105 3.66.157 4.626 1.13c.965.972 1.007 2.159 1.09 4.532a64 64 0 0 1 0 4.5c-.083 2.373-.125 3.56-1.09 4.533c-.965.972-2.186 1.024-4.626 1.129q-1.102.047-2.275.07c-.74.014-1.111.02-1.437.145s-.6.358-1.148.828l-2.179 1.87A.73.73 0 0 1 8 20.77v-2.348l-.244-.01c-2.44-.105-3.66-.157-4.626-1.13c-.965-.972-1.007-2.159-1.09-4.532A64 64 0 0 1 2 10.5"/></svg>';
-    tab.appendChild(icon);
-
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'sidebar-session-name';
-    nameSpan.textContent = session.name;
-    tab.appendChild(nameSpan);
-
-    // Show Telegram icon if session is linked to a Telegram group
-    if (session.telegram_linked) {
-      const telegramIcon = document.createElement('span');
-      telegramIcon.className = 'sidebar-session-telegram';
-      telegramIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>';
-      telegramIcon.title = session.telegram_group_name || 'Linked to Telegram';
-      tab.appendChild(telegramIcon);
-    }
-
-    // Close button (don't show for default if it's the only session)
-    if (session.id !== 'default' || sessions.length > 1) {
-      const closeBtn = document.createElement('button');
-      closeBtn.className = 'sidebar-session-close';
-      closeBtn.innerHTML = '×';
-      closeBtn.onclick = (e) => {
-        e.stopPropagation();
-        playNormalClick();
-        confirmDeleteSession(session.id, session.name);
-      };
-      tab.appendChild(closeBtn);
-    }
-
-    tabsContainer.appendChild(tab);
+    groupSessions.forEach((session) => renderSessionTab(session));
   });
 
-  // Keep the "+ New Chat" button visible at the cap (previously it was hidden,
-  // which looked like the feature had disappeared). Instead mark it disabled
-  // with an explanatory tooltip; clicking it still fires createNewSession,
-  // which shows a toast when the limit is reached.
+  syncNewChatButton();
+}
+
+function renderSessionTab(session) {
+  const tab = document.createElement('div');
+  const isActive = session.id === currentSessionId;
+  const isLoading = isLoadingBySession.get(session.id);
+  tab.className = 'sidebar-session' + (isActive ? ' active' : '') + (isLoading ? ' loading' : '');
+  tab.dataset.sessionId = session.id;
+  tab.dataset.kind = sessionKindOf(session);
+  tab.draggable = true;
+  // Native tooltip on hover — makes the rename gesture discoverable
+  // (upstream wired double-click but never surfaced it in the UI).
+  tab.title = 'Double-click to rename — drag to reorder';
+
+  tab.onclick = (e) => {
+    if (!e.target.closest('.sidebar-session-close') && !e.target.closest('.tab-name-input')) {
+      playNormalClick();
+      returnToChatView();
+      switchSession(session.id);
+    }
+  };
+  tab.ondblclick = () => startRenameSession(session.id);
+
+  // Drag events (vertical)
+  tab.ondragstart = (e) => {
+    draggedTab = tab;
+    draggedSessionId = session.id;
+    setTimeout(() => tab.classList.add('dragging'), 0);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  tab.ondragend = () => {
+    if (draggedTab) {
+      draggedTab.classList.remove('dragging');
+    }
+    draggedTab = null;
+    draggedSessionId = null;
+  };
+
+  tab.ondragover = (e) => {
+    e.preventDefault();
+    if (!draggedTab || draggedSessionId === session.id) return;
+    // Only reorder within the same group — dragging a chat into the
+    // automations group (or vice-versa) would contradict the durable kind.
+    if (draggedTab.dataset.kind !== tab.dataset.kind) return;
+
+    const targetTab = tab;
+    const rect = targetTab.getBoundingClientRect();
+    const midpoint = rect.top + rect.height / 2;
+
+    if (e.clientY < midpoint) {
+      if (targetTab.previousElementSibling !== draggedTab) {
+        tabsContainer.insertBefore(draggedTab, targetTab);
+        updateSessionsOrder();
+      }
+    } else {
+      if (targetTab.nextElementSibling !== draggedTab) {
+        tabsContainer.insertBefore(draggedTab, targetTab.nextElementSibling);
+        updateSessionsOrder();
+      }
+    }
+  };
+
+  // Chat icon — only visible when the sidebar is collapsed (CSS handles the toggle).
+  const icon = document.createElement('span');
+  icon.className = 'sidebar-session-icon';
+  icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7.5 8.5h9m-9 4H13m-11-2c0-.77.013-1.523.04-2.25c.083-2.373.125-3.56 1.09-4.533c.965-.972 2.186-1.024 4.626-1.129A100 100 0 0 1 12 2.5c1.48 0 2.905.03 4.244.088c2.44.105 3.66.157 4.626 1.13c.965.972 1.007 2.159 1.09 4.532a64 64 0 0 1 0 4.5c-.083 2.373-.125 3.56-1.09 4.533c-.965.972-2.186 1.024-4.626 1.129q-1.102.047-2.275.07c-.74.014-1.111.02-1.437.145s-.6.358-1.148.828l-2.179 1.87A.73.73 0 0 1 8 20.77v-2.348l-.244-.01c-2.44-.105-3.66-.157-4.626-1.13c-.965-.972-1.007-2.159-1.09-4.532A64 64 0 0 1 2 10.5"/></svg>';
+  tab.appendChild(icon);
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'sidebar-session-name';
+  nameSpan.textContent = session.name;
+  tab.appendChild(nameSpan);
+
+  // Show Telegram icon if session is linked to a Telegram group
+  if (session.telegram_linked) {
+    const telegramIcon = document.createElement('span');
+    telegramIcon.className = 'sidebar-session-telegram';
+    telegramIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>';
+    telegramIcon.title = session.telegram_group_name || 'Linked to Telegram';
+    tab.appendChild(telegramIcon);
+  }
+
+  // Close button (don't show for default if it's the only session)
+  if (session.id !== 'default' || sessions.length > 1) {
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'sidebar-session-close';
+    closeBtn.innerHTML = '×';
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      playNormalClick();
+      confirmDeleteSession(session.id, session.name);
+    };
+    tab.appendChild(closeBtn);
+  }
+
+  tabsContainer.appendChild(tab);
+}
+
+// Keep the "+ New Chat" button visible at the cap (previously it was hidden,
+// which looked like the feature had disappeared). Instead mark it disabled
+// with an explanatory tooltip; clicking it still fires createNewSession,
+// which shows a toast when the limit is reached.
+function syncNewChatButton() {
   const newChatBtn = document.getElementById('sidebar-new-chat');
   if (newChatBtn) {
     const atMax = sessions.length >= MAX_TABS;
