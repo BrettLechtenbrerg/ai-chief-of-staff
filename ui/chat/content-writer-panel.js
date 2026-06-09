@@ -18,8 +18,14 @@ let _cwNotyf = null;
 const _cwState = {
   openai: 'missing',      // 'ok' | 'missing' | 'invalid'
   dataforseo: 'missing',  // 'ok' | 'missing' | 'invalid'
-  brandbook: 'missing',   // 'ok' | 'missing'
+  brandbook: 'missing',   // 'ok' | 'missing' (the picked brand has a non-empty book)
 };
+
+// Multi-brand: the brands list + which brand the Content Writer will target.
+// The picked brand's id is stamped onto the Content Writer session before the
+// recipe fires, so the system prompt injects that brand's voice.
+let _cwBrands = [];
+let _cwPickedBrandId = null;
 
 // Track which cards the user has manually expanded so re-rendering after a
 // save doesn't snap an in-progress card closed underneath them.
@@ -272,15 +278,21 @@ async function _cwLoadState() {
     _cwState.openai = 'missing';
   }
 
-  // Brand book — both fields required for ✓
+  // Brand book — load brands, resolve the picked brand, and mark ✓ when that
+  // brand's book (Brand & Style + Writing Rules) is non-empty.
   try {
-    const brandStyle = await window.pocketAgent.settings.get('personalize.brandStyle');
-    const writingRules = await window.pocketAgent.settings.get('personalize.writingRules');
-    const bsOk = brandStyle && String(brandStyle).trim().length > 0;
-    const wrOk = writingRules && String(writingRules).trim().length > 0;
+    _cwBrands = (await window.pocketAgent.brands.list()) || [];
+    if (!_cwPickedBrandId || !_cwBrands.some((b) => b.id === _cwPickedBrandId)) {
+      const def = _cwBrands.find((b) => b.is_default);
+      _cwPickedBrandId = def ? def.id : (_cwBrands[0] && _cwBrands[0].id) || null;
+    }
+    const picked = _cwBrands.find((b) => b.id === _cwPickedBrandId);
+    const bsOk = picked && String(picked.brand_style || '').trim().length > 0;
+    const wrOk = picked && String(picked.writing_rules || '').trim().length > 0;
     _cwState.brandbook = bsOk && wrOk ? 'ok' : 'missing';
   } catch (err) {
-    console.warn('[CW] Failed to read brand book settings:', err);
+    console.warn('[CW] Failed to read brands:', err);
+    _cwBrands = [];
     _cwState.brandbook = 'missing';
   }
 
@@ -329,16 +341,18 @@ function _cwRender() {
     setupLabel: 'Set up DataForSEO \u2192',
     okLabel: 'Edit',
   });
+  // Surface the picked brand name in the card status so it's unmistakable
+  // which voice the blog post will use (e.g. "Writing as Brett Lechtenberg").
+  const pickedBrand = _cwBrands.find((b) => b.id === _cwPickedBrandId);
   _cwRenderCard('brandbook', {
-    okStatus: 'Saved',
-    missingStatus: 'So I write in your voice, not mine',
-    setupLabel: 'Add brand book \u2192',
-    okLabel: 'Edit',
+    okStatus: pickedBrand ? `Writing as ${pickedBrand.name}` : 'Ready',
+    missingStatus: 'Pick a brand with a filled-in book',
+    setupLabel: 'Pick a brand \u2192',
+    okLabel: 'Change',
   });
 
-  // Populate the brand book textareas with their current saved values
-  // (so re-opening Edit shows what they already have).
-  _cwPopulateBrandBookInputs();
+  // Populate the brand picker + preview from the loaded brands.
+  _cwRenderBrandPicker();
 
   // Start button gating
   const startBtn = document.getElementById('cw-start-btn');
@@ -368,8 +382,10 @@ function _cwRenderCard(key, labels) {
   if (toggle) toggle.textContent = state === 'ok' ? labels.okLabel : labels.setupLabel;
 
   // Auto-collapse if ✓ and user didn't manually expand; auto-expand if
-  // missing/invalid so they see what to do without clicking.
-  const shouldBeOpen = _cwExpanded[key] || state !== 'ok';
+  // missing/invalid so they see what to do without clicking. The brand card
+  // is the exception — picking which brand to write for is the whole point,
+  // so it always stays open and never hides the brand dropdown.
+  const shouldBeOpen = key === 'brandbook' || _cwExpanded[key] || state !== 'ok';
   if (shouldBeOpen) {
     card.classList.add('expanded');
   } else {
@@ -377,21 +393,58 @@ function _cwRenderCard(key, labels) {
   }
 }
 
-function _cwPopulateBrandBookInputs() {
-  // Pull current saved values into the textareas if the inputs are empty
-  // (don't overwrite work in progress).
-  (async () => {
-    try {
-      const bs = await window.pocketAgent.settings.get('personalize.brandStyle');
-      const wr = await window.pocketAgent.settings.get('personalize.writingRules');
-      const bsEl = document.getElementById('cw-input-brand-style');
-      const wrEl = document.getElementById('cw-input-writing-rules');
-      if (bsEl && !bsEl.value) bsEl.value = bs || '';
-      if (wrEl && !wrEl.value) wrEl.value = wr || '';
-    } catch (err) {
-      console.warn('[CW] Failed to populate brand book inputs:', err);
+// Render the brand <select> and a short read-only preview of the picked
+// brand's book so the user can confirm they chose the right voice.
+function _cwRenderBrandPicker() {
+  const select = document.getElementById('cw-brand-picker');
+  if (select) {
+    select.innerHTML = '';
+    if (_cwBrands.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'No brands yet — add one in Personalize';
+      select.appendChild(opt);
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+      for (const b of _cwBrands) {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = b.is_default ? `${b.name} (default)` : b.name;
+        if (b.id === _cwPickedBrandId) opt.selected = true;
+        select.appendChild(opt);
+      }
     }
-  })();
+  }
+
+  const preview = document.getElementById('cw-brand-preview');
+  if (preview) {
+    const picked = _cwBrands.find((b) => b.id === _cwPickedBrandId);
+    if (!picked) {
+      preview.textContent = '';
+    } else {
+      const bs = String(picked.brand_style || '').trim();
+      const wr = String(picked.writing_rules || '').trim();
+      if (!bs && !wr) {
+        preview.textContent = 'This brand has no Brand & Style or Writing Rules yet — add them in Personalize → Knowledge Base.';
+      } else {
+        const snip = (s) => (s.length > 220 ? s.slice(0, 220) + '…' : s);
+        const lines = [];
+        if (bs) lines.push('Brand & Style: ' + snip(bs));
+        if (wr) lines.push('Writing Rules: ' + snip(wr));
+        preview.textContent = lines.join('\n\n');
+      }
+    }
+  }
+}
+
+// User picked a different brand from the dropdown.
+async function _cwOnBrandPick() {
+  const select = document.getElementById('cw-brand-picker');
+  if (!select) return;
+  _cwPickedBrandId = select.value || null;
+  await _cwLoadState();
+  _cwRender();
 }
 
 // ---- Card toggle (chevron-style) ----
@@ -543,32 +596,6 @@ async function _cwSaveDataForSEO() {
   }
 }
 
-async function _cwSaveBrandBook() {
-  const bsEl = document.getElementById('cw-input-brand-style');
-  const wrEl = document.getElementById('cw-input-writing-rules');
-  const brandStyle = bsEl ? bsEl.value.trim() : '';
-  const writingRules = wrEl ? wrEl.value.trim() : '';
-  if (!brandStyle || !writingRules) {
-    _cwSetMessage('brandbook', 'Both fields are required.', 'err');
-    return;
-  }
-  _cwSetMessage('brandbook', '', null);
-  _cwBusy('cw-save-brandbook', true, 'Saving\u2026');
-  try {
-    await window.pocketAgent.settings.set('personalize.brandStyle', brandStyle);
-    await window.pocketAgent.settings.set('personalize.writingRules', writingRules);
-    _cwSetMessage('brandbook', 'Saved.', 'ok');
-    _cwShowToast('Brand book saved', 'success');
-    _cwExpanded.brandbook = false;
-    await _cwLoadState();
-    _cwRender();
-  } catch (err) {
-    _cwSetMessage('brandbook', err.message || 'Save failed.', 'err');
-  } finally {
-    _cwBusy('cw-save-brandbook', false);
-  }
-}
-
 // ---- Start ----
 
 /**
@@ -606,7 +633,7 @@ async function startContentWriter() {
     }
 
     if (!sessionId) {
-      const result = await window.pocketAgent.sessions.create('Content Writer');
+      const result = await window.pocketAgent.sessions.create('Content Writer', 'automation');
       if (!result || !result.success || !result.session) {
         _cwShowToast(result?.error || 'Failed to create session', 'error');
         return;
@@ -616,6 +643,16 @@ async function startContentWriter() {
         sessions.push(result.session);
       }
       sessionId = result.session.id;
+    }
+
+    // Target the Content Writer session at the picked brand so the system
+    // prompt injects that brand's voice. Null falls back to the default brand.
+    if (_cwPickedBrandId) {
+      try {
+        await window.pocketAgent.sessions.setBrand(sessionId, _cwPickedBrandId);
+      } catch (err) {
+        console.warn('[CW] sessions.setBrand failed:', err);
+      }
     }
 
     // Close this panel, then switch to the chat session.

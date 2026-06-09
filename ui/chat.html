@@ -66,6 +66,9 @@
     </nav>
     <div class="sidebar-bottom">
       <div class="sidebar-divider"></div>
+      <div class="sidebar-group-header sidebar-group-header--static">
+        <span class="sidebar-group-label">Tools &amp; Settings</span>
+      </div>
       <button class="sidebar-btn" id="sidebar-personalize-btn" title="Personalize">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="m15.214 5.982l1.402-1.401a1.982 1.982 0 0 1 2.803 2.803l-1.401 1.402m-2.804-2.804L6.98 14.216c-1.045 1.046-1.568 1.568-1.924 2.205S4.342 18.561 4 20c1.438-.342 2.942-.7 3.579-1.056s1.16-.879 2.205-1.924l8.234-8.234m-2.804-2.804l2.804 2.804"/><path d="M11 20h6"/></g></svg>
         <span class="sidebar-btn-label">Personalize</span>
@@ -1271,6 +1274,25 @@
         <!-- Knowledge Base Tab — brand book, style guide, business overview, references, custom instructions. -->
         <div class="pz-tab" id="pz-tab-context">
           <div class="pz-section-header"><h2>Knowledge Base</h2><p>Paste in your brand book, style guide, and operating rules — like a GPT Project or Claude system prompt. I’ll use this in every conversation.</p></div>
+          <div class="pz-brand-bar" id="pz-brand-bar">
+            <label class="pz-brand-label" for="pz-brand-select">Brand</label>
+            <select id="pz-brand-select" class="pz-brand-select" onchange="pzOnBrandChange()"></select>
+            <span id="pz-brand-default-badge" class="pz-brand-badge" style="display:none;">Default</span>
+            <div class="pz-brand-actions">
+              <button type="button" class="pz-brand-btn" onclick="playNormalClick(); pzStartAddBrand()">+ Add</button>
+              <button type="button" class="pz-brand-btn" onclick="playNormalClick(); pzStartRenameBrand()">Rename</button>
+              <button type="button" class="pz-brand-btn" id="pz-brand-setdefault" onclick="playNormalClick(); pzSetDefaultBrand()">Set default</button>
+              <button type="button" class="pz-brand-btn pz-brand-btn-danger" onclick="playNormalClick(); pzDeleteBrand()">Delete</button>
+            </div>
+          </div>
+          <!-- Inline name editor (Add / Rename). window.prompt is disabled in this
+               Electron renderer, so brand naming uses an inline input instead. -->
+          <div class="pz-brand-edit" id="pz-brand-edit" style="display:none;">
+            <input type="text" id="pz-brand-name-input" class="pz-brand-name-input" placeholder="Brand name (e.g. TSAI, PMMA)" onkeydown="pzBrandEditKey(event)" />
+            <button type="button" class="pz-brand-btn" id="pz-brand-edit-save" onclick="playNormalClick(); pzCommitBrandEdit()">Save</button>
+            <button type="button" class="pz-brand-btn" onclick="playNormalClick(); pzCancelBrandEdit()">Cancel</button>
+          </div>
+          <p class="pz-brand-hint">Brand &amp; Style, Writing Rules, and About My Business below belong to the selected brand. Documents &amp; References and Custom Instructions are shared across all brands.</p>
           <div class="pz-mode-tabs" id="pz-context-mode-tabs">
             <button class="pz-mode-tab active" data-context-tab="brandStyle">Brand &amp; Style</button>
             <button class="pz-mode-tab" data-context-tab="writingRules">Writing Rules</button>
@@ -1390,23 +1412,18 @@
         <header class="cw-card-header">
           <div class="cw-card-title">
             <span class="cw-card-badge" id="cw-badge-brandbook">⚠</span>
-            <h2>Brand book</h2>
-            <span class="cw-card-status" id="cw-status-brandbook">So I write in your voice, not mine</span>
+            <h2>Brand</h2>
+            <span class="cw-card-status" id="cw-status-brandbook">Which brand should I write for?</span>
           </div>
-          <button class="cw-card-toggle" id="cw-toggle-brandbook" onclick="playNormalClick(); _cwToggleCard('brandbook')">Add brand book →</button>
         </header>
         <div class="cw-card-body" id="cw-body-brandbook">
-          <p class="cw-hint">Tip: copy what you already have from your brand guide, an old style doc, or a ChatGPT/Claude project instruction.</p>
+          <p class="cw-hint">Pick which brand I write for. The blog will use that brand’s voice (Brand &amp; Style + Writing Rules). Edit brands in Personalize → Knowledge Base.</p>
           <div class="cw-form-row">
-            <label for="cw-input-brand-style">Brand &amp; Style</label>
-            <textarea id="cw-input-brand-style" rows="8" placeholder="Paste your brand voice / tone guidelines.&#10;&#10;e.g. People-first language. No hype, no corporate buzzwords. Three audiences: business owners ready to scale, coaches and consultants, operators who want practical AI."></textarea>
+            <label for="cw-brand-picker">Brand</label>
+            <select id="cw-brand-picker" class="cw-brand-picker" onchange="_cwOnBrandPick()"></select>
           </div>
-          <div class="cw-form-row">
-            <label for="cw-input-writing-rules">Writing Rules</label>
-            <textarea id="cw-input-writing-rules" rows="8" placeholder="Your writing rules — grammar, format, length, punctuation, sign-offs.&#10;&#10;e.g. Lowercase everywhere except proper nouns. No em-dashes. No periods at end of casual messages. Sign off emails as '— Brett'."></textarea>
-          </div>
+          <div class="cw-brand-preview" id="cw-brand-preview"></div>
           <div class="cw-form-actions">
-            <button class="cw-primary-btn" id="cw-save-brandbook" onclick="playNormalClick(); _cwSaveBrandBook()">Save</button>
             <span class="cw-form-message" id="cw-msg-brandbook"></span>
           </div>
         </div>

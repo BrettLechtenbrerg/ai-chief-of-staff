@@ -23,6 +23,7 @@ import { getMCPManager } from '../mcp/manager';
 import {
   registerAgentIPC,
   registerSessionsIPC,
+  registerBrandsIPC,
   registerSettingsIPC,
   registerFactsIPC,
   registerCronIPC,
@@ -458,6 +459,7 @@ function setupIPC(): void {
   const deps = buildIPCDeps();
   registerAgentIPC(deps);
   registerSessionsIPC(deps);
+  registerBrandsIPC(deps);
   registerSettingsIPC(deps);
   registerFactsIPC(deps);
   registerCronIPC(deps);

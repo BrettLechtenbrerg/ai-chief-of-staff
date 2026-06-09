@@ -62,6 +62,7 @@ import {
 import type { FactsCache, Fact } from './facts';
 import {
   type Session,
+  type SessionKind,
   createSession as _createSession,
   ensureSession as _ensureSession,
   getSession as _getSession,
@@ -78,10 +79,26 @@ import {
   getSdkSessionId as _getSdkSessionId,
   setSdkSessionId as _setSdkSessionId,
   clearSdkSessionId as _clearSdkSessionId,
+  getSessionBrandId as _getSessionBrandId,
+  setSessionBrandId as _setSessionBrandId,
 } from './sessions';
+import {
+  type Brand,
+  type BrandInput,
+  type BrandUpdate,
+  listBrands as _listBrands,
+  getBrand as _getBrand,
+  getDefaultBrand as _getDefaultBrand,
+  createBrand as _createBrand,
+  updateBrand as _updateBrand,
+  deleteBrand as _deleteBrand,
+  setDefaultBrand as _setDefaultBrand,
+  resolveBrand as _resolveBrand,
+} from './brands';
 
 // Types
-export type { Session } from './sessions';
+export type { Session, SessionKind } from './sessions';
+export type { Brand, BrandInput, BrandUpdate } from './brands';
 export type { Message, SmartContextOptions, SmartContext, SummarizerFn } from './messages';
 export type { Fact } from './facts';
 export type { CronJob } from './cron-jobs';
@@ -366,6 +383,108 @@ export class MemoryManager {
       this.db.exec('ALTER TABLE sessions ADD COLUMN working_directory TEXT');
       console.log('[Memory] Migrated sessions table: added working_directory column');
     }
+
+    // Migration: add kind column to sessions so the sidebar can group
+    // automation/report threads separately from normal chats. Brand-new
+    // installs default everything to 'chat'; on the FIRST migration only, we
+    // backfill the known automation thread names so pre-existing SEO/Content
+    // Writer/cron sessions land in the right group on launch. After that it's
+    // stamped at creation time (durable, rename-proof).
+    const sessColumnsForKind = this.db.pragma('table_info(sessions)') as Array<{ name: string }>;
+    if (!sessColumnsForKind.some((c) => c.name === 'kind')) {
+      this.db.exec("ALTER TABLE sessions ADD COLUMN kind TEXT DEFAULT 'chat'");
+      // One-time backfill of the threads automations are known to create.
+      // 'Weekly Content — *' uses an em dash; LIKE matches it literally.
+      this.db
+        .prepare(
+          `UPDATE sessions SET kind = 'automation'
+           WHERE name IN ('SEO Report', 'Content Writer')
+              OR name LIKE 'Weekly Content %'
+              OR name LIKE 'Phone requests%'`
+        )
+        .run();
+      console.log('[Memory] Migrated sessions table: added kind column + backfilled automations');
+    }
+
+    // Migration: multi-brand support. Create the brands table, add a nullable
+    // brand_id to sessions (null = use the default brand), and seed one
+    // 'default' brand from the legacy single brand book so nobody loses their
+    // current Brand & Style / Writing Rules / About-My-Business on upgrade.
+    this.migrateBrands();
+  }
+
+  /**
+   * Create the brands table + sessions.brand_id column, and one-time seed a
+   * default brand from the legacy personalize.* settings keys (same shared DB).
+   * Safe to run repeatedly: table/column creation is guarded, and seeding only
+   * happens when the brands table is empty.
+   */
+  private migrateBrands(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS brands (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL,
+        brand_style TEXT DEFAULT '',
+        writing_rules TEXT DEFAULT '',
+        business TEXT DEFAULT '',
+        site_url TEXT DEFAULT '',
+        is_default INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ'))),
+        updated_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ')))
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_brands_slug_unique ON brands(slug);
+    `);
+
+    // Add nullable brand_id to sessions (null falls back to the default brand).
+    const sessColumnsForBrand = this.db.pragma('table_info(sessions)') as Array<{ name: string }>;
+    if (!sessColumnsForBrand.some((c) => c.name === 'brand_id')) {
+      this.db.exec('ALTER TABLE sessions ADD COLUMN brand_id TEXT REFERENCES brands(id)');
+      console.log('[Memory] Migrated sessions table: added brand_id column');
+    }
+
+    // Seed a default brand from legacy keys, only if no brands exist yet.
+    const brandCount = (
+      this.db.prepare('SELECT COUNT(*) as c FROM brands').get() as { c: number }
+    ).c;
+    if (brandCount === 0) {
+      // The settings table is owned by SettingsManager and may not exist in
+      // isolated contexts (e.g. unit tests that construct MemoryManager alone).
+      const settingsExists = this.db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='settings'")
+        .get();
+      const readSetting = (key: string): string => {
+        if (!settingsExists) return '';
+        const row = this.db
+          .prepare('SELECT value FROM settings WHERE key = ? AND encrypted = 0')
+          .get(key) as { value: string } | undefined;
+        return row?.value ?? '';
+      };
+
+      const brandStyle = readSetting('personalize.brandStyle');
+      const writingRules = readSetting('personalize.writingRules');
+      const business = readSetting('personalize.business');
+      const siteUrl = readSetting('personalize.website') || readSetting('seo.siteUrl');
+      // Name the seeded brand after the user/business — NOT the assistant's
+      // name (personalize.agentName, e.g. "Zeus"), which is a different concept.
+      const userName = readSetting('profile.name').trim();
+      const name = userName || 'My Brand';
+
+      const slug = name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'brand';
+
+      this.db
+        .prepare(
+          `INSERT INTO brands
+             (id, name, slug, brand_style, writing_rules, business, site_url, is_default, created_at, updated_at)
+           VALUES ('default', ?, ?, ?, ?, ?, ?, 1, (strftime('%Y-%m-%dT%H:%M:%fZ')), (strftime('%Y-%m-%dT%H:%M:%fZ')))`
+        )
+        .run(name, slug, brandStyle, writingRules, business, siteUrl);
+      console.log(`[Memory] Seeded default brand "${name}" from legacy brand book`);
+    }
   }
 
   /**
@@ -548,9 +667,10 @@ export class MemoryManager {
   createSession(
     name: string,
     mode: AgentModeId = 'general',
-    workingDirectory?: string | null
+    workingDirectory?: string | null,
+    kind: SessionKind = 'chat'
   ): Session {
-    return _createSession(this.db, name, mode, workingDirectory);
+    return _createSession(this.db, name, mode, workingDirectory, kind);
   }
 
   ensureSession(id: string, mode: AgentModeId = 'general'): void {
@@ -599,6 +719,48 @@ export class MemoryManager {
 
   setSessionMode(sessionId: string, mode: AgentModeId): boolean {
     return _setSessionMode(this.db, sessionId, mode);
+  }
+
+  getSessionBrandId(sessionId: string): string | null {
+    return _getSessionBrandId(this.db, sessionId);
+  }
+
+  setSessionBrandId(sessionId: string, brandId: string | null): boolean {
+    return _setSessionBrandId(this.db, sessionId, brandId);
+  }
+
+  // ============ BRAND METHODS ============
+
+  listBrands(): Brand[] {
+    return _listBrands(this.db);
+  }
+
+  getBrand(id: string): Brand | null {
+    return _getBrand(this.db, id);
+  }
+
+  getDefaultBrand(): Brand | null {
+    return _getDefaultBrand(this.db);
+  }
+
+  createBrand(input: BrandInput): Brand {
+    return _createBrand(this.db, input);
+  }
+
+  updateBrand(id: string, update: BrandUpdate): Brand | null {
+    return _updateBrand(this.db, id, update);
+  }
+
+  deleteBrand(id: string): boolean {
+    return _deleteBrand(this.db, id);
+  }
+
+  setDefaultBrand(id: string): boolean {
+    return _setDefaultBrand(this.db, id);
+  }
+
+  resolveBrand(brandId?: string | null): Brand | null {
+    return _resolveBrand(this.db, brandId);
   }
 
   // ============ TELEGRAM CHAT SESSION METHODS ============

@@ -479,20 +479,79 @@ class SettingsManagerClass {
   }
 
   /**
+   * Resolve the brand book (Brand & Style / Writing Rules / About-My-Business)
+   * for a context. With multi-brand, the source of truth is the `brands` table
+   * (shared DB): the explicitly-selected brand wins, else the default brand.
+   * When no brand row exists at all (pre-migration / fresh), falls back to the
+   * legacy personalize.* settings keys so behavior is unchanged.
+   */
+  private resolveBrandBook(brandId?: string | null): {
+    brandStyle: string;
+    writingRules: string;
+    business: string;
+  } {
+    const legacy = {
+      brandStyle: this.get('personalize.brandStyle'),
+      writingRules: this.get('personalize.writingRules'),
+      business: this.get('personalize.business'),
+    };
+    if (!this.db) return legacy;
+
+    // Brands table may not exist yet if memory hasn't migrated (settings init
+    // runs first). Guard so we never throw building a system prompt.
+    try {
+      const tableExists = this.db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='brands'")
+        .get();
+      if (!tableExists) return legacy;
+
+      let row:
+        | { brand_style: string | null; writing_rules: string | null; business: string | null }
+        | undefined;
+      if (brandId) {
+        row = this.db
+          .prepare('SELECT brand_style, writing_rules, business FROM brands WHERE id = ?')
+          .get(brandId) as typeof row;
+      }
+      if (!row) {
+        row = this.db
+          .prepare(
+            'SELECT brand_style, writing_rules, business FROM brands WHERE is_default = 1 LIMIT 1'
+          )
+          .get() as typeof row;
+      }
+      if (!row) return legacy;
+
+      return {
+        brandStyle: row.brand_style ?? '',
+        writingRules: row.writing_rules ?? '',
+        business: row.business ?? '',
+      };
+    } catch (err) {
+      console.warn('[Settings] resolveBrandBook failed, using legacy keys:', err);
+      return legacy;
+    }
+  }
+
+  /**
    * Get user context: profile details + world (goals, struggles, fun facts)
    * + context bundle (brand style, writing rules, business, references,
    * custom instructions). Groups all "about the user" content together so
    * the chat engine can drop it into the system prompt verbatim.
+   *
+   * @param brandId Optional session brand. Brand & Style / Writing Rules /
+   *   About-My-Business resolve to that brand (selected → default → legacy).
    */
-  getFormattedUserContext(): string {
+  getFormattedUserContext(brandId?: string | null): string {
     const profile = this.getFormattedProfile();
     const goals = this.get('personalize.goals');
     const struggles = this.get('personalize.struggles');
     const funFacts = this.get('personalize.funFacts');
 
-    const brandStyle = this.get('personalize.brandStyle');
-    const writingRules = this.get('personalize.writingRules');
-    const business = this.get('personalize.business');
+    const brandBook = this.resolveBrandBook(brandId);
+    const brandStyle = brandBook.brandStyle;
+    const writingRules = brandBook.writingRules;
+    const business = brandBook.business;
     const references = this.get('personalize.references');
     const customInstructions = this.get('personalize.customInstructions');
 

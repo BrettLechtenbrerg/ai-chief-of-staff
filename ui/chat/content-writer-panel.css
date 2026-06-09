@@ -243,6 +243,36 @@
   border-color: var(--accent);
 }
 
+#content-writer-view .cw-brand-picker {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+#content-writer-view .cw-brand-picker:focus { outline: none; border-color: var(--accent); }
+#content-writer-view .cw-brand-picker:disabled { opacity: 0.6; cursor: default; }
+
+#content-writer-view .cw-brand-preview {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  padding: 10px 12px;
+  margin: 8px 0 4px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+#content-writer-view .cw-brand-preview:empty { display: none; }
+
 #content-writer-view .cw-form-actions {
   display: flex;
   align-items: center;

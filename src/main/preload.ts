@@ -58,9 +58,12 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   // ─── Sessions ────────────────────────────────────────────────────────
   sessions: {
     list: () => ipcRenderer.invoke('sessions:list'),
-    create: (name: string) => ipcRenderer.invoke('sessions:create', name),
+    create: (name: string, kind?: 'chat' | 'automation') =>
+      ipcRenderer.invoke('sessions:create', name, kind),
     rename: (id: string, name: string) => ipcRenderer.invoke('sessions:rename', id, name),
     delete: (id: string) => ipcRenderer.invoke('sessions:delete', id),
+    setBrand: (id: string, brandId: string | null) =>
+      ipcRenderer.invoke('sessions:setBrand', id, brandId),
     onChanged: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on('sessions:changed', listener);
@@ -72,6 +75,16 @@ contextBridge.exposeInMainWorld('pocketAgent', {
       ipcRenderer.on('session:cleared', listener);
       return () => ipcRenderer.removeListener('session:cleared', listener);
     },
+  },
+
+  // ─── Brands (multi-brand books) ─────────────────────────────────────
+  brands: {
+    list: () => ipcRenderer.invoke('brands:list'),
+    create: (input: BrandInput) => ipcRenderer.invoke('brands:create', input),
+    update: (id: string, update: BrandUpdate) =>
+      ipcRenderer.invoke('brands:update', id, update),
+    delete: (id: string) => ipcRenderer.invoke('brands:delete', id),
+    setDefault: (id: string) => ipcRenderer.invoke('brands:setDefault', id),
   },
 
   // ─── Facts ───────────────────────────────────────────────────────────
@@ -459,11 +472,45 @@ interface Session {
   id: string;
   name: string;
   mode?: 'general' | 'coder';
+  kind?: 'chat' | 'automation';
   working_directory?: string | null;
+  brand_id?: string | null;
   created_at: string;
   updated_at: string;
   telegram_linked?: boolean;
   telegram_group_name?: string | null;
+}
+
+interface Brand {
+  id: string;
+  name: string;
+  slug: string;
+  brand_style: string;
+  writing_rules: string;
+  business: string;
+  site_url: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BrandInput {
+  name: string;
+  slug?: string;
+  brand_style?: string;
+  writing_rules?: string;
+  business?: string;
+  site_url?: string;
+  is_default?: boolean;
+}
+
+interface BrandUpdate {
+  name?: string;
+  slug?: string;
+  brand_style?: string;
+  writing_rules?: string;
+  business?: string;
+  site_url?: string;
 }
 
 // Type declarations for renderer
@@ -561,11 +608,31 @@ declare global {
 
       sessions: {
         list: () => Promise<Session[]>;
-        create: (name: string) => Promise<{ success: boolean; session?: Session; error?: string }>;
+        create: (
+          name: string,
+          kind?: 'chat' | 'automation'
+        ) => Promise<{ success: boolean; session?: Session; error?: string }>;
         rename: (id: string, name: string) => Promise<{ success: boolean; error?: string }>;
         delete: (id: string) => Promise<{ success: boolean }>;
+        setBrand: (
+          id: string,
+          brandId: string | null
+        ) => Promise<{ success: boolean; error?: string }>;
         onChanged: (callback: () => void) => () => void;
         onCleared: (callback: (sessionId: string) => void) => () => void;
+      };
+
+      brands: {
+        list: () => Promise<Brand[]>;
+        create: (
+          input: BrandInput
+        ) => Promise<{ success: boolean; brand?: Brand; error?: string }>;
+        update: (
+          id: string,
+          update: BrandUpdate
+        ) => Promise<{ success: boolean; brand?: Brand; error?: string }>;
+        delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+        setDefault: (id: string) => Promise<{ success: boolean; error?: string }>;
       };
 
       facts: {

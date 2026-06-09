@@ -1,11 +1,22 @@
 import Database from 'better-sqlite3';
 import type { AgentModeId } from '../agent/agent-modes';
 
+/**
+ * How a session was created. 'automation' threads come from a bottom-panel
+ * action (SEO Report, Content Writer) or a cron autorun and are grouped
+ * separately in the sidebar so they're easy to find; 'chat' threads are
+ * normal user-started conversations. Classification is durable (stored, not
+ * inferred from the name) so renaming a thread never moves it between groups.
+ */
+export type SessionKind = 'chat' | 'automation';
+
 export interface Session {
   id: string;
   name: string;
   mode?: AgentModeId;
+  kind?: SessionKind;
   working_directory?: string | null;
+  brand_id?: string | null;
   created_at: string;
   updated_at: string;
   telegram_linked?: boolean;
@@ -20,7 +31,8 @@ export function createSession(
   db: Database.Database,
   name: string,
   mode: AgentModeId = 'general',
-  workingDirectory?: string | null
+  workingDirectory?: string | null,
+  kind: SessionKind = 'chat'
 ): Session {
   // Check for duplicate name
   const existing = getSessionByName(db, name);
@@ -31,10 +43,10 @@ export function createSession(
   const id = `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   db.prepare(
     `
-      INSERT INTO sessions (id, name, mode, working_directory, created_at, updated_at)
-      VALUES (?, ?, ?, ?, (strftime('%Y-%m-%dT%H:%M:%fZ')), (strftime('%Y-%m-%dT%H:%M:%fZ')))
+      INSERT INTO sessions (id, name, mode, kind, working_directory, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, (strftime('%Y-%m-%dT%H:%M:%fZ')), (strftime('%Y-%m-%dT%H:%M:%fZ')))
     `
-  ).run(id, name, mode, workingDirectory ?? null);
+  ).run(id, name, mode, kind, workingDirectory ?? null);
 
   return getSession(db, id)!;
 }
@@ -66,7 +78,7 @@ export function getSessionByName(db: Database.Database, name: string): Session |
   const row = db
     .prepare(
       `
-      SELECT id, name, mode, working_directory, created_at, updated_at
+      SELECT id, name, mode, kind, working_directory, brand_id, created_at, updated_at
       FROM sessions
       WHERE name = ?
     `
@@ -83,7 +95,7 @@ export function getSession(db: Database.Database, id: string): Session | null {
   const row = db
     .prepare(
       `
-      SELECT id, name, mode, working_directory, created_at, updated_at
+      SELECT id, name, mode, kind, working_directory, brand_id, created_at, updated_at
       FROM sessions
       WHERE id = ?
     `
@@ -102,7 +114,9 @@ export function getSessions(db: Database.Database): Session[] {
     id: string;
     name: string;
     mode: string | null;
+    kind: string | null;
     working_directory: string | null;
+    brand_id: string | null;
     created_at: string;
     updated_at: string;
     telegram_linked: number;
@@ -115,7 +129,9 @@ export function getSessions(db: Database.Database): Session[] {
         s.id,
         s.name,
         s.mode,
+        s.kind,
         s.working_directory,
+        s.brand_id,
         s.created_at,
         s.updated_at,
         CASE WHEN t.chat_id IS NOT NULL THEN 1 ELSE 0 END as telegram_linked,
@@ -131,7 +147,9 @@ export function getSessions(db: Database.Database): Session[] {
     id: row.id,
     name: row.name,
     mode: (row.mode as AgentModeId) || 'general',
+    kind: (row.kind as SessionKind) || 'chat',
     working_directory: row.working_directory,
+    brand_id: row.brand_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
     telegram_linked: !!row.telegram_linked,
@@ -281,6 +299,32 @@ export function setSessionMode(
     `
     )
     .run(mode, sessionId);
+  return result.changes > 0;
+}
+
+/**
+ * Get the brand_id for a session (null = use the default brand).
+ */
+export function getSessionBrandId(db: Database.Database, sessionId: string): string | null {
+  const row = db.prepare('SELECT brand_id FROM sessions WHERE id = ?').get(sessionId) as
+    | { brand_id: string | null }
+    | undefined;
+  return row?.brand_id ?? null;
+}
+
+/**
+ * Set the brand_id for a session (null clears it, falling back to default).
+ */
+export function setSessionBrandId(
+  db: Database.Database,
+  sessionId: string,
+  brandId: string | null
+): boolean {
+  const result = db
+    .prepare(
+      `UPDATE sessions SET brand_id = ?, updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ')) WHERE id = ?`
+    )
+    .run(brandId, sessionId);
   return result.changes > 0;
 }
 

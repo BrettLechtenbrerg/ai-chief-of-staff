@@ -824,8 +824,11 @@ export class ChatEngine {
       console.log(`[ChatEngine] Soul injected: ${soul.length} chars`);
     }
 
-    // 2. User context — profile, goals, struggles, fun facts (editable in settings)
-    const userContext = SettingsManager.getFormattedUserContext();
+    // 2. User context — profile, goals, struggles, fun facts (editable in settings).
+    // Brand book resolves to this session's brand (null → default brand) so
+    // Content Writer / SEO runs write in the targeted brand's voice.
+    const sessionBrandId = sessionId ? this.memory.getSessionBrandId(sessionId) : null;
+    const userContext = SettingsManager.getFormattedUserContext(sessionBrandId);
     if (userContext) {
       dynamicParts.push(userContext);
       console.log(`[ChatEngine] User context injected: ${userContext.length} chars`);

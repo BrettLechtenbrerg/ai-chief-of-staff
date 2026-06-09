@@ -69,6 +69,23 @@
 /* .pz-name-input inherits the shell-cream look from shared/forms.css. */
 #personalize-view .pz-name-input { width: 100%; font-size: 14px; font-weight: 500; }
 
+/* Brand selector bar (Knowledge Base tab) */
+#personalize-view .pz-brand-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 6px; }
+#personalize-view .pz-brand-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+#personalize-view .pz-brand-select { min-width: 180px; padding: 8px 30px 8px 12px; background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'Roboto', sans-serif; font-size: 14px; outline: none; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a6' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; }
+#personalize-view .pz-brand-select:focus { border-color: var(--accent); }
+#personalize-view .pz-brand-select option { background: var(--bg-secondary); color: var(--text-primary); }
+#personalize-view .pz-brand-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 8px; }
+#personalize-view .pz-brand-actions { display: flex; gap: 6px; margin-left: auto; }
+#personalize-view .pz-brand-btn { font-size: 12px; padding: 6px 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+#personalize-view .pz-brand-btn:hover { border-color: var(--accent); }
+#personalize-view .pz-brand-btn:disabled { opacity: 0.45; cursor: default; }
+#personalize-view .pz-brand-btn-danger:hover { border-color: #e0533d; color: #e0533d; }
+#personalize-view .pz-brand-hint { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; }
+#personalize-view .pz-brand-edit { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+#personalize-view .pz-brand-name-input { flex: 1; max-width: 320px; padding: 8px 12px; background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'Roboto', sans-serif; font-size: 14px; outline: none; }
+#personalize-view .pz-brand-name-input:focus { border-color: var(--accent); }
+
 /* Action bar */
 #personalize-view .pz-action-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 16px 0 6px; }
 #personalize-view .pz-action-bar .info { font-size: 12px; color: var(--text-muted); }

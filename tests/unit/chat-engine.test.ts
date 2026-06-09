@@ -198,6 +198,7 @@ function createEngine() {
     saveMessage: vi.fn(() => 1),
     getSmartContext: vi.fn(async () => ({ recentMessages: [], rollingSummary: null })),
     getSessionMode: vi.fn(() => 'general'),
+    getSessionBrandId: vi.fn(() => null),
     getFactsMemoryUsage: vi.fn(() => ({ usedChars: 0, budgetChars: 50000, pct: 0 })),
     getSoulMemoryUsage: vi.fn(() => ({ usedChars: 0, budgetChars: 50000, pct: 0 })),
   };

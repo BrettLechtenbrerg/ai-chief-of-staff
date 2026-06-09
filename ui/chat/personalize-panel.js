@@ -152,8 +152,19 @@ async function pzSaveWorld() {
 
 // ---- Context (brand book / style / business / refs / custom instructions) ----
 
-// Field IDs map 1:1 to settings keys: pz-context-<key>  <=>  personalize.<key>
-const _pzContextFields = ['brandStyle', 'writingRules', 'business', 'references', 'customInstructions'];
+// Brand-scoped fields live on the selected brand (brands table); the field id
+// pz-context-<key> maps to brand column <brandColumn>. The remaining two
+// fields are shared across brands and stay in personalize.* settings.
+const _pzBrandContextFields = {
+  brandStyle: 'brand_style',
+  writingRules: 'writing_rules',
+  business: 'business',
+};
+const _pzSharedContextFields = ['references', 'customInstructions'];
+
+// In-memory brand list + currently selected brand id for the Knowledge Base tab.
+let _pzBrands = [];
+let _pzSelectedBrandId = null;
 
 function _pzInitContextTabs() {
   const tabs = document.getElementById('pz-context-mode-tabs');
@@ -173,14 +184,226 @@ function _pzInitContextTabs() {
 async function _pzLoadContext() {
   _pzInitContextTabs();
   try {
-    for (const field of _pzContextFields) {
+    // Shared fields come from settings; wire their drop targets once.
+    for (const field of _pzSharedContextFields) {
       const input = document.getElementById(`pz-context-${field}`);
       if (input) {
         input.value = (await window.pocketAgent.settings.get(`personalize.${field}`)) || '';
         _pzWireContextDropTarget(input);
       }
     }
+    // Reset any stale inline name editor left open from a prior visit.
+    pzCancelBrandEdit();
+    // Brand-scoped fields come from the selected brand.
+    await _pzLoadBrands();
+    for (const field of Object.keys(_pzBrandContextFields)) {
+      const input = document.getElementById(`pz-context-${field}`);
+      if (input) _pzWireContextDropTarget(input);
+    }
   } catch (e) { console.error('[Personalize] Error loading context:', e); }
+}
+
+// Load brands, populate the selector, and fill the brand-scoped textareas
+// from whichever brand is selected (default brand on first load).
+async function _pzLoadBrands() {
+  try {
+    _pzBrands = (await window.pocketAgent.brands.list()) || [];
+  } catch (e) {
+    console.error('[Personalize] Error loading brands:', e);
+    _pzBrands = [];
+  }
+
+  const select = document.getElementById('pz-brand-select');
+  if (!select) return;
+
+  // Keep a valid selection: previous pick if it still exists, else default.
+  if (!_pzSelectedBrandId || !_pzBrands.some(b => b.id === _pzSelectedBrandId)) {
+    const def = _pzBrands.find(b => b.is_default);
+    _pzSelectedBrandId = def ? def.id : (_pzBrands[0] && _pzBrands[0].id) || null;
+  }
+
+  select.innerHTML = '';
+  for (const b of _pzBrands) {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = b.is_default ? `${b.name} (default)` : b.name;
+    if (b.id === _pzSelectedBrandId) opt.selected = true;
+    select.appendChild(opt);
+  }
+
+  _pzFillBrandFields();
+}
+
+// Populate the three brand-scoped textareas from the selected brand record.
+function _pzFillBrandFields() {
+  const brand = _pzBrands.find(b => b.id === _pzSelectedBrandId);
+  for (const [field, column] of Object.entries(_pzBrandContextFields)) {
+    const input = document.getElementById(`pz-context-${field}`);
+    if (input) input.value = (brand && brand[column]) || '';
+  }
+  const badge = document.getElementById('pz-brand-default-badge');
+  const setDefaultBtn = document.getElementById('pz-brand-setdefault');
+  if (badge) badge.style.display = brand && brand.is_default ? '' : 'none';
+  if (setDefaultBtn) setDefaultBtn.disabled = !!(brand && brand.is_default);
+}
+
+// Switching the brand selector: persist any edits to the current brand first
+// so unsaved field changes aren't silently lost, then load the new brand.
+async function pzOnBrandChange() {
+  const select = document.getElementById('pz-brand-select');
+  if (!select) return;
+  const nextId = select.value;
+  if (nextId === _pzSelectedBrandId) return;
+  await _pzSaveBrandFields();
+  _pzSelectedBrandId = nextId;
+  // Re-read from server so we reflect the persisted state of the picked brand.
+  await _pzLoadBrands();
+}
+
+// Persist the three brand-scoped textareas to the selected brand.
+async function _pzSaveBrandFields() {
+  if (!_pzSelectedBrandId) return true;
+  const update = {};
+  for (const [field, column] of Object.entries(_pzBrandContextFields)) {
+    const input = document.getElementById(`pz-context-${field}`);
+    if (input) update[column] = input.value;
+  }
+  try {
+    const res = await window.pocketAgent.brands.update(_pzSelectedBrandId, update);
+    if (!res || !res.success) {
+      _pzShowToast(res && res.error ? res.error : 'Couldn\'t save brand', 'error');
+      return false;
+    }
+    // Reflect saved values locally without a full reload.
+    const brand = _pzBrands.find(b => b.id === _pzSelectedBrandId);
+    if (brand && res.brand) Object.assign(brand, res.brand);
+    return true;
+  } catch (e) {
+    _pzShowToast('Couldn\'t save brand', 'error');
+    return false;
+  }
+}
+
+// window.prompt is a no-op in this Electron renderer, so Add/Rename use an
+// inline input row instead. _pzBrandEditMode is 'add' | 'rename' | null.
+let _pzBrandEditMode = null;
+
+function _pzShowBrandEdit(mode, initialValue) {
+  _pzBrandEditMode = mode;
+  const bar = document.getElementById('pz-brand-bar');
+  const editor = document.getElementById('pz-brand-edit');
+  const input = document.getElementById('pz-brand-name-input');
+  if (bar) bar.style.display = 'none';
+  if (editor) editor.style.display = '';
+  if (input) {
+    input.value = initialValue || '';
+    input.focus();
+    input.select();
+  }
+}
+
+function pzCancelBrandEdit() {
+  _pzBrandEditMode = null;
+  const bar = document.getElementById('pz-brand-bar');
+  const editor = document.getElementById('pz-brand-edit');
+  if (editor) editor.style.display = 'none';
+  if (bar) bar.style.display = '';
+}
+
+// Enter commits, Escape cancels.
+function pzBrandEditKey(event) {
+  if (event.key === 'Enter') { event.preventDefault(); pzCommitBrandEdit(); }
+  else if (event.key === 'Escape') { event.preventDefault(); pzCancelBrandEdit(); }
+}
+
+function pzStartAddBrand() {
+  _pzShowBrandEdit('add', '');
+}
+
+function pzStartRenameBrand() {
+  const brand = _pzBrands.find(b => b.id === _pzSelectedBrandId);
+  if (!brand) return;
+  _pzShowBrandEdit('rename', brand.name);
+}
+
+async function pzCommitBrandEdit() {
+  const input = document.getElementById('pz-brand-name-input');
+  const name = input ? input.value.trim() : '';
+  if (!name) { _pzShowToast('Enter a brand name', 'error'); return; }
+  const mode = _pzBrandEditMode;
+
+  if (mode === 'add') {
+    try {
+      const res = await window.pocketAgent.brands.create({ name });
+      if (!res || !res.success) {
+        _pzShowToast(res && res.error ? res.error : 'Couldn\'t add brand', 'error');
+        return;
+      }
+      _pzSelectedBrandId = res.brand.id;
+      pzCancelBrandEdit();
+      await _pzLoadBrands();
+      _pzShowToast(`Added brand "${res.brand.name}"`, 'success');
+    } catch (e) {
+      _pzShowToast('Couldn\'t add brand', 'error');
+    }
+    return;
+  }
+
+  if (mode === 'rename') {
+    const brand = _pzBrands.find(b => b.id === _pzSelectedBrandId);
+    if (!brand) { pzCancelBrandEdit(); return; }
+    if (name === brand.name) { pzCancelBrandEdit(); return; }
+    try {
+      const res = await window.pocketAgent.brands.update(brand.id, { name });
+      if (!res || !res.success) {
+        _pzShowToast(res && res.error ? res.error : 'Couldn\'t rename', 'error');
+        return;
+      }
+      pzCancelBrandEdit();
+      await _pzLoadBrands();
+      _pzShowToast('Renamed', 'success');
+    } catch (e) {
+      _pzShowToast('Couldn\'t rename', 'error');
+    }
+  }
+}
+
+async function pzSetDefaultBrand() {
+  if (!_pzSelectedBrandId) return;
+  try {
+    const res = await window.pocketAgent.brands.setDefault(_pzSelectedBrandId);
+    if (!res || !res.success) {
+      _pzShowToast(res && res.error ? res.error : 'Couldn\'t set default', 'error');
+      return;
+    }
+    await _pzLoadBrands();
+    _pzShowToast('Set as default brand', 'success');
+    _pzActivateReboot();
+  } catch (e) {
+    _pzShowToast('Couldn\'t set default', 'error');
+  }
+}
+
+async function pzDeleteBrand() {
+  const brand = _pzBrands.find(b => b.id === _pzSelectedBrandId);
+  if (!brand) return;
+  if (_pzBrands.length <= 1) {
+    _pzShowToast('Can\'t delete the last brand', 'error');
+    return;
+  }
+  if (!window.confirm(`Delete brand "${brand.name}"? Sessions using it fall back to the default brand.`)) return;
+  try {
+    const res = await window.pocketAgent.brands.delete(brand.id);
+    if (!res || !res.success) {
+      _pzShowToast(res && res.error ? res.error : 'Couldn\'t delete', 'error');
+      return;
+    }
+    _pzSelectedBrandId = null;
+    await _pzLoadBrands();
+    _pzShowToast(`Deleted "${brand.name}"`, 'success');
+  } catch (e) {
+    _pzShowToast('Couldn\'t delete', 'error');
+  }
 }
 
 // Soft cap per field. Plenty of room for a typical brand book (5-20 pages)
@@ -273,12 +496,15 @@ async function _pzExtractAndAppend(textarea, file) {
 
 async function pzSaveContext() {
   try {
-    for (const field of _pzContextFields) {
+    // Brand-scoped fields go to the selected brand; shared fields to settings.
+    const brandOk = await _pzSaveBrandFields();
+    for (const field of _pzSharedContextFields) {
       const input = document.getElementById(`pz-context-${field}`);
       if (input) {
         await window.pocketAgent.settings.set(`personalize.${field}`, input.value);
       }
     }
+    if (!brandOk) return;
     _pzShowToast('Saved! Reboot to apply', 'success');
     _pzActivateReboot();
   } catch (e) { _pzShowToast('Couldn\'t save context', 'error'); }
