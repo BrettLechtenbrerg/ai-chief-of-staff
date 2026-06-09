@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import type { IPCDependencies } from './types';
 import type { BrandInput, BrandUpdate } from '../../memory';
+import { listPublishProfiles } from '../brand-profiles';
 
 /**
  * IPC for the first-class multi-brand feature. Brands live in the shared
@@ -12,6 +13,11 @@ export function registerBrandsIPC(deps: IPCDependencies): void {
 
   ipcMain.handle('brands:list', async () => {
     return getMemory()?.listBrands() || [];
+  });
+
+  // Publishing profiles from ~/dev/_brand-profiles ([] when the dir is absent).
+  ipcMain.handle('brands:listPublishProfiles', async () => {
+    return listPublishProfiles();
   });
 
   ipcMain.handle('brands:create', async (_, input: BrandInput) => {

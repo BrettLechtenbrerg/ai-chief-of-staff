@@ -429,6 +429,7 @@ export class MemoryManager {
         writing_rules TEXT DEFAULT '',
         business TEXT DEFAULT '',
         site_url TEXT DEFAULT '',
+        profile_slug TEXT DEFAULT '',
         is_default INTEGER DEFAULT 0,
         created_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ'))),
         updated_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ')))
@@ -441,6 +442,13 @@ export class MemoryManager {
     if (!sessColumnsForBrand.some((c) => c.name === 'brand_id')) {
       this.db.exec('ALTER TABLE sessions ADD COLUMN brand_id TEXT REFERENCES brands(id)');
       console.log('[Memory] Migrated sessions table: added brand_id column');
+    }
+
+    // Add profile_slug to brands created before the publish-profile link existed.
+    const brandColumns = this.db.pragma('table_info(brands)') as Array<{ name: string }>;
+    if (!brandColumns.some((c) => c.name === 'profile_slug')) {
+      this.db.exec("ALTER TABLE brands ADD COLUMN profile_slug TEXT DEFAULT ''");
+      console.log('[Memory] Migrated brands table: added profile_slug column');
     }
 
     // Seed a default brand from legacy keys, only if no brands exist yet.

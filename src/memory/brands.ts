@@ -18,6 +18,8 @@ export interface Brand {
   writing_rules: string;
   business: string;
   site_url: string;
+  /** Slug of a ~/dev/_brand-profiles publishing profile ('' = not linked). */
+  profile_slug: string;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -31,6 +33,7 @@ interface BrandRow {
   writing_rules: string | null;
   business: string | null;
   site_url: string | null;
+  profile_slug: string | null;
   is_default: number;
   created_at: string;
   updated_at: string;
@@ -43,6 +46,7 @@ export interface BrandInput {
   writing_rules?: string;
   business?: string;
   site_url?: string;
+  profile_slug?: string;
   is_default?: boolean;
 }
 
@@ -53,6 +57,7 @@ export interface BrandUpdate {
   writing_rules?: string;
   business?: string;
   site_url?: string;
+  profile_slug?: string;
 }
 
 function rowToBrand(row: BrandRow): Brand {
@@ -64,6 +69,7 @@ function rowToBrand(row: BrandRow): Brand {
     writing_rules: row.writing_rules ?? '',
     business: row.business ?? '',
     site_url: row.site_url ?? '',
+    profile_slug: row.profile_slug ?? '',
     is_default: !!row.is_default,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -105,7 +111,7 @@ function uniqueSlug(db: Database.Database, base: string, excludeId?: string): st
 export function listBrands(db: Database.Database): Brand[] {
   const rows = db
     .prepare(
-      `SELECT id, name, slug, brand_style, writing_rules, business, site_url, is_default, created_at, updated_at
+      `SELECT id, name, slug, brand_style, writing_rules, business, site_url, profile_slug, is_default, created_at, updated_at
        FROM brands
        ORDER BY is_default DESC, name COLLATE NOCASE ASC`
     )
@@ -119,7 +125,7 @@ export function listBrands(db: Database.Database): Brand[] {
 export function getBrand(db: Database.Database, id: string): Brand | null {
   const row = db
     .prepare(
-      `SELECT id, name, slug, brand_style, writing_rules, business, site_url, is_default, created_at, updated_at
+      `SELECT id, name, slug, brand_style, writing_rules, business, site_url, profile_slug, is_default, created_at, updated_at
        FROM brands WHERE id = ?`
     )
     .get(id) as BrandRow | undefined;
@@ -132,7 +138,7 @@ export function getBrand(db: Database.Database, id: string): Brand | null {
 export function getDefaultBrand(db: Database.Database): Brand | null {
   const row = db
     .prepare(
-      `SELECT id, name, slug, brand_style, writing_rules, business, site_url, is_default, created_at, updated_at
+      `SELECT id, name, slug, brand_style, writing_rules, business, site_url, profile_slug, is_default, created_at, updated_at
        FROM brands WHERE is_default = 1 LIMIT 1`
     )
     .get() as BrandRow | undefined;
@@ -166,8 +172,8 @@ export function createBrand(db: Database.Database, input: BrandInput): Brand {
     }
     db.prepare(
       `INSERT INTO brands
-         (id, name, slug, brand_style, writing_rules, business, site_url, is_default, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, (strftime('%Y-%m-%dT%H:%M:%fZ')), (strftime('%Y-%m-%dT%H:%M:%fZ')))`
+         (id, name, slug, brand_style, writing_rules, business, site_url, profile_slug, is_default, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, (strftime('%Y-%m-%dT%H:%M:%fZ')), (strftime('%Y-%m-%dT%H:%M:%fZ')))`
     ).run(
       id,
       name,
@@ -176,6 +182,7 @@ export function createBrand(db: Database.Database, input: BrandInput): Brand {
       input.writing_rules ?? '',
       input.business ?? '',
       input.site_url ?? '',
+      input.profile_slug ?? '',
       isDefault ? 1 : 0
     );
   });
@@ -202,7 +209,7 @@ export function updateBrand(db: Database.Database, id: string, update: BrandUpda
 
   db.prepare(
     `UPDATE brands SET
-       name = ?, slug = ?, brand_style = ?, writing_rules = ?, business = ?, site_url = ?,
+       name = ?, slug = ?, brand_style = ?, writing_rules = ?, business = ?, site_url = ?, profile_slug = ?,
        updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ'))
      WHERE id = ?`
   ).run(
@@ -212,6 +219,7 @@ export function updateBrand(db: Database.Database, id: string, update: BrandUpda
     update.writing_rules ?? existing.writing_rules,
     update.business ?? existing.business,
     update.site_url ?? existing.site_url,
+    update.profile_slug ?? existing.profile_slug,
     id
   );
 

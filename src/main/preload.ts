@@ -85,6 +85,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
       ipcRenderer.invoke('brands:update', id, update),
     delete: (id: string) => ipcRenderer.invoke('brands:delete', id),
     setDefault: (id: string) => ipcRenderer.invoke('brands:setDefault', id),
+    listPublishProfiles: () => ipcRenderer.invoke('brands:listPublishProfiles'),
   },
 
   // ─── Facts ───────────────────────────────────────────────────────────
@@ -489,9 +490,24 @@ interface Brand {
   writing_rules: string;
   business: string;
   site_url: string;
+  profile_slug: string;
   is_default: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Publishing profile read from ~/dev/_brand-profiles/{slug}/profile.json
+interface PublishProfile {
+  slug: string;
+  name: string;
+  shortName: string;
+  blogBackend: string;
+  blogIndexUrl: string;
+  postUrlTemplate: string;
+  localRepoPath: string;
+  contentDir: string;
+  imageDir: string;
+  repoExists: boolean;
 }
 
 interface BrandInput {
@@ -501,6 +517,7 @@ interface BrandInput {
   writing_rules?: string;
   business?: string;
   site_url?: string;
+  profile_slug?: string;
   is_default?: boolean;
 }
 
@@ -511,6 +528,7 @@ interface BrandUpdate {
   writing_rules?: string;
   business?: string;
   site_url?: string;
+  profile_slug?: string;
 }
 
 // Type declarations for renderer
@@ -633,6 +651,7 @@ declare global {
         ) => Promise<{ success: boolean; brand?: Brand; error?: string }>;
         delete: (id: string) => Promise<{ success: boolean; error?: string }>;
         setDefault: (id: string) => Promise<{ success: boolean; error?: string }>;
+        listPublishProfiles: () => Promise<PublishProfile[]>;
       };
 
       facts: {

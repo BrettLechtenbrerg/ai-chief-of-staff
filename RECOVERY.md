@@ -257,7 +257,23 @@ First-class "Brand" concept so Content Writer / SEO can write in different brand
 - **Native-module gotcha (recurring):** tests need `better-sqlite3` built for system Node (`npm rebuild better-sqlite3`); the app needs it built for Electron (`npm run rebuild:native`). They conflict. Left on **Electron ABI** so the installed app runs. Rebuild for Node before `npm test`, back to Electron before launching.
 - **Next steps:** review the diff, run `/commit`, then a clean `dist:local` reinstall (drops the hot-installed build, picks up the hardening one-liner). Then the eyeball test: add 2+ brands, run Content Writer against each, confirm draft voice differs.
 
-#### B. Meta Ads Analyzer — ROADMAP (build next, likely next session)
+#### B. Meta Ads Analyzer — IMPLEMENTED Jun 9 (NOT YET COMMITTED; live OAuth test pending)
+
+Built per the approved plan `~/.gg/plans/meta-ads-analyzer.md`. v1 is strictly read-only analysis.
+
+- **What shipped:**
+  - `meta-ads` Connect Tools card (`src/main/ipc/connect-tools-ipc.ts`): authType `auto` (single Enable button), new `marketing` category, spawns `npx -y mcp-remote https://mcp.pipeboard.co/meta-ads-mcp --auth-timeout 120` under server name `meta-ads`. helperHtml tells the user to grant **read-only** access at the consent screen.
+  - One-click recipe `ui/chat/meta-ads-panel.js` (`startMetaAdsAnalyzer()`, mirrors seo-report-panel.js): find-or-create "Meta Ads Analyzer" automation session + kickoff prompt (discover accounts → 30-vs-30-day campaign/ad-set insights → fatigue/pacing/placement/audience/anomaly analysis → top-3 winners/problems → ≤5-item action list). Prompt hard-forbids any write tool — recommendations only — and self-gates honestly when the connection is missing or the account isn't MCP-enabled.
+  - UI wiring: `sidebar-meta-ads-btn` ("Ad Analyzer") in `ui/chat.html` between SEO Report and Connect Tools + binding in `ui/chat/event-bindings.js`.
+  - Tests: `tests/unit/connect-tools-ipc.test.ts` extended (buildEntry shape, auto-auth card, Windows visibility). Full suite 1238/1238 green; typecheck + lint clean; telemetry guard clean.
+- **URL decision (Jun 9 spike):** Meta's official `https://mcp.facebook.com/ads` is **dead for us** — its OAuth server rejects mcp-remote's dynamic client registration (`InvalidClientMetadataError: Dynamic registration is not available for this client`; same failure Claude Code users report). **Pipeboard's hosted MCP works** with mcp-remote's localhost callback — that's the shipped URL. Tradeoff accepted: Pipeboard (third party) sits in the data path; requires a Pipeboard account.
+- **Token behavior:** mcp-remote caches OAuth tokens in `~/.mcp-auth/`, so restarts are silent; if tokens lapse, the next app launch pops a browser re-auth when the manager autostarts the server — acceptable for v1, don't mistake it for a bug. First Enable click can take 30–90s (npx cold download + browser OAuth).
+- **Deferred to Phase 2:** brand→ad-account mapping (alongside workstream C). v1 recipe lists accounts and asks which to analyze.
+- **LIVE-VERIFIED Jun 9 (PM):** Brett completed the Pipeboard↔Facebook OAuth (note: Meta's consent only offers the broad "Manage ads" scope — no read-only tier exists on Pipeboard's flow, so read-only is enforced purely at the recipe layer; Brett accepted the tradeoff). Card went green: **Connected — 95 tools**, no browser popup (tokens pre-cached from the spike). Ad Analyzer ran end-to-end against PMMA (`act_70400051`): discovered 11 accounts, asked which to analyze, produced the full structured report + two drill-downs. **Zero write-tool calls** — every recommended change was routed to Ads Manager (verified by transcript; tool-call payloads aren't persisted in the messages table, so no protocol-level audit exists).
+- **Defect found + fixed during live test:** mid-run the agent **invented ad names** inside a Dynamic Creative ad set (presented variants as 5 separate ads), then self-corrected when creative-detail calls didn't resolve. Hardened `_META_ADS_KICKOFF_PROMPT` with a grounding rule: quote exact names AND IDs from tool responses; call out Dynamic Creative explicitly. Watch for recurrence.
+- **Ship decision for beta.18 is Brett's.** All code uncommitted on `main` alongside the multi-brand work.
+
+Original roadmap notes kept below for context:
 
 Brett wants the COS to analyze his Facebook/Meta ads and give feedback. **Verdict: high feasibility, low-to-moderate effort — it's an MCP server, and the COS is already an MCP host (DataForSEO/Gmail/GHL all wired the same way).**
 
@@ -272,9 +288,22 @@ Brett wants the COS to analyze his Facebook/Meta ads and give feedback. **Verdic
 - **Honest caveat:** the connector makes asking fast but doesn't make the question smart — the value is in the recipe prompt we author, exactly like Content Writer is more than "just an LLM."
 - **When building:** start with a `.gg/plans/` plan (Connect Tools card + read-only recipe + brand mapping), get Brett's approval, then implement.
 
-#### C. Unify in-app brands with the `~/dev/_brand-profiles` publishing system — ROADMAP
+#### C. Unify in-app brands with the `~/dev/_brand-profiles` publishing system — IMPLEMENTED Jun 9 (option (a): mapping column + recipe-level publish)
 
-**The single most important follow-up. There are currently TWO disconnected brand systems and they don't know about each other:**
+**Shipped Jun 9, 2026** (plan: `~/.gg/plans/brand-publish-unify.md`). What landed:
+
+- **`brands.profile_slug` column** linking a brand row to a `~/dev/_brand-profiles/{slug}` folder. Migration in `src/memory/index.ts` `migrateBrands()` (CREATE TABLE + guarded ALTER TABLE, pragma-checked, idempotent). Full CRUD pass-through in `src/memory/brands.ts` (`Brand`/`BrandInput`/`BrandUpdate`, INSERT/UPDATE/SELECTs).
+- **NEW `src/main/brand-profiles.ts`** — pure-Node reader for `~/dev/_brand-profiles`: `listPublishProfiles()` / `getPublishProfile(slug)` return `{ slug, name, shortName, blogBackend, blogIndexUrl, postUrlTemplate, localRepoPath, contentDir, imageDir, repoExists }`. Malformed profile.json skipped per-folder; missing root → `[]` (testers without the dir see nothing).
+- **IPC + preload:** `brands:listPublishProfiles` in `src/main/ipc/brands-ipc.ts`, `brands.listPublishProfiles()` + `profile_slug`/`PublishProfile` typings in `src/main/preload.ts`. (`brands:update` passes `profile_slug` through for free.)
+- **Link UI:** Personalize → Knowledge Base brand bar gained a "Publishes to" dropdown (`#pz-brand-publish-select` in `ui/chat.html`, wired in `ui/chat/personalize-panel.js`). Hidden entirely when `listPublishProfiles()` is empty. Options: "Not linked — saves to Desktop" + one per profile (`TSAI — totalsuccessai.com/blog`). On change → `brands.update(id, { profile_slug })` + toast.
+- **Brand-aware Content Writer recipe** (`ui/chat/content-writer-panel.js`): `_cwBuildKickoffPrompt(profile)` appends a `=== PUBLISH TARGET ===` block when the picked brand is linked to a `github-next` profile whose repo exists locally. The block overrides Step 10 (`__CW_APPROVE__`): keep the Desktop archive copy → read ONE existing post in `{localRepoPath}/{contentDir}` and mirror its frontmatter shape exactly (no hardcoded schema, drift-proof per repo) → write `{contentDir}/YYYY-MM-DD-{slug}.md` → cp hero to `{imageDir}/{slug}-hero.png` → `git add` ONLY those two paths, commit, push (never --force; push failure = report + stop, commit stays local) → confirmation includes the live `postUrlTemplate` URL + ~2-min Vercel note. Brand card status now shows the destination (`Writing as TSAI → publishes to totalsuccessai.com/blog` vs `→ saves to Desktop`). Unlinked brands get the base prompt **byte-identical to before** — zero tester-visible change. Profiles re-read on every `_cwLoadState()` (panel open + Start).
+- **Tests:** `tests/unit/brands.test.ts` (+2: profile_slug round-trip, legacy-DB migration adds the column), NEW `tests/unit/brand-profiles.test.ts` (7 tests: tmp fixture with valid/malformed/missing). Suite 1246 passing, typecheck + lint clean.
+- **Still owed (manual eyeball test):** Personalize → link the TSAI brand → Content Writer shows the publish destination → run the recipe → approve → confirm the post lands in `~/dev/TSAI-Site/content/blog/`, hero in `public/blog-images/`, commit pushed, live URL reported. And the inverse: unlinked brand stays Desktop-only.
+- **Rejected during planning:** option (b) (make `_brand-profiles` the source of truth for voice too) — bigger refactor, breaks testers with no profiles dir. Revisit later.
+
+<details><summary>Original roadmap notes (pre-implementation, kept for context)</summary>
+
+**There were TWO disconnected brand systems and they didn't know about each other:**
 
 1. **NEW in-app brand books** (built this session) — live in the app's SQLite `brands` table. Control **VOICE only** (Brand & Style / Writing Rules / About-My-Business injected into the system prompt). This is what the Content Writer brand picker selects.
 2. **OLD brand profiles** (the actual publishing engine, pre-existing) — live at `~/dev/_brand-profiles/{slug}/profile.json` (+ `WRITING_RULES.md`, `SOCIAL_RULES.md`, `blog-topics.md`). Control **WHERE it publishes**: site repo, blog backend, live URL, weekly cron schedule, social handles.
@@ -291,6 +320,8 @@ Brett wants the COS to analyze his Facebook/Meta ads and give feedback. **Verdic
 **The fix (mapping job, no new publishing infra needed):** link each in-app brand (SQLite `brands` row) to its `_brand-profiles` slug, so selecting a brand drives BOTH voice AND publish target (repo + contentDir + blogUrl + backend). Options to weigh during planning: (a) add a `profile_slug` column to `brands` and have the Content Writer recipe resolve the profile + run the github-next publish path on approve; or (b) make `_brand-profiles` the source of truth and have the app read brand voice from there too (de-dupes the two systems entirely — cleaner long-term, bigger refactor). Brett's `brands.site_url` column (added this session) is a partial bridge already.
 
 **When building:** `.gg/plans/` plan first, Brett approves, then implement. Do this AFTER the Meta Ads Analyzer per Brett's sequencing (Jun 9: ship multi-brand voice beta first → then Facebook → then this).
+
+</details>
 
 ---
 

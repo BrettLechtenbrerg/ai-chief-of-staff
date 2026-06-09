@@ -73,6 +73,28 @@ describe('Brands (multi-brand books)', () => {
     it('getBrand returns null for an unknown id', () => {
       expect(memory.getBrand('nope')).toBeNull();
     });
+
+    it('profile_slug defaults to empty and round-trips through create/update/list', () => {
+      // Default empty on plain create.
+      const plain = memory.createBrand({ name: 'Unlinked' });
+      expect(plain.profile_slug).toBe('');
+
+      // Honored on create.
+      const linked = memory.createBrand({ name: 'TSAI', profile_slug: 'tsai' });
+      expect(linked.profile_slug).toBe('tsai');
+
+      // Round-trips through update + list.
+      const updated = memory.updateBrand(plain.id, { profile_slug: 'pmma' });
+      expect(updated!.profile_slug).toBe('pmma');
+      const listed = memory.listBrands().find((b) => b.id === plain.id);
+      expect(listed!.profile_slug).toBe('pmma');
+
+      // Untouched by unrelated updates; clearable with ''.
+      const renamed = memory.updateBrand(plain.id, { name: 'Renamed' });
+      expect(renamed!.profile_slug).toBe('pmma');
+      const cleared = memory.updateBrand(plain.id, { profile_slug: '' });
+      expect(cleared!.profile_slug).toBe('');
+    });
   });
 
   describe('default-brand invariant', () => {
@@ -153,6 +175,54 @@ describe('Brands (multi-brand books)', () => {
       memory.deleteBrand(b.id);
       expect(memory.getSessionBrandId(session.id)).toBeNull();
     });
+  });
+});
+
+describe('Brands migration on a legacy-shaped DB (no profile_slug column)', () => {
+  it('adds the profile_slug column and preserves existing rows', async () => {
+    const os = await import('os');
+    const path = await import('path');
+    const fs = await import('fs');
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'brands-migrate-test-'));
+    const dbPath = path.join(dir, 'legacy.db');
+
+    // Mimic a DB created before the profile_slug column existed.
+    const setup = new Database(dbPath);
+    setup.exec(`
+      CREATE TABLE brands (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL,
+        brand_style TEXT DEFAULT '',
+        writing_rules TEXT DEFAULT '',
+        business TEXT DEFAULT '',
+        site_url TEXT DEFAULT '',
+        is_default INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ'))),
+        updated_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ')))
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_brands_slug_unique ON brands(slug);
+      INSERT INTO brands (id, name, slug, brand_style, is_default)
+      VALUES ('legacy-1', 'Legacy Brand', 'legacy-brand', 'Bold.', 1);
+    `);
+    setup.close();
+
+    const memory = new MemoryManager(dbPath);
+    try {
+      const brand = memory.getBrand('legacy-1');
+      expect(brand).not.toBeNull();
+      expect(brand!.name).toBe('Legacy Brand');
+      expect(brand!.brand_style).toBe('Bold.');
+      expect(brand!.profile_slug).toBe(''); // column added, defaulted empty
+
+      // The new column is writable after migration.
+      const updated = memory.updateBrand('legacy-1', { profile_slug: 'tsai' });
+      expect(updated!.profile_slug).toBe('tsai');
+    } finally {
+      memory.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

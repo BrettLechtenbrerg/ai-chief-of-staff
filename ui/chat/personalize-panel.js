@@ -166,6 +166,9 @@ const _pzSharedContextFields = ['references', 'customInstructions'];
 let _pzBrands = [];
 let _pzSelectedBrandId = null;
 
+// Publishing profiles from ~/dev/_brand-profiles ([] for testers without it).
+let _pzPublishProfiles = [];
+
 function _pzInitContextTabs() {
   const tabs = document.getElementById('pz-context-mode-tabs');
   if (!tabs) return;
@@ -213,6 +216,15 @@ async function _pzLoadBrands() {
     _pzBrands = [];
   }
 
+  try {
+    _pzPublishProfiles = window.pocketAgent.brands.listPublishProfiles
+      ? (await window.pocketAgent.brands.listPublishProfiles()) || []
+      : [];
+  } catch (e) {
+    console.error('[Personalize] Error loading publish profiles:', e);
+    _pzPublishProfiles = [];
+  }
+
   const select = document.getElementById('pz-brand-select');
   if (!select) return;
 
@@ -245,6 +257,67 @@ function _pzFillBrandFields() {
   const setDefaultBtn = document.getElementById('pz-brand-setdefault');
   if (badge) badge.style.display = brand && brand.is_default ? '' : 'none';
   if (setDefaultBtn) setDefaultBtn.disabled = !!(brand && brand.is_default);
+  _pzFillPublishRow(brand);
+}
+
+// Show/refresh the "Publishes to" dropdown for the selected brand. Hidden
+// entirely when there are no publishing profiles on this machine.
+function _pzFillPublishRow(brand) {
+  const row = document.getElementById('pz-brand-publish-row');
+  const select = document.getElementById('pz-brand-publish-select');
+  if (!row || !select) return;
+
+  if (!_pzPublishProfiles.length) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+
+  const current = (brand && brand.profile_slug) || '';
+  select.innerHTML = '';
+
+  const noneOpt = document.createElement('option');
+  noneOpt.value = '';
+  noneOpt.textContent = 'Not linked — saves to Desktop';
+  select.appendChild(noneOpt);
+
+  for (const p of _pzPublishProfiles) {
+    const opt = document.createElement('option');
+    opt.value = p.slug;
+    const dest = (p.blogIndexUrl || '').replace(/^https?:\/\/(www\.)?/, '');
+    opt.textContent = dest ? `${p.shortName || p.name} — ${dest}` : (p.shortName || p.name);
+    select.appendChild(opt);
+  }
+  select.value = current;
+  // Linked profile vanished from disk — fall back to the "not linked" option.
+  if (select.value !== current) select.value = '';
+}
+
+// Persist the publishing-profile link for the selected brand.
+async function pzOnBrandPublishChange() {
+  const select = document.getElementById('pz-brand-publish-select');
+  const brand = _pzBrands.find(b => b.id === _pzSelectedBrandId);
+  if (!select || !brand) return;
+  const profileSlug = select.value;
+  try {
+    const res = await window.pocketAgent.brands.update(brand.id, { profile_slug: profileSlug });
+    if (!res || !res.success) {
+      _pzShowToast(res && res.error ? res.error : 'Couldn\'t link publishing profile', 'error');
+      select.value = brand.profile_slug || '';
+      return;
+    }
+    if (res.brand) Object.assign(brand, res.brand);
+    const profile = _pzPublishProfiles.find(p => p.slug === profileSlug);
+    _pzShowToast(
+      profile
+        ? `"${brand.name}" now publishes to ${profile.shortName || profile.name}`
+        : `"${brand.name}" unlinked — saves to Desktop`,
+      'success'
+    );
+  } catch (e) {
+    _pzShowToast('Couldn\'t link publishing profile', 'error');
+    select.value = brand.profile_slug || '';
+  }
 }
 
 // Switching the brand selector: persist any edits to the current brand first

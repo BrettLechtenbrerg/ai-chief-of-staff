@@ -27,6 +27,11 @@ const _cwState = {
 let _cwBrands = [];
 let _cwPickedBrandId = null;
 
+// Publishing profiles from ~/dev/_brand-profiles. When the picked brand is
+// linked to one (brands.profile_slug), the approve step also publishes the
+// post into that brand's site repo. Empty for testers without the dir.
+let _cwPublishProfiles = [];
+
 // Track which cards the user has manually expanded so re-rendering after a
 // save doesn't snap an in-progress card closed underneath them.
 const _cwExpanded = {
@@ -41,7 +46,7 @@ const _cwExpanded = {
 // this as a single user turn and follows the steps. Hard rules at the
 // bottom keep it from publishing externally or skipping the brand book.
 
-const _CW_KICKOFF_PROMPT = [
+const _CW_KICKOFF_PROMPT_BASE = [
   'You are running the Content Writer routine for me. Follow each step in order. If any step fails, tell me what went wrong and stop — don\u2019t push or write anything broken to disk.',
   '',
   'Step 1 — Read my brand book.',
@@ -195,6 +200,49 @@ const _CW_KICKOFF_PROMPT = [
   'Begin with Step 1 now.',
 ].join('\n');
 
+/**
+ * Build the kickoff prompt for a run. With no publish profile (or a profile
+ * that isn't a locally-cloned github-next repo) this returns the base prompt
+ * byte-identical to the historical behavior — Desktop-only output. With a
+ * linked profile, a PUBLISH TARGET block is appended that overrides Step 10
+ * to also write + commit + push the post into the brand's site repo.
+ */
+function _cwBuildKickoffPrompt(publishProfile) {
+  const p = publishProfile;
+  if (!p || p.blogBackend !== 'github-next' || !p.repoExists || !p.localRepoPath || !p.contentDir || !p.imageDir) {
+    return _CW_KICKOFF_PROMPT_BASE;
+  }
+
+  const publishBlock = [
+    '',
+    '=== PUBLISH TARGET ===',
+    `This brand publishes to its live site via a local git repo. This block OVERRIDES Step 10 and, for these exact steps only, overrides the "never post to any external service" hard rule — the git push below is the one sanctioned external publish.`,
+    '',
+    `Site repo: ${p.localRepoPath}`,
+    `Posts dir: ${p.localRepoPath}/${p.contentDir}`,
+    `Images dir: ${p.localRepoPath}/${p.imageDir}`,
+    `Live post URL template: ${p.postUrlTemplate || '(unknown — omit the URL line)'}`,
+    '',
+    'When (and ONLY when) my message is the exact literal `__CW_APPROVE__`, replace Step 10 with all of the following in one turn:',
+    `  a) Save the Desktop archive copy exactly as Step 10a describes (write blog-post.md to the $HOME/Desktop/Blogs/YYYY-MM-DD-slug/ folder). The Desktop copy is the archive; the repo copy below is the publish.`,
+    `  b) List ${p.localRepoPath}/${p.contentDir} and READ ONE recent existing post in it. Mirror its frontmatter shape EXACTLY — same fields, same order, same formatting (e.g. title, date, slug, description, keyword, hero_image, faq if present). Do not invent fields it doesn't have or drop fields it does have; fill faq-style fields with sensible content derived from the article.`,
+    `  c) Use the write tool to save the post (mirrored frontmatter + the approved article body) to ${p.localRepoPath}/${p.contentDir}/YYYY-MM-DD-<slug>.md using today's date and the Step 5 slug.`,
+    `  d) Copy the hero image into the repo: shell_command \`cp "$HOME/Desktop/Blogs/YYYY-MM-DD-slug/hero.png" "${p.localRepoPath}/${p.imageDir}/<slug>-hero.png"\` and reference it in the frontmatter as /${p.imageDir.replace(/^public\//, '')}/<slug>-hero.png (mirror how the existing post references its hero image).`,
+    `  e) Commit and push ONLY those two files:`,
+    `       git -C "${p.localRepoPath}" add "${p.contentDir}/YYYY-MM-DD-<slug>.md" "${p.imageDir}/<slug>-hero.png"`,
+    `       git -C "${p.localRepoPath}" commit -m "content(<slug>): add blog post"`,
+    `       git -C "${p.localRepoPath}" push`,
+    '     Hard rules for this git step: stage ONLY those two paths — never `git add -A` or `.`; NEVER use --force or rewrite history; never touch, revert, or commit any other file in the repo. If the push fails (auth, conflict, network), report the exact error and STOP — leave the commit local, do not retry with different flags.',
+    `  f) Reply with ONE short confirmation that includes the live URL${p.postUrlTemplate ? ` (${p.postUrlTemplate} with {slug} replaced by the post slug)` : ''} and a note that Vercel deploys it in ~2 minutes, then end with the same marker Step 10 requires on its own final line:`,
+    '[[CW_STATE:ready_for_spin]]',
+    '',
+    'Everything else — revisions, Step 11 social spin, all other hard rules — is unchanged.',
+    '=== END PUBLISH TARGET ===',
+  ].join('\n');
+
+  return _CW_KICKOFF_PROMPT_BASE + '\n' + publishBlock;
+}
+
 // ---- Show / Hide ----
 
 function showContentWriterPanel() {
@@ -296,6 +344,17 @@ async function _cwLoadState() {
     _cwState.brandbook = 'missing';
   }
 
+  // Publishing profiles — re-read every load so edits to profile.json on
+  // disk are picked up the next time the panel opens or Start is clicked.
+  try {
+    _cwPublishProfiles = window.pocketAgent.brands.listPublishProfiles
+      ? (await window.pocketAgent.brands.listPublishProfiles()) || []
+      : [];
+  } catch (err) {
+    console.warn('[CW] Failed to list publish profiles:', err);
+    _cwPublishProfiles = [];
+  }
+
   // DataForSEO — connection exists in mcp-servers.json. Match is rename-proof:
   // the May 28 recovery renamed the entry `dataforseo` -> `dataforseo-mcp-server`
   // so its Connect Tools card would resolve, which silently broke this card's
@@ -341,11 +400,20 @@ function _cwRender() {
     setupLabel: 'Set up DataForSEO \u2192',
     okLabel: 'Edit',
   });
-  // Surface the picked brand name in the card status so it's unmistakable
-  // which voice the blog post will use (e.g. "Writing as Brett Lechtenberg").
+  // Surface the picked brand name + publish destination in the card status
+  // so it's unmistakable which voice the post will use and where the
+  // approve step sends it (site repo vs Desktop-only).
   const pickedBrand = _cwBrands.find((b) => b.id === _cwPickedBrandId);
+  const pickedProfile = _cwResolvePublishProfile(pickedBrand);
+  let brandOkStatus = 'Ready';
+  if (pickedBrand) {
+    const dest = pickedProfile
+      ? `publishes to ${(pickedProfile.blogIndexUrl || pickedProfile.shortName || pickedProfile.name).replace(/^https?:\/\/(www\.)?/, '')}`
+      : 'saves to Desktop';
+    brandOkStatus = `Writing as ${pickedBrand.name} \u2192 ${dest}`;
+  }
   _cwRenderCard('brandbook', {
-    okStatus: pickedBrand ? `Writing as ${pickedBrand.name}` : 'Ready',
+    okStatus: brandOkStatus,
     missingStatus: 'Pick a brand with a filled-in book',
     setupLabel: 'Pick a brand \u2192',
     okLabel: 'Change',
@@ -436,6 +504,18 @@ function _cwRenderBrandPicker() {
       }
     }
   }
+}
+
+// Resolve a brand's linked publishing profile, but only when it's actually
+// publishable from this machine (github-next backend + repo cloned locally).
+// Returns null otherwise so callers fall back to Desktop-only behavior.
+function _cwResolvePublishProfile(brand) {
+  if (!brand || !brand.profile_slug) return null;
+  const profile = _cwPublishProfiles.find((p) => p.slug === brand.profile_slug);
+  if (!profile) return null;
+  if (profile.blogBackend !== 'github-next' || !profile.repoExists) return null;
+  if (!profile.localRepoPath || !profile.contentDir || !profile.imageDir) return null;
+  return profile;
 }
 
 // User picked a different brand from the dropdown.
@@ -670,7 +750,10 @@ async function startContentWriter() {
     await new Promise((resolve) => setTimeout(resolve, 0));
     const messageInput = document.getElementById('message-input');
     if (messageInput) {
-      messageInput.value = _CW_KICKOFF_PROMPT;
+      // Brand-aware kickoff: a linked publishing profile adds the PUBLISH
+      // TARGET block; unlinked brands get the base (Desktop-only) prompt.
+      const pickedBrand = _cwBrands.find((b) => b.id === _cwPickedBrandId);
+      messageInput.value = _cwBuildKickoffPrompt(_cwResolvePublishProfile(pickedBrand));
     }
     if (typeof sendMessage === 'function') {
       await sendMessage();

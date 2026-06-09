@@ -1298,6 +1298,12 @@
             <button type="button" class="pz-brand-btn" onclick="playNormalClick(); pzCancelBrandEdit()">Cancel</button>
           </div>
           <p class="pz-brand-hint">Brand &amp; Style, Writing Rules, and About My Business below belong to the selected brand. Documents &amp; References and Custom Instructions are shared across all brands.</p>
+          <!-- Publishing-profile link — hidden unless ~/dev/_brand-profiles has profiles,
+               so testers without the profiles dir never see this row. -->
+          <div class="pz-brand-publish-row" id="pz-brand-publish-row" style="display:none;">
+            <label class="pz-brand-label" for="pz-brand-publish-select">Publishes to</label>
+            <select id="pz-brand-publish-select" class="pz-brand-select" onchange="pzOnBrandPublishChange()"></select>
+          </div>
           <div class="pz-mode-tabs" id="pz-context-mode-tabs">
             <button class="pz-mode-tab active" data-context-tab="brandStyle">Brand &amp; Style</button>
             <button class="pz-mode-tab" data-context-tab="writingRules">Writing Rules</button>
