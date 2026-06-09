@@ -33,6 +33,7 @@ bindClick('sidebar-personalize-btn', () => { playNormalClick(); togglePersonaliz
 bindClick('sidebar-routines-btn', () => { playNormalClick(); toggleRoutinesPanel(); });
 bindClick('sidebar-content-writer-btn', () => { playNormalClick(); toggleContentWriterPanel(); });
 bindClick('sidebar-seo-report-btn', () => { playNormalClick(); startSeoReport(); });
+bindClick('sidebar-meta-ads-btn', () => { playNormalClick(); startMetaAdsAnalyzer(); });
 bindClick('sidebar-connect-tools-btn', () => { playNormalClick(); toggleConnectToolsPanel(); });
 bindClick('sidebar-brain-btn', () => { playNormalClick(); toggleBrainPanel(); });
 bindClick('sidebar-docs-btn', () => { playNormalClick(); openDocs(); });

@@ -3,7 +3,7 @@
  *
  * Layered on top of the lower-level connections-ipc.ts: this surface knows
  * about the curated *menu* of supported tools (Gmail, Calendar, Drive,
- * Bookmarks, GHL, DataForSEO, Firecrawl), what kind of auth each one
+ * Bookmarks, GHL, DataForSEO, Firecrawl, Meta Ads), what kind of auth each one
  * needs, and how to write the right `mcp-servers.json` entry for each.
  *
  * Exposed via preload as `window.pocketAgent.connectTools.*`:
@@ -45,7 +45,8 @@ export type SupportedToolId =
   | 'bookmarks'
   | 'ghl'
   | 'dataforseo'
-  | 'firecrawl';
+  | 'firecrawl'
+  | 'meta-ads';
 
 export type AuthType = 'google-oauth' | 'api-key' | 'two-field' | 'auto';
 
@@ -59,7 +60,7 @@ export interface SupportedToolField {
 export interface SupportedTool {
   id: SupportedToolId;
   name: string;
-  category: 'google' | 'crm' | 'research' | 'browser';
+  category: 'google' | 'crm' | 'research' | 'browser' | 'marketing';
   description: string;
   authType: AuthType;
   fields?: SupportedToolField[];
@@ -220,6 +221,19 @@ function getSupportedTools(): SupportedTool[] {
       helperHtml:
         '<strong>Free tier:</strong> Firecrawl gives 500 credits/month free — no card required. Find your API key on the <strong>API Keys</strong> page of your dashboard. It starts with <code>fc-</code>.',
     },
+    {
+      id: 'meta-ads',
+      name: 'Meta Ads',
+      category: 'marketing',
+      description:
+        'Read-only access to your Facebook/Instagram ad accounts: campaigns, ad sets, spend and performance insights.',
+      authType: 'auto',
+      mcpServerName: 'meta-ads',
+      signupUrl: 'https://pipeboard.co',
+      dashboardUrl: 'https://pipeboard.co',
+      helperHtml:
+        '<strong>Heads up:</strong> clicking Enable opens your browser to authorize via Pipeboard, which connects to your Meta (Facebook) account. Sign in with the account that has Business Manager access to your ad accounts. Meta\u2019s consent screen grants ad-management permission (it has no narrower tier), but the Ad Analyzer is <strong>read-only by design</strong> — it never changes your campaigns, only recommends. First connect can take a minute or two — the browser window is part of the flow, not an error.',
+    },
   ];
 }
 
@@ -295,6 +309,27 @@ function buildEntry(
         command: 'npx',
         args: ['-y', 'firecrawl-mcp'],
         env: { FIRECRAWL_API_KEY: p.apiKey },
+        ...acosMeta,
+      };
+    }
+    case 'meta-ads': {
+      // Remote MCP bridged over stdio via mcp-remote. Spike result (Jun 9):
+      // Meta's official endpoint (mcp.facebook.com/ads) rejects mcp-remote's
+      // dynamic client registration ("Dynamic registration is not available
+      // for this client"), so we use Pipeboard's hosted Meta Ads MCP, whose
+      // OAuth flow works with mcp-remote's localhost callback. Tokens cache
+      // in ~/.mcp-auth so restarts are silent. --auth-timeout 120 because
+      // the browser OAuth (Pipeboard login + Meta connect) easily exceeds
+      // the 30s default on first run.
+      return {
+        command: 'npx',
+        args: [
+          '-y',
+          'mcp-remote',
+          'https://mcp.pipeboard.co/meta-ads-mcp',
+          '--auth-timeout',
+          '120',
+        ],
         ...acosMeta,
       };
     }

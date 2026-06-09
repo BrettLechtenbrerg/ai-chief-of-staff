@@ -167,6 +167,25 @@ describe('connect-tools-ipc', () => {
       expect(entry.env!.FIRECRAWL_API_KEY).toBe('fc-abc');
     });
 
+    it('builds Meta Ads entry bridging the remote MCP via mcp-remote', () => {
+      const tools = __test__.getSupportedTools();
+      const meta = tools.find((t) => t.id === 'meta-ads')!;
+      const entry = __test__.buildEntry(meta, {}, paths);
+      // npx → mcp-remote stdio bridge to Pipeboard's hosted Meta Ads MCP
+      // (Meta's official endpoint rejects mcp-remote's dynamic client
+      // registration — Jun 9 spike). OAuth happens in the system browser, so
+      // there's no env/secret in the entry.
+      expect(entry.command).toBe('npx');
+      expect(entry.args).toContain('mcp-remote');
+      expect(entry.args).toContain('https://mcp.pipeboard.co/meta-ads-mcp');
+      // First-run browser OAuth easily exceeds mcp-remote's 30s default.
+      const args = entry.args!;
+      expect(args[args.indexOf('--auth-timeout') + 1]).toBe('120');
+      expect(entry.env).toBeUndefined();
+      expect((entry as Record<string, unknown>)._acos_managed).toBe(true);
+      expect((entry as Record<string, unknown>)._acos_tool_id).toBe('meta-ads');
+    });
+
     it('every entry is flagged _acos_managed + has _acos_tool_id', () => {
       const tools = __test__.getSupportedTools();
       for (const t of tools) {
@@ -212,6 +231,16 @@ describe('connect-tools-ipc', () => {
       }
     });
 
+    it('meta-ads is an auto-auth card with read-only guidance in the helper', () => {
+      const meta = __test__.getSupportedTools().find((t) => t.id === 'meta-ads')!;
+      // authType 'auto' renders a single Enable button — no input fields.
+      expect(meta.authType).toBe('auto');
+      expect(meta.fields).toBeUndefined();
+      expect(meta.mcpServerName).toBe('meta-ads');
+      expect(meta.helperHtml).toMatch(/read-only/i);
+      expect(meta.helperHtml).toMatch(/browser/i);
+    });
+
     it('exposes GHL alias server names so hand-managed entries are recognized for status', () => {
       const ghl = __test__.getSupportedTools().find((t) => t.id === 'ghl')!;
       expect(ghl.mcpServerName).toBe('ghl-mcp');
@@ -234,6 +263,14 @@ describe('connect-tools-ipc', () => {
     it('no supported tool is hidden on Windows anymore', () => {
       const tools = __test__.getSupportedTools();
       expect(tools.every((t) => !t.unavailableOnWindows)).toBe(true);
+    });
+
+    it('meta-ads is listed on Windows (mcp-remote is pure JS under npx)', () => {
+      const tools = __test__.getSupportedTools();
+      const meta = tools.find((t) => t.id === 'meta-ads')!;
+      expect(meta.unavailableOnWindows).toBeUndefined();
+      const winVisible = tools.filter((t) => !t.unavailableOnWindows);
+      expect(winVisible.some((t) => t.id === 'meta-ads')).toBe(true);
     });
   });
 
