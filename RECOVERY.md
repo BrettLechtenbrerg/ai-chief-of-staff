@@ -241,6 +241,59 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
+### Next session — pick up here (added Jun 9 — multi-brand in flight + Meta Ads Analyzer queued)
+
+**Two things live here: (A) finish/commit the multi-brand work that's currently uncommitted on `main`, then (B) build the Meta Ads Analyzer (the next feature Brett wants).**
+
+#### A. Multi-Brand Books (Phase 1) — IMPLEMENTED, NOT YET COMMITTED
+
+First-class "Brand" concept so Content Writer / SEO can write in different brand voices (TSAI, PMMA, etc.) instead of one global brand book. Built and installed locally this session; **diff not reviewed/committed yet.**
+
+- **New:** `src/memory/brands.ts` (brands table CRUD: slug uniqueness, single-default invariant, `resolveBrand` selected→default fallback), `src/main/ipc/brands-ipc.ts` (`brands:list/create/update/delete/setDefault` + `sessions:setBrand`), `tests/unit/brands.test.ts` (16 tests, pass).
+- **Changed:** `src/memory/index.ts` (migration: creates `brands`, adds nullable `sessions.brand_id`, one-time seeds a `default` brand from legacy `personalize.*` keys — zero data loss), `src/memory/sessions.ts` (`brand_id` + get/set), `src/settings/index.ts` (`getFormattedUserContext(brandId?)` resolves brand book from the brands table, legacy fallback), `src/agent/chat-engine.ts` (injects the session's brand book per turn), `src/main/preload.ts` + ipc registration, `ui/chat/personalize-panel.{js,css}` (brand manager: add/rename/delete/set-default; Brand & Style / Writing Rules / About-My-Business edit the selected brand; References + Custom Instructions stay shared), `ui/chat/content-writer-panel.{js}` + `ui/chat.html` (brand-book card → brand picker; stamps `brand_id` on the session before the recipe fires).
+- **Two follow-up bugfixes already applied this session:** (1) seed named the brand after `personalize.agentName` ("Zeus", the assistant) — corrected to `profile.name`; also manually renamed the live default brand to "Brett Lechtenberg" / slug `brettlechtenberg` in Brett's DB. (2) Add/Rename used `window.prompt`, which is a **no-op in this Electron renderer** — replaced with an inline input row (Enter=save, Esc=cancel). `window.confirm` DOES work here, so Delete was fine. **Lesson: never use `window.prompt` in renderer UI — use inline inputs.**
+- **One un-shipped hardening edit:** `_pzLoadContext` now calls `pzCancelBrandEdit()` to reset a stale inline editor — in source, NOT yet in the installed build (skipped a rebuild for a one-liner edge case). Rolls in on next build.
+- **Deferred (Phase 2):** the SEO Report tool (`src/tools/seo-report.ts`) still uses the old file/settings-based single brand — intentionally untouched. Brand-aware SEO is the Phase 2 follow-up (each brand could map to its own Search Console property / site_url; `brands.site_url` column already exists for this).
+- **Native-module gotcha (recurring):** tests need `better-sqlite3` built for system Node (`npm rebuild better-sqlite3`); the app needs it built for Electron (`npm run rebuild:native`). They conflict. Left on **Electron ABI** so the installed app runs. Rebuild for Node before `npm test`, back to Electron before launching.
+- **Next steps:** review the diff, run `/commit`, then a clean `dist:local` reinstall (drops the hot-installed build, picks up the hardening one-liner). Then the eyeball test: add 2+ brands, run Content Writer against each, confirm draft voice differs.
+
+#### B. Meta Ads Analyzer — ROADMAP (build next, likely next session)
+
+Brett wants the COS to analyze his Facebook/Meta ads and give feedback. **Verdict: high feasibility, low-to-moderate effort — it's an MCP server, and the COS is already an MCP host (DataForSEO/Gmail/GHL all wired the same way).**
+
+- **Meta shipped an OFFICIAL MCP connector** (Apr 29 2026) at `https://mcp.facebook.com/ads` — 29 tools across performance reporting, campaign management, catalog management, signal diagnostics. Free, OAuth login, no Meta developer app / no Marketing-API-approval wait. This is the recommended default path.
+  - Known caveat: phased rollout — `is_ads_mcp_enabled: false` for some accounts. Fallback while waiting: third-party MCPs (Pipeboard, Adzviser, GoMarble).
+- **Open-source self-host option:** `pipeboard-co/meta-ads-mcp` (★973, Python, actively maintained) — 42 Meta tools; bundle-able directly into the COS if we don't want a remote URL dependency.
+- **Proposed shape (mirror existing patterns):**
+  1. A "Connect Meta Ads" card in the Connect Tools panel (mirror the DataForSEO card) — register `https://mcp.facebook.com/ads` (or the self-hosted server) in `mcp-servers.json`.
+  2. A read-only **"Meta Ads Analyzer" recipe/routine** (mirror Content Writer / SEO Report panels): a bottom-panel button that boots an `automation`-kind session with a kickoff prompt encoding what good ad performance looks like (creative fatigue via frequency vs. performance, audience/lookalike comparison, CPA/ROAS by placement, spend pacing) and returns a structured feedback report.
+  3. **Brand-aware:** tie it to the new brand system — a brand could map to its Meta ad account, so "analyze TSAI's ads" pulls the right account.
+- **Scope v1 = analysis/read-only** (feedback + recommendations, NOT auto-changes). Meta's connector defaults new campaigns to paused and won't delete without explicit instruction, but keep v1 strictly diagnostic. Writes (budget shifts, pausing fatigued ad sets) are a later phase behind explicit confirmation.
+- **Honest caveat:** the connector makes asking fast but doesn't make the question smart — the value is in the recipe prompt we author, exactly like Content Writer is more than "just an LLM."
+- **When building:** start with a `.gg/plans/` plan (Connect Tools card + read-only recipe + brand mapping), get Brett's approval, then implement.
+
+#### C. Unify in-app brands with the `~/dev/_brand-profiles` publishing system — ROADMAP
+
+**The single most important follow-up. There are currently TWO disconnected brand systems and they don't know about each other:**
+
+1. **NEW in-app brand books** (built this session) — live in the app's SQLite `brands` table. Control **VOICE only** (Brand & Style / Writing Rules / About-My-Business injected into the system prompt). This is what the Content Writer brand picker selects.
+2. **OLD brand profiles** (the actual publishing engine, pre-existing) — live at `~/dev/_brand-profiles/{slug}/profile.json` (+ `WRITING_RULES.md`, `SOCIAL_RULES.md`, `blog-topics.md`). Control **WHERE it publishes**: site repo, blog backend, live URL, weekly cron schedule, social handles.
+
+**How publishing actually works today (corrected understanding — it is NOT GHL, NOT the Content Writer panel's Approve button):** All three of Brett's sites are `github-next` backend = Next.js code repos auto-deployed by Vercel. The weekly content/SEO cron (per `~/dev/_brand-profiles/SEO-WEEKLY-ROUTINE.md`) writes the post markdown into the brand's site repo `content/blog/` + hero image into `public/blog-images/`, commits/PRs, Vercel deploys, post goes live at `{blogIndexUrl}/{slug}`. The bottom-panel "Content Writer" recipe's `__CW_APPROVE__` only saves a `.md` to `~/Desktop/Blogs/` — it does NOT publish. (`src/tools/image-gen.ts` already hardcodes the three `public/blog-images/` dirs; `src/tools/daily-posting-packet.ts` has the `blogBackend: 'github-next' | 'ghl'` concept.)
+
+**Verified Jun 9 — all three brands are publish-ready (`github-next`):**
+- **Brett** (`brett-personal`): repo `BL-2026-Personal-Site` (`~/dev/BL-2026-Personal-Site`) → brettlechtenberg.com/blog
+- **TSAI** (`tsai`): repo `TSAI-Site` (`~/dev/TSAI-Site`) → totalsuccessai.com/blog
+- **PMMA** (`pmma`): repo `PMMA-Website-2026-Master` (`~/dev/PMMA-Website-2026-Master`) → personalmasterymartialarts.com/blog
+
+**The gap:** picking "TSAI" in the in-app Content Writer dropdown changes the voice but does NOT route publishing to TSAI's repo — the two systems aren't linked. So multi-brand voice works; multi-brand *auto-publish to the right site* does not (from the in-app picker).
+
+**The fix (mapping job, no new publishing infra needed):** link each in-app brand (SQLite `brands` row) to its `_brand-profiles` slug, so selecting a brand drives BOTH voice AND publish target (repo + contentDir + blogUrl + backend). Options to weigh during planning: (a) add a `profile_slug` column to `brands` and have the Content Writer recipe resolve the profile + run the github-next publish path on approve; or (b) make `_brand-profiles` the source of truth and have the app read brand voice from there too (de-dupes the two systems entirely — cleaner long-term, bigger refactor). Brett's `brands.site_url` column (added this session) is a partial bridge already.
+
+**When building:** `.gg/plans/` plan first, Brett approves, then implement. Do this AFTER the Meta Ads Analyzer per Brett's sequencing (Jun 9: ship multi-brand voice beta first → then Facebook → then this).
+
+---
+
 ### Next session — pick up here (added May 28, evening — READY TO SHIP beta.14)
 
 **Status: 4 fixes committed on `main` (NOT pushed, NOT shipped). All hot-copied into the local installed app and verified working. Ship beta.14 tomorrow.**
