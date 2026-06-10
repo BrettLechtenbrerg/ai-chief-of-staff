@@ -323,6 +323,21 @@ Brett wants the COS to analyze his Facebook/Meta ads and give feedback. **Verdic
 
 </details>
 
+#### D. Meta Ad Creator — IMPLEMENTED Jun 9 (draft-only; dormant autopost behind `metaAds.autopost`)
+
+Built per the approved plan `~/.gg/plans/meta-ad-creator.md`. Ad *creation* gets its own sidebar feature + session, separate from the read-only Ad Analyzer. **Brett's explicit requirements: draft + save only — the agent must NOT post ads to Meta; build the autopost path now but leave it dormant.**
+
+- **What shipped:**
+  - One-click recipe `ui/chat/meta-ad-creator-panel.js` (`startMetaAdCreator()`, mirrors meta-ads-panel.js): find-or-create "Meta Ad Creator" automation session, stamp the **default brand** via `sessions:setBrand` (so the brand book voice is injected; Brett can redirect in-chat), fire the kickoff prompt. Recipe: confirm brand voice → ask offer/goal and wait → optional READ-ONLY Meta performance snapshot (top CTR hooks, last 30 days; proceeds without it — creation never hard-requires the analyzer connection) → 3 distinct concepts (primary text ~125-char hook, headline ≤40, description ≤30, CTA button, image direction) → `generate_blog_image` to `~/Desktop/Ads/YYYY-MM-DD-<slug>/ad-image.png` with `generateSquare: true` → inline review, conversational approval (no `[[CW_STATE]]` markers — those are hard-scoped to the Content Writer session) → on approval write `ad.md` (final copy + Ads Manager paste checklist).
+  - HARD RULES in the prompt: never call any Meta create/update/pause/delete tool (even if asked to "post it"); Meta access read-only and only for the snapshot; never invent performance data; all files under `~/Desktop/Ads/` only.
+  - `src/tools/image-gen.ts`: `~/Desktop/Ads` added to `ALLOWED_DIRS` (+ outputPath description). Tests in `tests/unit/image-gen.test.ts` (+2: Ads path accepted, `AdsEvil` sibling-prefix rejected).
+  - UI wiring: `sidebar-ad-creator-btn` ("Ad Creator", pencil-in-frame icon) in `ui/chat.html` directly below Ad Analyzer + binding in `ui/chat/event-bindings.js`; `<script>` tag for the new panel JS.
+- **DORMANT AUTOPOST — how it works and what activation requires:**
+  - `_adBuildKickoffPrompt(autopostEnabled)` — `false` (the only reachable state today) returns the draft-only prompt; `true` appends an `=== AUTOPOST (Meta) ===` block that overrides the approval step: still save the Desktop draft, ask which ad set, create the creative + ad via Meta MCP write tools **in PAUSED status**, report ad/creative IDs — NEVER set anything ACTIVE, never touch budgets/schedules/targeting.
+  - The flag is read from settings key **`metaAds.autopost`** at Start-click time (`window.pocketAgent.settings.get`). **No UI writes this key anywhere** — it defaults to unset/falsy, so the block is unreachable until we deliberately add a toggle or set the key manually. Grep-able single point of activation (one read, zero writers).
+  - Activation ALSO requires the Meta OAuth grant to include write scope. Note: per the Jun 9 live test, Pipeboard's flow only offers the broad "Manage ads" scope (no read-only tier), so the token likely already has write capability — the read-only guarantee is enforced at the recipe layer. Re-verify scope before flipping the flag, and add an explicit confirm step in whatever toggle UI we build.
+- **Verification:** typecheck + lint clean, suite 1248/1248 green. Manual eyeball test owed: click Ad Creator → draft flow end-to-end → `ad.md` + both images under `~/Desktop/Ads/` → confirm the agent refuses "post it to Meta".
+
 ---
 
 ### Next session — pick up here (added May 28, evening — READY TO SHIP beta.14)

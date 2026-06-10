@@ -79,12 +79,17 @@ function desktopPreviewPath(repoPath: string): string {
 //    sidebar feature. The agent creates per-article subfolders here
 //    (e.g. ~/Desktop/Blogs/2026-05-21-my-post/hero.png) so testers can
 //    find their generated posts without hunting through the filesystem.
-// 2. Each brand's site repo public/blog-images/ — where committed images live
+// 2. ~/Desktop/Ads/ — the Meta Ad Creator sidebar feature. The agent
+//    creates per-ad subfolders here (e.g. ~/Desktop/Ads/2026-06-09-my-offer/
+//    ad-image.png) holding the drafted ad copy + images for Brett to paste
+//    into Ads Manager.
+// 3. Each brand's site repo public/blog-images/ — where committed images live
 //    for blogs hosted on github-next (currently TSAI).
-// 3. The _brand-profiles/_inbox/ folder — where images for GHL-blog brands
+// 4. The _brand-profiles/_inbox/ folder — where images for GHL-blog brands
 //    (PMMA, brett-personal) land. Brett uploads from here.
 const ALLOWED_DIRS = [
   path.resolve(process.env.HOME || '', 'Desktop/Blogs'),
+  path.resolve(process.env.HOME || '', 'Desktop/Ads'),
   path.resolve(process.env.HOME || '', 'dev/TSAI-Site/public/blog-images'),
   path.resolve(
     process.env.HOME || '',
@@ -314,7 +319,7 @@ export function getGenerateBlogImageToolDefinition() {
         outputPath: {
           type: 'string',
           description:
-            "Absolute path. Must end with .png. Allowed parent dirs: ~/dev/TSAI-Site/public/blog-images/, ~/dev/PMMA-Website-2026-Master/public/blog-images/, ~/dev/BL-2026-Personal-Site/public/blog-images/, or ~/dev/_brand-profiles/_inbox/. The cron picks the right dir per the brand's blog backend.",
+            "Absolute path. Must end with .png. Allowed parent dirs: ~/Desktop/Blogs/, ~/Desktop/Ads/ (Meta Ad Creator images), ~/dev/TSAI-Site/public/blog-images/, ~/dev/PMMA-Website-2026-Master/public/blog-images/, ~/dev/BL-2026-Personal-Site/public/blog-images/, or ~/dev/_brand-profiles/_inbox/. The cron picks the right dir per the brand's blog backend.",
         },
         desktopCopy: {
           type: 'boolean',

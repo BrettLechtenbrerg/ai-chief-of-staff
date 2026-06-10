@@ -137,6 +137,32 @@ describe('image-gen / generateBlogImage validation', () => {
     expect(r.error).toMatch(/\.png/);
   });
 
+  it('accepts an outputPath under ~/Desktop/Ads/ (Meta Ad Creator)', async () => {
+    // No API key configured → if validation passes we hit the key check,
+    // proving the path itself was accepted without touching the network.
+    mockGetSetting.mockReturnValue('');
+    const realHome = ORIGINAL_HOME || '';
+    const r = await generateBlogImage({
+      prompt: 'an ad image',
+      outputPath: path.join(
+        realHome,
+        'Desktop/Ads/2026-06-09-summer-camp/ad-image.png',
+      ),
+    });
+    expect(r.success).toBe(false);
+    expect(r.error).toMatch(/OpenAI API key not configured/);
+  });
+
+  it('rejects a sibling dir that merely shares the ~/Desktop/Ads prefix', async () => {
+    const realHome = ORIGINAL_HOME || '';
+    const r = await generateBlogImage({
+      prompt: 'an ad image',
+      outputPath: path.join(realHome, 'Desktop/AdsEvil/ad-image.png'),
+    });
+    expect(r.success).toBe(false);
+    expect(r.error).toMatch(/must be inside/);
+  });
+
   it('rejects when no OpenAI key is configured', async () => {
     mockGetSetting.mockReturnValue('');
     const realHome = ORIGINAL_HOME || '';
