@@ -281,6 +281,13 @@ const TOOLS = [
     ),
     handler: async (a) => httpPost(`${BASE_URL}/contacts/${a.contact_id}/tags`, { tags: a.tags }),
   },
+  {
+    name: 'delete_contact',
+    description: 'Permanently delete a contact from the sub-account. This cannot be undone.',
+    annotations: DESTRUCTIVE,
+    inputSchema: schema({ contact_id: S.str('Contact ID to delete') }, ['contact_id']),
+    handler: async (a) => httpDelete(`${BASE_URL}/contacts/${a.contact_id}`),
+  },
 
   // ── Conversations ────────────────────────────────────────────────────────────
   {
