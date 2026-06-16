@@ -27,8 +27,7 @@
  *   - workflow id omitted          → enrollment step reported as 'skipped'.
  */
 
-import { getMCPManager } from '../mcp/manager';
-import type { MCPToolDescriptor } from '../mcp/types';
+import { resolveGhlServer, callGhl, extractContactId, contactHasTag } from './ghl-shared';
 
 /** Tag applied to every synthetic contact so they're trivially identifiable. */
 const SMOKE_TAG = 'acos-smoke-test';
@@ -61,63 +60,6 @@ export interface CampaignSmokeTestResult {
   testEmail?: string;
   steps?: StepResult[];
   cleanedUp?: boolean;
-}
-
-/**
- * Find the ready GHL MCP server by looking for one that exposes `create_contact`.
- * The server may be registered as `ghl-mcp` (bundled) or `flo-ghl` / `flo-ghl-brett`
- * (Brett's hand-built entries), so we resolve by capability rather than by name.
- */
-function resolveGhlServer(): { serverName: string; tools: Set<string> } | null {
-  const all: MCPToolDescriptor[] = getMCPManager().getAllTools();
-  const byServer = new Map<string, Set<string>>();
-  for (const t of all) {
-    if (!byServer.has(t.serverName)) byServer.set(t.serverName, new Set());
-    byServer.get(t.serverName)!.add(t.toolName);
-  }
-  for (const [serverName, tools] of byServer) {
-    if (tools.has('create_contact') && tools.has('get_contact')) {
-      return { serverName, tools };
-    }
-  }
-  return null;
-}
-
-/** Call a GHL tool through the sanctioned MCP layer and parse its JSON reply. */
-async function callGhl(
-  serverName: string,
-  toolName: string,
-  args: Record<string, unknown>,
-): Promise<{ raw: string; json: unknown }> {
-  const agentToolName = `mcp__${serverName}__${toolName}`;
-  const raw = await getMCPManager().callTool(agentToolName, args);
-  let json: unknown = null;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    // Some tools return plain text; keep raw for the report.
-  }
-  return { raw, json };
-}
-
-/** Dig a contact id out of GHL's various response shapes. */
-function extractContactId(json: unknown): string | null {
-  if (!json || typeof json !== 'object') return null;
-  const obj = json as Record<string, unknown>;
-  if (typeof obj.id === 'string') return obj.id;
-  const contact = obj.contact as Record<string, unknown> | undefined;
-  if (contact && typeof contact.id === 'string') return contact.id;
-  return null;
-}
-
-/** True if the fetched contact carries the given tag (case-insensitive). */
-function contactHasTag(json: unknown, tag: string): boolean {
-  if (!json || typeof json !== 'object') return false;
-  const obj = json as Record<string, unknown>;
-  const contact = (obj.contact as Record<string, unknown>) ?? obj;
-  const tags = contact.tags;
-  if (!Array.isArray(tags)) return false;
-  return tags.some((t) => String(t).toLowerCase() === tag.toLowerCase());
 }
 
 export async function runCampaignSmokeTest(

@@ -35,6 +35,18 @@ import {
   getCampaignSmokeTestToolDefinition,
   handleCampaignSmokeTestTool,
 } from './campaign-smoke-test';
+import {
+  getCampaignSetupContactToolDefinition,
+  handleCampaignSetupContactTool,
+} from './campaign-setup-contact';
+import {
+  getCampaignEnrollToolDefinition,
+  handleCampaignEnrollTool,
+} from './campaign-enroll';
+import {
+  getCampaignStatusToolDefinition,
+  handleCampaignStatusTool,
+} from './campaign-status';
 
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
@@ -246,6 +258,31 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: smokeDef.description,
     input_schema: smokeDef.input_schema as Record<string, unknown>,
     handler: handleCampaignSmokeTestTool,
+  });
+
+  // Campaign-operations wrappers (Phase 1): idempotent contact upsert, enroll
+  // into a pre-built workflow/drip campaign, and a read-only status snapshot.
+  // All self-gate on a connected GHL MCP server at call time.
+  const setupDef = getCampaignSetupContactToolDefinition();
+  tools.push({
+    name: setupDef.name,
+    description: setupDef.description,
+    input_schema: setupDef.input_schema as Record<string, unknown>,
+    handler: handleCampaignSetupContactTool,
+  });
+  const enrollDef = getCampaignEnrollToolDefinition();
+  tools.push({
+    name: enrollDef.name,
+    description: enrollDef.description,
+    input_schema: enrollDef.input_schema as Record<string, unknown>,
+    handler: handleCampaignEnrollTool,
+  });
+  const statusDef = getCampaignStatusToolDefinition();
+  tools.push({
+    name: statusDef.name,
+    description: statusDef.description,
+    input_schema: statusDef.input_schema as Record<string, unknown>,
+    handler: handleCampaignStatusTool,
   });
 
   // Project tools
