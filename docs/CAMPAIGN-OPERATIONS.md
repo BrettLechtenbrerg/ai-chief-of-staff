@@ -1,6 +1,7 @@
 # Campaign Operations — Design Doc
 
-> Status: **draft / Phase 1 planning** · Created June 16, 2026 · Owner: Brett
+> Status: **Phase 1 tools built — pending live test** · Created June 16, 2026 ·
+> Updated June 16, 2026 · Owner: Brett
 > Companion to `RESUME-PROMPT.md` ("NEW WORKSTREAM — Campaign Operations") and
 > `RECOVERY.md`. This doc is the concrete plan that the resume-prompt's "first
 > concrete step" produced. Read those two first for the why.
@@ -124,6 +125,37 @@ Meta Marketing API and (later) Google Ads API. GHL only sees leads after they
 arrive. True ad→enrollment ROI needs a **join layer** (Phase 2).
 
 ---
+
+## Implementation status (June 16, 2026)
+
+**Built & pushed** (in-process custom tools under `src/tools/`, registered in
+`getCustomTools`, all self-gating on a connected GHL MCP server, routing only
+through `getMCPManager().callTool` — never raw curl):
+
+- `delete_contact` added to `vendor/ghl-mcp-node/index.js` (93 tools total) —
+  enables true smoke-test cleanup.
+- `src/tools/ghl-shared.ts` — shared helpers: capability-based `resolveGhlServer`
+  (matches `ghl-mcp` / `flo-ghl` / `flo-ghl-brett`), `callGhl`, response parsers,
+  `resolveNameToId`.
+- **`campaign_smoke_test`** — synthetic contact → tag → optional enroll → assert
+  → `delete_contact` cleanup (always, via `finally`).
+- **`campaign_setup_contact`** — idempotent upsert by email/phone; tags added
+  additively (never clobbers).
+- **`campaign_enroll`** — enroll into workflow OR drip campaign; name→id
+  resolution; enforces exactly-one-target.
+- **`campaign_status`** — read-only snapshot (tags, conversations, opportunities).
+  Deliberately omits a fake "enrolled count" (no GHL API for it).
+- **`campaign_send_message`** — SMS/Email with **dry-run default**; real send
+  only on explicit `dryRun:false` after human approval.
+- **`campaign_verify`** — read-only assertions (expected tags, conversation
+  activity) against a real contact.
+
+**Not yet tested live** — needs native rebuild + relaunch, GHL connected, and a
+`workflowId`/name from a workflow built in the GHL UI.
+
+**Still open:** Phase 2 (Google Ads connector + stats-join), Phase 3 (optional
+Twilio/Postmark graduation). The `campaign_ad_report` / `campaign_morning_digest`
+tools below remain Phase 2.
 
 ## Proposed wrapper tools (6–8)
 

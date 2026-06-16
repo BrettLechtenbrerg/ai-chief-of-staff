@@ -47,6 +47,14 @@ import {
   getCampaignStatusToolDefinition,
   handleCampaignStatusTool,
 } from './campaign-status';
+import {
+  getCampaignSendMessageToolDefinition,
+  handleCampaignSendMessageTool,
+} from './campaign-send-message';
+import {
+  getCampaignVerifyToolDefinition,
+  handleCampaignVerifyTool,
+} from './campaign-verify';
 
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
@@ -283,6 +291,20 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: statusDef.description,
     input_schema: statusDef.input_schema as Record<string, unknown>,
     handler: handleCampaignStatusTool,
+  });
+  const sendMsgDef = getCampaignSendMessageToolDefinition();
+  tools.push({
+    name: sendMsgDef.name,
+    description: sendMsgDef.description,
+    input_schema: sendMsgDef.input_schema as Record<string, unknown>,
+    handler: handleCampaignSendMessageTool,
+  });
+  const verifyDef = getCampaignVerifyToolDefinition();
+  tools.push({
+    name: verifyDef.name,
+    description: verifyDef.description,
+    input_schema: verifyDef.input_schema as Record<string, unknown>,
+    handler: handleCampaignVerifyTool,
   });
 
   // Project tools
