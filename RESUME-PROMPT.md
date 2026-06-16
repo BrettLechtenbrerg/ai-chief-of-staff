@@ -16,8 +16,9 @@ desktop AI agent (Electron app, MIT rebrand of KenKaiii/pocket-agent).
 **GitHub:** https://github.com/BrettLechtenbrerg/ai-chief-of-staff
   (note: the `Lechtenbrerg` spelling is the REAL handle — not a typo. The
   "corrected" `BrettLechtenberg` 404s. Never auto-fix it.)
-**Latest release:** v1.0.0-beta.18 (public prerelease) — `git log` head is
-  `chore(release): v1.0.0-beta.18` (3814b8c).
+**Latest release:** v1.0.0-beta.18 (public prerelease). `git log` head is
+  `1ab9c27` (campaign-ops Phase 1 tools — unreleased, not yet tagged/built).
+  Newest shipped release tag is still v1.0.0-beta.18 (3814b8c).
 **Landing page:** https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app
   (Vercel auto-deploys from BrettLechtenbrerg/TSAI-Site)
 **Upstream:** https://github.com/KenKaiii/pocket-agent (MIT, fork point
@@ -146,12 +147,38 @@ Key facts that shape the plan:
   create-fields / verify-contact / cleanup) and a daily digest cron — the proven
   blueprint to generalize for the COS campaign tool layer.
 
-**First concrete step when this workstream resumes:** read (1) how
-`vendor/ghl-mcp-node` tools get registered into the agent (vs. just spawned),
-(2) where the GHL token is loaded, (3) the Meta connector / Pipeboard OAuth
-source (to model Google Ads on it). Then write `docs/CAMPAIGN-OPERATIONS.md`:
-the auth-once token model, the 6–8 wrapper tools, and the one-command
-setup→test→verify→report flow.
+**STATUS (June 16) — Phase 1 tools BUILT & pushed, not yet tested live.**
+The research + design step is DONE — see `docs/CAMPAIGN-OPERATIONS.md` (the
+canonical Campaign-Ops doc: MCP registration path, three auth-once token
+models, the verified CAN/STAYS-MANUAL GHL surface). Key finding: GHL tools are
+registered into the agent **automatically** via `rebuildToolIndex` +
+`buildMCPAgentTools` — callable, not just spawned. Don't re-investigate.
+
+Built & pushed (in-process custom tools in `src/tools/`, registered in
+`getCustomTools`, all self-gating on a connected GHL MCP server, routing only
+through `getMCPManager().callTool` — never raw curl):
+- `delete_contact` added to `vendor/ghl-mcp-node/index.js` (now 93 tools).
+- `src/tools/ghl-shared.ts` — `resolveGhlServer` (capability-based: matches
+  `ghl-mcp` / `flo-ghl` / `flo-ghl-brett`), `callGhl`, parsers, `resolveNameToId`.
+- `campaign_smoke_test` — synthetic contact → tag → optional enroll → assert →
+  `delete_contact` cleanup (always, via `finally`).
+- `campaign_setup_contact` — idempotent upsert by email/phone; tags additive.
+- `campaign_enroll` — workflow OR drip campaign; name→id; one-target enforced.
+- `campaign_status` — read-only snapshot (tags/conversations/opportunities).
+- `campaign_send_message` — SMS/Email, **dry-run default** (real send only on
+  explicit `dryRun:false` after human approval).
+- `campaign_verify` — read-only assertions (expected tags, conversation activity).
+
+**NEXT STEP = TEST LIVE (Brett to drive).** Needs: `npm run rebuild:native`
+then relaunch the app (the tools call the running app's MCP manager, so the
+new `delete_contact` + tools only take effect after a rebuild/relaunch or next
+signed build); GHL connected in Settings → Connections; and a `workflowId` (or
+name) from a workflow built in the GHL UI to exercise enrollment. Run
+`campaign_smoke_test` first.
+
+After the test passes: Phase 2 — Google Ads connector (mirror the Meta /
+Pipeboard `mcp-remote` model) + the ad-spend→GHL-lead stats-join layer. Needs
+Brett's input on Google Ads accounts/auth before starting.
 
 ---
 
