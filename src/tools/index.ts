@@ -31,6 +31,10 @@ import {
   getFetchSeoDataToolDefinition,
   handleFetchSeoDataTool,
 } from './seo-report';
+import {
+  getCampaignSmokeTestToolDefinition,
+  handleCampaignSmokeTestTool,
+} from './campaign-smoke-test';
 
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
@@ -231,6 +235,17 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: seoDef.description,
     input_schema: seoDef.input_schema as Record<string, unknown>,
     handler: handleFetchSeoDataTool,
+  });
+
+  // campaign_smoke_test — end-to-end check of GHL campaign wiring. Creates a
+  // synthetic test contact, verifies tag/enrollment, then deletes it. Always
+  // registered; self-gates on a connected GHL MCP server at call time.
+  const smokeDef = getCampaignSmokeTestToolDefinition();
+  tools.push({
+    name: smokeDef.name,
+    description: smokeDef.description,
+    input_schema: smokeDef.input_schema as Record<string, unknown>,
+    handler: handleCampaignSmokeTestTool,
   });
 
   // Project tools
