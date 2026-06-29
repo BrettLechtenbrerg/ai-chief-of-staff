@@ -17,9 +17,9 @@ desktop AI agent (Electron app, MIT rebrand of KenKaiii/pocket-agent).
   (note: the `Lechtenbrerg` spelling is the REAL handle — not a typo. The
   "corrected" `BrettLechtenberg` 404s. Never auto-fix it.)
 **Latest release:** v1.0.0-beta.18 (public prerelease, tag `3814b8c`). `git log`
-  head is `0fb3ee7` (**Hook Lab** + **Video Studio** — both unreleased, not yet
-  tagged/built). Campaign-ops Phase 1 tools also unreleased (still need a live
-  test). Nothing past beta.18 is tagged.
+  head is `7126e95`. Unreleased on `main` since beta.18: **Silence Trimmer**,
+  **Hook Lab**, **Video Studio**, and **Campaign-ops Phase 1** — none tagged or
+  built into a release yet. Nothing past beta.18 is tagged.
 **Landing page:** https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app
   (Vercel auto-deploys from BrettLechtenbrerg/TSAI-Site)
 **Upstream:** https://github.com/KenKaiii/pocket-agent (MIT, fork point
@@ -58,11 +58,15 @@ before the next release tag.
   ("trim the silence out of this video"), pairs with Video Studio output.
   EXTERNAL deps (ffmpeg + faster-whisper) live on the user's machine — the tool
   self-gates with install guidance; nothing heavy is bundled. **LIVE-TESTED
-  Jun 29** on this Mac (ffmpeg 8.1.2 + faster-whisper 1.2.1): trimmed a real
-  video AND audio clip — fillers + silences removed, output in-sync (0.03s
-  drift), original untouched, explicit same-path overwrite honored. Note:
-  filler-word accuracy depends on the Whisper model (the `base` default can
-  miss synthetic-TTS "um/uh"; `small`+ is tighter) — documented in SKILL.md.
+  Jun 29** on this Mac (ffmpeg 8.1.2 + faster-whisper 1.2.1, both now installed):
+  ran `trimmer.py` directly on a real video AND audio clip — fillers + silences
+  removed, output in-sync (0.03s drift), original untouched, explicit same-path
+  overwrite honored, audio-only stays audio-only. Note: filler-word accuracy
+  depends on the Whisper model (the `base` default can miss synthetic-TTS
+  "um/uh"; `small`+ is tighter) — documented in SKILL.md. **App was rebuilt
+  (`rebuild:native`) + rebuilt JS + relaunched Jun 29**, so the tool is loaded
+  in the running app (433 tools) — the only thing not yet exercised is the agent
+  calling `trim_video_silence` live in chat.
 - **Hook Lab** (`0fb3ee7`) — short-form hook strategist. Sidebar
   `sidebar-hook-lab-btn` → `ui/chat/hook-lab-panel.js` (`startHookLab`). Panel:
   idea textarea + optional goal chips + optional brand picker. Boots a "Hook
@@ -91,8 +95,10 @@ before the next release tag.
 
 Verification done so far: typecheck + lint clean; Video Studio proven with a
 real dual-aspect Remotion render (1080×1920 + 1920×1080) consuming brand.json;
-Hook Lab panel layout confirmed via a CSS harness. The in-app GUI click-through
-(real agent turns with an API key) is the remaining manual step for both.
+Hook Lab panel layout confirmed via a CSS harness; Silence Trimmer proven with a
+real ffmpeg+whisper E2E run (script-level). The app is currently rebuilt +
+relaunched with all of it loaded. The remaining manual step for each is the
+in-app GUI/agent click-through (real agent turns with an API key).
 
 ---
 
@@ -147,18 +153,32 @@ Hook Lab panel layout confirmed via a CSS harness. The in-app GUI click-through
   that's a regression — flag it. LICENSE must keep Ken's © line; README must
   credit upstream.
 - Never use `window.prompt` in renderer UI (silent no-op) — inline inputs only.
-- New surfaces follow one pattern (Content Writer → Video Studio → Hook Lab):
-  sidebar button + `#<name>-view` in `chat.html` + `ui/chat/<name>-panel.{js,css}`
-  + a binding in `event-bindings.js` + an entry in `_dismissOtherPanels`
-  (settings-panel.js) so panels don't double-stack. Session kind is only
-  `'chat' | 'automation'` — it is NOT the agent tool mode (that's global via
-  `AgentManager.getMode()`).
+- New *panel* surfaces follow one pattern (Content Writer → Video Studio → Hook
+  Lab): sidebar button + `#<name>-view` in `chat.html` +
+  `ui/chat/<name>-panel.{js,css}` + a binding in `event-bindings.js` + an entry
+  in `_dismissOtherPanels` (settings-panel.js) so panels don't double-stack.
+  Session kind is only `'chat' | 'automation'` — it is NOT the agent tool mode
+  (that's global via `AgentManager.getMode()`).
+- New *tool-only* skills (Silence Trimmer) follow the bundled-skill pattern:
+  `assets/skills/<name>/` (SKILL.md + script) resolved via
+  `resolveBundledAsset()` in `video-shared.ts`, a thin `src/tools/<name>.ts`
+  registered in `getCustomTools`, heavy/native deps kept EXTERNAL on the user's
+  machine (self-gate with install guidance — never bundle them). Loads after
+  `rebuild:native` + JS build + relaunch.
+- **Never commit Python `__pycache__`/`*.pyc`** — running the bundled skill's
+  `py_compile` once leaked one into git + the `assets/**` ship glob; now
+  gitignored (fixed `7126e95`).
 
 ---
 
 ## Open items / next candidates
 
-1. **Live-test the three unreleased workstreams**, then tag a beta:
+1. **Live-test the unreleased workstreams in the app, then tag a beta:**
+   - Silence Trimmer: in chat, ask the agent to trim a real clip
+     ("trim the silence + filler words out of ~/Desktop/.../clip.mp4"); confirm
+     it lands in `~/Desktop/Trimmed/` and the original is untouched. If it
+     under-cuts fillers on real audio, set `WHISPER_MODEL=small` (or make that
+     the tool default).
    - Hook Lab: open it, try a lead-gen idea (confirm Lead-Gen Mode fires), check
      the full 12-section output + /25 score; paste a weak hook for Rewrite Mode.
    - Video Studio: pick a brand, render a 9:16 (~10s) and a 16:9; confirm the
