@@ -94,9 +94,10 @@ Hard rule: refuses any output path inside an `.app` bundle.
 
 ## The recipe (panel → agent)
 
-The panel boots a **"Video Studio"** session in **coder** mode (best for TSX +
-running renders), sets the brand, and drops a verbatim kickoff recipe with the
-chosen aspect interpolated in. Steps:
+The panel boots a **"Video Studio"** session (kind `automation`, like Content
+Writer — the agent's tool mode is global, not set by the session kind), sets the
+brand, and drops a verbatim kickoff recipe with the chosen aspect interpolated
+in. Steps:
 
 1. Read the Remotion skill; confirm the hard rules.
 2. Confirm the brief (objective, message/CTA, duration, assets, brand). The

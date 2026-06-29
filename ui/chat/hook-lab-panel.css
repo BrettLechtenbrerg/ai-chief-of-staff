@@ -1,0 +1,225 @@
+/* Hook Lab Panel — scoped under #hook-lab-view
+ *
+ * Mirrors content-writer / video-studio panel styling (same theme tokens, same
+ * card shape) so it inherits skin/theme switches automatically. Adds goal chips
+ * and an idea textarea unique to this surface.
+ */
+
+#hook-lab-view {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#hook-lab-view.active {
+  display: flex;
+}
+
+/* Header */
+#hook-lab-view .hl-header {
+  background: var(--bg-secondary);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+#hook-lab-view .hl-header h1 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+#hook-lab-view .hl-header h1 span {
+  color: var(--text-primary);
+}
+
+#hook-lab-view .hl-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Scrollable body */
+#hook-lab-view .hl-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+#hook-lab-view .hl-container::-webkit-scrollbar { width: 6px; }
+#hook-lab-view .hl-container::-webkit-scrollbar-track { background: transparent; }
+#hook-lab-view .hl-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+#hook-lab-view .hl-intro {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 4px;
+}
+
+/* Cards */
+#hook-lab-view .hl-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+}
+
+#hook-lab-view .hl-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+#hook-lab-view .hl-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+#hook-lab-view .hl-card-title h2 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+#hook-lab-view .hl-card-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+#hook-lab-view .hl-card-body {
+  padding: 0 16px 16px;
+}
+
+#hook-lab-view .hl-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+/* Form rows */
+#hook-lab-view .hl-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+#hook-lab-view .hl-form-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#hook-lab-view .hl-form-row textarea {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 92px;
+  line-height: 1.5;
+}
+
+#hook-lab-view .hl-form-row textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#hook-lab-view .hl-brand-picker {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+#hook-lab-view .hl-brand-picker:focus { outline: none; border-color: var(--accent); }
+#hook-lab-view .hl-brand-picker:disabled { opacity: 0.6; cursor: default; }
+
+/* Goal chips */
+#hook-lab-view .hl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+#hook-lab-view .hl-chip {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+#hook-lab-view .hl-chip:hover {
+  border-color: var(--accent);
+}
+
+#hook-lab-view .hl-chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-primary);
+}
+
+/* Start-button footer */
+#hook-lab-view .hl-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 0;
+}
+
+#hook-lab-view .hl-start-btn {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 280px;
+  transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+#hook-lab-view .hl-start-btn:hover:not(:disabled) { opacity: 0.9; }
+#hook-lab-view .hl-start-btn:active:not(:disabled) { transform: translateY(1px); }
+#hook-lab-view .hl-start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#hook-lab-view .hl-actions-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}

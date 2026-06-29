@@ -241,9 +241,21 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
+### Next session — pick up here (added Jun 29 — Hook Lab implemented, not yet released)
+
+**Hook Lab** — a short-form hook strategist — is implemented on `main` (not yet tagged/built). Sidebar button opens a panel (idea textarea + optional goal chips + optional brand picker); **Build My Hooks** boots a "Hook Lab" automation session that returns a complete hook system (best main format + specific format type, 5 options for each of the 5 hook elements, a /25 score, a 15–30s script, and CTAs), following Brett's Hook Lab™ framework. Conversational — no approval markers. Ends each run by offering to send the winning hook to Video Studio.
+
+- **New:** `assets/skills/hook-lab/SKILL.md` (the Hook Lab framework as a shipped skill asset; GPT-meta guardrails like prompt-protection/conference-positioning intentionally dropped — they're standalone-GPT artifacts, not appropriate inside Brett's own product), `ui/chat/hook-lab-panel.{js,css}`.
+- **Changed:** `ui/chat.html` (sidebar `sidebar-hook-lab-btn`, `#hook-lab-view`, CSS link, script include), `ui/chat/event-bindings.js` (binding), `ui/chat/settings-panel.js` (`_dismissOtherPanels` map — see bugfix below).
+- **The operative recipe lives in the panel JS** (`_hlBuildKickoffPrompt`), mirroring Content Writer: the full framework is embedded in the kickoff so output is on-system regardless of whether the agent reads the bundled `SKILL.md`. The SKILL.md is the canonical reference asset.
+- **Bugfix (was a latent gap from the Video Studio turn):** `_dismissOtherPanels` had a hardcoded view→button map that never included `video-studio-view` — so opening another panel left Video Studio visible underneath (two `.active` panels = double display). Added both `video-studio-view` and `hook-lab-view` to the map.
+- **Bugfix (Video Studio turn):** the panel called `sessions.create('Video Studio', 'coder')`, but `sessions:create` only accepts kind `'chat' | 'automation'` (anything else silently → `'chat'`); kind is NOT the agent tool mode (that's global via `AgentManager.getMode()`). Corrected to `'automation'` and fixed the misleading comment + the "coder mode" mentions in docs.
+- **No native/tool/IPC changes:** Hook Lab is pure renderer UI + an injected prompt. Reuses existing `brands.list` / `sessions.create|setBrand` / `sendMessage`. Nothing to rebuild beyond relaunching to load the new panel.
+- **Next steps:** relaunch the app; open Hook Lab; type an idea (try a lead-gen one like "promote my free AI workshop for realtors" to confirm Lead-Gen Mode triggers) and confirm the full 12-section output + /25 score; try the goal chips + a brand to confirm voice tailoring; paste an existing weak hook to confirm Rewrite Mode. Do **not** tag/release until eyeballed. (`assets/**` already ships the skill via existing build globs — no electron-builder change needed.)
+
 ### Next session — pick up here (added Jun 29 — Video Studio implemented, not yet released)
 
-**Video Studio** — programmatic branded video via Remotion — is implemented on `main` (not yet tagged/built). A sidebar button opens a panel (workspace + brand + aspect picker 9:16/16:9/1:1 + optional OpenAI); **Create a Video** boots a "Video Studio" coder session that designs → builds → renders a branded MP4 to `~/Desktop/Videos/YYYY-MM-DD-<slug>/`.
+**Video Studio** — programmatic branded video via Remotion — is implemented on `main` (not yet tagged/built). A sidebar button opens a panel (workspace + brand + aspect picker 9:16/16:9/1:1 + optional OpenAI); **Create a Video** boots a "Video Studio" automation session that designs → builds → renders a branded MP4 to `~/Desktop/Videos/YYYY-MM-DD-<slug>/`.
 
 - **New:** `assets/skills/remotion/SKILL.md` (Remotion best-practices skill, ships via `assets/**`), `src/tools/video-shared.ts` (workspace + bundled-skill resolution, `ASPECTS` map, slug/output-dir helpers, `runInWorkspace`), `src/tools/video-scaffold.ts` (`scaffold_video_project`), `src/tools/video-render.ts` (`render_video`), `ui/chat/video-studio-panel.{js,css}`, `docs/VIDEO-STUDIO.md`.
 - **Changed:** `src/tools/index.ts` (registers both tools), `ui/chat.html` (sidebar `sidebar-video-studio-btn`, `#video-studio-view`, CSS link, script include), `ui/chat/event-bindings.js` (binding), `ui/chat/messaging.js` (`_vsHandleAssistantMessage` hook next to the CW one).

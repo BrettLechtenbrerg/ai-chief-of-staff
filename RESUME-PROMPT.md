@@ -45,10 +45,17 @@ Before starting:
 
 ## Current state (what's live as of beta.18)
 
+- **Hook Lab** (unreleased) — short-form hook strategist. Sidebar
+  `sidebar-hook-lab-btn` → `ui/chat/hook-lab-panel.js` (`startHookLab`). Panel:
+  idea textarea + optional goal chips + optional brand picker. Boots a "Hook
+  Lab" automation session that returns a full hook system (best format + 5
+  options for each of the 5 hook elements + /25 score + 15–30s script + CTAs)
+  per `assets/skills/hook-lab/SKILL.md`. Conversational (no markers); bridges to
+  Video Studio. Built from Brett's Hook Lab™ system instructions.
 - **Video Studio** (unreleased) — programmatic branded video via Remotion.
   Sidebar `sidebar-video-studio-btn` → `ui/chat/video-studio-panel.js`
   (`startVideoStudio`). Panel: workspace + brand + **aspect picker** (9:16 /
-  16:9 / 1:1) + optional OpenAI. Boots a "Video Studio" coder session that
+  16:9 / 1:1) + optional OpenAI. Boots a "Video Studio" automation session that
   designs → builds → renders an MP4 to `~/Desktop/Videos/YYYY-MM-DD-<slug>/`.
   Tools `scaffold_video_project` + `render_video` (`src/tools/video-*.ts`).
   **Remotion is EXTERNAL** — renders in `~/dev/_video-studio`, never bundled

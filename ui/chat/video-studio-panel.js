@@ -405,8 +405,10 @@ async function startVideoStudio() {
     }
 
     if (!sessionId) {
-      // coder mode is best for writing/debugging TSX + running renders.
-      const result = await window.pocketAgent.sessions.create('Video Studio', 'coder');
+      // 'automation' kind mirrors Content Writer (a focused recipe session). The
+      // agent's tool mode is global, not set by this kind — the recipe drives the
+      // shell + render tools regardless.
+      const result = await window.pocketAgent.sessions.create('Video Studio', 'automation');
       if (!result || !result.success || !result.session) {
         _vsShowToast(result?.error || 'Failed to create session', 'error');
         return;
