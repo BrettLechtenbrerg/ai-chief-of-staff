@@ -293,17 +293,32 @@ def merge_intervals(intervals: list[tuple[float, float]]) -> list[tuple[float, f
 
 def keep_segments(removals: list[tuple[float, float]], duration: float,
                   padding: float) -> list[tuple[float, float]]:
-    """Complement of removals over [0, duration], with padding kept around cuts."""
-    merged = merge_intervals(removals)
+    """Complement of removals over [0, duration], keeping `padding` seconds of
+    content around every cut.
+
+    Padding is applied by shrinking each removal inward by `padding` on both
+    sides (so we cut slightly less and keep a buffer around the boundary). A
+    removal that is shorter than 2*padding shrinks away entirely and is kept —
+    that's the desired "don't make abrupt micro-cuts" behavior. Because the
+    shrunk removals are merged (sorted, non-overlapping) and we walk a cursor
+    strictly forward, the resulting keep segments are guaranteed ordered and
+    non-overlapping for any padding value.
+    """
+    shrunk: list[tuple[float, float]] = []
+    for s, e in removals:
+        ns, ne = s + padding, e - padding
+        # Only remove if a meaningful chunk survives after padding both edges.
+        if ne - ns > 0.02:
+            shrunk.append((ns, ne))
+    merged = merge_intervals(shrunk)
+
     segments: list[tuple[float, float]] = []
     cursor = 0.0
     for s, e in merged:
-        # Keep a little padding before the cut and after it.
-        seg_end = min(s + padding, duration)
-        if seg_end - cursor > 0.01:
-            segments.append((cursor, seg_end))
-        cursor = max(cursor, e - padding)
-    if duration - cursor > 0.01:
+        if s - cursor >= 0.05:
+            segments.append((cursor, s))
+        cursor = max(cursor, e)
+    if duration - cursor >= 0.05:
         segments.append((cursor, duration))
 
     # Clamp + drop degenerate slivers.
@@ -400,8 +415,11 @@ def main() -> None:
             fh.write(build_filter_script(segments, has_video))
 
         # Render to a temp output first, then move into place. This guarantees we
-        # never clobber the input mid-write, even when output == input.
-        tmp_out = os.path.join(tmpdir, "out" + (ext or ".mp4"))
+        # never clobber the input mid-write, even when output == input. Use the
+        # OUTPUT's extension so ffmpeg picks the correct container (the output
+        # may differ from the input, e.g. trimming a .mov into a .mp4).
+        out_ext = os.path.splitext(out_path)[1] or ext or ".mp4"
+        tmp_out = os.path.join(tmpdir, "out" + out_ext)
         cmd = [ffmpeg, "-y", "-i", in_path, "-filter_complex_script", filter_path]
         if has_video:
             cmd += ["-map", "[outv]", "-map", "[outa]"]
