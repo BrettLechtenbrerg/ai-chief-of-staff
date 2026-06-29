@@ -69,11 +69,23 @@ export function resolveVideoWorkspace(): string {
  * repo's `assets/` is two levels up. Mirrors src/mcp/bundled-paths.ts.
  */
 export function resolveBundledSkill(): string {
+  return resolveBundledAsset('skills', 'remotion', 'SKILL.md');
+}
+
+/**
+ * Resolve a path inside the bundled `assets/` directory, regardless of dev vs.
+ * packaged. In a packaged Electron app, `extraResources` copies `assets/` into
+ * `Contents/Resources/assets/` (and `process.resourcesPath` points at that
+ * `Resources` dir). In dev, the compiled tool lives at `dist/tools/`, so the
+ * repo's `assets/` is two levels up. Pass path segments relative to `assets/`,
+ * e.g. resolveBundledAsset('skills', 'video-silence-trimmer', 'trimmer.py').
+ */
+export function resolveBundledAsset(...segments: string[]): string {
   // `app` may be undefined in non-Electron contexts (e.g. isolated unit tests).
   const isPackaged = Boolean(app?.isPackaged);
   const resourcesPath = process.resourcesPath || '';
 
-  const rel = path.join('assets', 'skills', 'remotion', 'SKILL.md');
+  const rel = path.join('assets', ...segments);
   if (isPackaged && resourcesPath) {
     return path.join(resourcesPath, rel);
   }

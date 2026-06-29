@@ -46,9 +46,20 @@ Before starting:
 
 ## Unreleased on `main` (built since beta.18, NOT yet tagged/built)
 
-Three workstreams sit on `main` past the beta.18 tag. All need a live test
+Several workstreams sit on `main` past the beta.18 tag. All need a live test
 before the next release tag.
 
+- **Silence Trimmer** (unreleased) — `trim_video_silence` tool removes filler
+  words ("um/uh/ah/hmm") + dead air from any video/audio file, exporting a
+  clean in-sync file to `~/Desktop/Trimmed/`. Shells out to the bundled
+  `assets/skills/video-silence-trimmer/trimmer.py` (faster-whisper on-device by
+  default; optional openai/elevenlabs engines). `src/tools/video-trim.ts`,
+  registered in `getCustomTools`. No panel — the agent calls it on request
+  ("trim the silence out of this video"), pairs with Video Studio output.
+  EXTERNAL deps (ffmpeg + faster-whisper) live on the user's machine — the tool
+  self-gates with install guidance; nothing heavy is bundled. Verified: segment
+  math + dependency-error paths unit-tested; **full E2E (real ffmpeg+whisper
+  run) still needs those deps installed** — that's the live-test step.
 - **Hook Lab** (`0fb3ee7`) — short-form hook strategist. Sidebar
   `sidebar-hook-lab-btn` → `ui/chat/hook-lab-panel.js` (`startHookLab`). Panel:
   idea textarea + optional goal chips + optional brand picker. Boots a "Hook

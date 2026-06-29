@@ -63,6 +63,10 @@ import {
   getRenderVideoToolDefinition,
   handleRenderVideoTool,
 } from './video-render';
+import {
+  getTrimVideoSilenceToolDefinition,
+  handleTrimVideoSilenceTool,
+} from './video-trim';
 
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
@@ -332,6 +336,16 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: renderVideoDef.description,
     input_schema: renderVideoDef.input_schema as Record<string, unknown>,
     handler: handleRenderVideoTool,
+  });
+  // trim_video_silence — remove filler words + dead air from a video/audio file
+  // via the bundled video-silence-trimmer Python skill. Self-gates on ffmpeg +
+  // the transcription engine being installed on the user's machine.
+  const trimVideoDef = getTrimVideoSilenceToolDefinition();
+  tools.push({
+    name: trimVideoDef.name,
+    description: trimVideoDef.description,
+    input_schema: trimVideoDef.input_schema as Record<string, unknown>,
+    handler: handleTrimVideoSilenceTool,
   });
 
   // Project tools
