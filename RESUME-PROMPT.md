@@ -45,6 +45,15 @@ Before starting:
 
 ## Current state (what's live as of beta.18)
 
+- **Video Studio** (unreleased) — programmatic branded video via Remotion.
+  Sidebar `sidebar-video-studio-btn` → `ui/chat/video-studio-panel.js`
+  (`startVideoStudio`). Panel: workspace + brand + **aspect picker** (9:16 /
+  16:9 / 1:1) + optional OpenAI. Boots a "Video Studio" coder session that
+  designs → builds → renders an MP4 to `~/Desktop/Videos/YYYY-MM-DD-<slug>/`.
+  Tools `scaffold_video_project` + `render_video` (`src/tools/video-*.ts`).
+  **Remotion is EXTERNAL** — renders in `~/dev/_video-studio`, never bundled
+  into the signed app (the renderer pulls a ~150 MB headless Chrome + ffmpeg).
+  Skill ships at `assets/skills/remotion/SKILL.md`. See `docs/VIDEO-STUDIO.md`.
 - **Meta Ad Creator** (beta.18, `d6dfff8`) — draft-only ad recipe.
   `ui/chat/meta-ad-creator-panel.js` (`startMetaAdCreator`); sidebar button
   `sidebar-ad-creator-btn`. Flow: brand voice → brief → optional READ-ONLY

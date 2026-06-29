@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="chat/brain-panel.css">
   <link rel="stylesheet" href="chat/routines-panel.css">
   <link rel="stylesheet" href="chat/content-writer-panel.css">
+  <link rel="stylesheet" href="chat/video-studio-panel.css">
   <link rel="stylesheet" href="chat/connect-tools-panel.css">
   <link rel="stylesheet" href="chat/personalize-panel.css">
   <link rel="stylesheet" href="chat/help-modal.css">
@@ -95,6 +96,11 @@
         <!-- Pencil in a picture frame — represents drafting ad copy + creative. -->
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M14.5 8.5l1.5 1.5-5.5 5.5-2 .5.5-2 5.5-5.5z"/></svg>
         <span class="sidebar-btn-label">Ad Creator</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-video-studio-btn" title="Video Studio">
+        <!-- Clapperboard — represents programmatic video creation. -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18"/><path d="M6.5 7l1.6-2.6M11 7l1.6-2.6M15.5 7l1.6-2.6"/></svg>
+        <span class="sidebar-btn-label">Video Studio</span>
       </button>
       <button class="sidebar-btn" id="sidebar-connect-tools-btn" title="Connect Tools">
         <!-- Plug/socket icon — represents wiring up integrations. -->
@@ -1452,6 +1458,111 @@
     </div>
   </div><!-- #content-writer-view -->
 
+  <!-- Video Studio View -->
+  <div id="video-studio-view">
+    <div class="vs-header">
+      <h1><span>Video Studio</span></h1>
+      <div class="vs-header-actions">
+        <button onclick="playNormalClick(); hideVideoStudioPanel()">Back</button>
+      </div>
+    </div>
+    <div class="vs-container">
+      <p class="vs-intro">Design, build, and render a branded video — then I drop the MP4 on your Desktop.</p>
+
+      <!-- Card 1: Workspace -->
+      <section class="vs-card" data-card="workspace">
+        <header class="vs-card-header">
+          <div class="vs-card-title">
+            <span class="vs-card-badge" id="vs-badge-workspace">⋯</span>
+            <h2>Video workspace</h2>
+            <span class="vs-card-status" id="vs-status-workspace">Prepared automatically on first run</span>
+          </div>
+        </header>
+        <div class="vs-card-body" id="vs-body-workspace">
+          <p class="vs-hint">I build videos with Remotion in a dedicated project at <code>~/dev/_video-studio</code>. The first run installs it (a few minutes, one time). Nothing heavy is added to this app.</p>
+        </div>
+      </section>
+
+      <!-- Card 2: Brand -->
+      <section class="vs-card" data-card="brand">
+        <header class="vs-card-header">
+          <div class="vs-card-title">
+            <span class="vs-card-badge" id="vs-badge-brand">⚠</span>
+            <h2>Brand</h2>
+            <span class="vs-card-status" id="vs-status-brand">Which brand is this video for?</span>
+          </div>
+        </header>
+        <div class="vs-card-body" id="vs-body-brand">
+          <p class="vs-hint">Pick the brand. The video uses that brand’s voice (and colors when present). Edit brands in Personalize → Knowledge Base.</p>
+          <div class="vs-form-row">
+            <label for="vs-brand-picker">Brand</label>
+            <select id="vs-brand-picker" class="vs-brand-picker" onchange="_vsOnBrandPick()"></select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 3: Aspect ratio -->
+      <section class="vs-card" data-card="aspect" data-state="ok">
+        <header class="vs-card-header">
+          <div class="vs-card-title">
+            <span class="vs-card-badge" id="vs-badge-aspect">✓</span>
+            <h2>Aspect ratio</h2>
+            <span class="vs-card-status">Where will you post it?</span>
+          </div>
+        </header>
+        <div class="vs-card-body" id="vs-body-aspect">
+          <div class="vs-aspect-group" id="vs-aspect-group">
+            <div class="vs-aspect-option" data-aspect="9:16" onclick="playNormalClick(); _vsPickAspect('9:16')">
+              <span class="vs-aspect-thumb"><i class="r916"></i></span>
+              <span class="vs-aspect-text"><strong>9:16</strong><small>Reels / TikTok / Shorts · 1080×1920</small></span>
+            </div>
+            <div class="vs-aspect-option" data-aspect="16:9" onclick="playNormalClick(); _vsPickAspect('16:9')">
+              <span class="vs-aspect-thumb"><i class="r169"></i></span>
+              <span class="vs-aspect-text"><strong>16:9</strong><small>YouTube / web · 1920×1080</small></span>
+            </div>
+            <div class="vs-aspect-option" data-aspect="1:1" onclick="playNormalClick(); _vsPickAspect('1:1')">
+              <span class="vs-aspect-thumb"><i class="r11"></i></span>
+              <span class="vs-aspect-text"><strong>1:1</strong><small>Feed posts · 1080×1080</small></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 4: OpenAI (optional) -->
+      <section class="vs-card" data-card="openai">
+        <header class="vs-card-header">
+          <div class="vs-card-title">
+            <span class="vs-card-badge" id="vs-badge-openai">⚠</span>
+            <h2>OpenAI key <small style="font-weight:400;color:var(--text-muted)">(optional)</small></h2>
+            <span class="vs-card-status" id="vs-status-openai">Enables AI background/still images</span>
+          </div>
+          <button class="vs-card-toggle" id="vs-toggle-openai" onclick="playNormalClick(); _vsToggleOpenAI()">Add key →</button>
+        </header>
+        <div class="vs-card-body" id="vs-body-openai">
+          <ol class="vs-steps">
+            <li>Create a secret key on the OpenAI API keys page.
+              <button class="vs-link-btn" onclick="playNormalClick(); _vsOpenExternal('https://platform.openai.com/api-keys')">Open platform.openai.com/api-keys</button>
+            </li>
+            <li>Paste it here. I store it in your system keychain. Skip this if your video is pure typography/motion.</li>
+          </ol>
+          <div class="vs-form-row">
+            <label for="vs-input-openai">OpenAI API key</label>
+            <input type="password" id="vs-input-openai" placeholder="sk-…" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="vs-form-actions">
+            <button class="vs-primary-btn" id="vs-save-openai" onclick="playNormalClick(); _vsSaveOpenAI()">Save &amp; Test</button>
+            <span class="vs-form-message" id="vs-msg-openai"></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="vs-actions">
+        <button class="vs-start-btn" id="vs-start-btn" onclick="playNormalClick(); startVideoStudio()" disabled>▶ Create a Video</button>
+        <p class="vs-actions-hint" id="vs-actions-hint">Pick a brand to unlock.</p>
+      </div>
+    </div>
+  </div><!-- #video-studio-view -->
+
   <!-- Connect Tools View — friendly marketplace for the curated set of
        integrations (Gmail, Calendar, Drive, GHL, DataForSEO, Firecrawl,
        Bookmarks). Cards are rendered dynamically by connect-tools-panel.js. -->
@@ -1538,6 +1649,7 @@
   <script src="chat/brain-panel.js"></script>
   <script src="chat/routines-panel.js"></script>
   <script src="chat/content-writer-panel.js"></script>
+  <script src="chat/video-studio-panel.js"></script>
   <script src="chat/seo-report-panel.js"></script>
   <script src="chat/meta-ads-panel.js"></script>
   <script src="chat/meta-ad-creator-panel.js"></script>

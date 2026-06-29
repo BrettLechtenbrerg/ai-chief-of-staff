@@ -241,6 +241,17 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
+### Next session — pick up here (added Jun 29 — Video Studio implemented, not yet released)
+
+**Video Studio** — programmatic branded video via Remotion — is implemented on `main` (not yet tagged/built). A sidebar button opens a panel (workspace + brand + aspect picker 9:16/16:9/1:1 + optional OpenAI); **Create a Video** boots a "Video Studio" coder session that designs → builds → renders a branded MP4 to `~/Desktop/Videos/YYYY-MM-DD-<slug>/`.
+
+- **New:** `assets/skills/remotion/SKILL.md` (Remotion best-practices skill, ships via `assets/**`), `src/tools/video-shared.ts` (workspace + bundled-skill resolution, `ASPECTS` map, slug/output-dir helpers, `runInWorkspace`), `src/tools/video-scaffold.ts` (`scaffold_video_project`), `src/tools/video-render.ts` (`render_video`), `ui/chat/video-studio-panel.{js,css}`, `docs/VIDEO-STUDIO.md`.
+- **Changed:** `src/tools/index.ts` (registers both tools), `ui/chat.html` (sidebar `sidebar-video-studio-btn`, `#video-studio-view`, CSS link, script include), `ui/chat/event-bindings.js` (binding), `ui/chat/messaging.js` (`_vsHandleAssistantMessage` hook next to the CW one).
+- **GOTCHA — Remotion is EXTERNAL, never bundle the renderer:** the renderer (`@remotion/renderer`) pulls a ~150 MB Chrome Headless Shell + ffmpeg. Bundling that into a notarized DMG is the exact build-size/signing pain this doc warns about. So rendering happens in a real Remotion project at `~/dev/_video-studio` (scaffolded on first use), driven by `npx remotion render` via the agent's shell. The signed `.app` gains ZERO heavy native deps. Only `SKILL.md` ships as an app asset. **Never add the renderer/headless Chromium to `build.files` / `extraResources`.**
+- **First-run cost:** first `scaffold_video_project` runs `npm install` (minutes); first `render_video` lazily downloads the Chrome shell (~150 MB) into the workspace. One-time, on the user's machine, invisible after.
+- **No native-ABI interaction:** these tools shell out to a separate Node project in `~/dev/`; they don't touch the app's `better-sqlite3`. The usual `rebuild:native` step still applies only to relaunch the app to pick up the new in-app tools.
+- **Next steps:** `npm rebuild better-sqlite3` → `npm run typecheck` + `lint` + `test`; `npm run rebuild:native` → relaunch; live test — pick a brand, render a 9:16 ~10s test video (1080×1920) and a 16:9 (1920×1080); confirm the skill installs at `~/dev/_video-studio/.agents/skills/remotion/SKILL.md` and approval buttons appear/clear. Do **not** tag/release until the live render passes. Optional `dist:local` to confirm the bundled skill asset resolves packaged.
+
 ### Next session — pick up here (added Jun 9 — multi-brand in flight + Meta Ads Analyzer queued)
 
 **Two things live here: (A) finish/commit the multi-brand work that's currently uncommitted on `main`, then (B) build the Meta Ads Analyzer (the next feature Brett wants).**

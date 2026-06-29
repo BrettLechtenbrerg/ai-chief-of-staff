@@ -240,6 +240,7 @@ async function sendMessage() {
         }
         addMessage('assistant', result.response, !streamBubble, [], null, true, result.media);
         if (typeof _cwHandleAssistantMessage === 'function') _cwHandleAssistantMessage(result.response, sessionId);
+        if (typeof _vsHandleAssistantMessage === 'function') _vsHandleAssistantMessage(result.response, sessionId);
         if (streamBubble) {
           streamBubble.remove();
           streamingBubbleBySession.delete(sessionId);

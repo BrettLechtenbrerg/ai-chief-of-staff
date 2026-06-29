@@ -55,6 +55,14 @@ import {
   getCampaignVerifyToolDefinition,
   handleCampaignVerifyTool,
 } from './campaign-verify';
+import {
+  getScaffoldVideoProjectToolDefinition,
+  handleScaffoldVideoProjectTool,
+} from './video-scaffold';
+import {
+  getRenderVideoToolDefinition,
+  handleRenderVideoTool,
+} from './video-render';
 
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
@@ -305,6 +313,25 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: verifyDef.description,
     input_schema: verifyDef.input_schema as Record<string, unknown>,
     handler: handleCampaignVerifyTool,
+  });
+
+  // Video Studio tools — scaffold the external Remotion workspace and render
+  // compositions to MP4 on the Desktop. Both shell out to ~/dev/_video-studio;
+  // they never touch the app's native deps. self-gate at call time (scaffold
+  // creates the workspace; render refuses if it's missing).
+  const scaffoldVideoDef = getScaffoldVideoProjectToolDefinition();
+  tools.push({
+    name: scaffoldVideoDef.name,
+    description: scaffoldVideoDef.description,
+    input_schema: scaffoldVideoDef.input_schema as Record<string, unknown>,
+    handler: handleScaffoldVideoProjectTool,
+  });
+  const renderVideoDef = getRenderVideoToolDefinition();
+  tools.push({
+    name: renderVideoDef.name,
+    description: renderVideoDef.description,
+    input_schema: renderVideoDef.input_schema as Record<string, unknown>,
+    handler: handleRenderVideoTool,
   });
 
   // Project tools

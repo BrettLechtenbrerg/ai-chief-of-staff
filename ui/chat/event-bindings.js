@@ -35,6 +35,7 @@ bindClick('sidebar-content-writer-btn', () => { playNormalClick(); toggleContent
 bindClick('sidebar-seo-report-btn', () => { playNormalClick(); startSeoReport(); });
 bindClick('sidebar-meta-ads-btn', () => { playNormalClick(); startMetaAdsAnalyzer(); });
 bindClick('sidebar-ad-creator-btn', () => { playNormalClick(); startMetaAdCreator(); });
+bindClick('sidebar-video-studio-btn', () => { playNormalClick(); toggleVideoStudioPanel(); });
 bindClick('sidebar-connect-tools-btn', () => { playNormalClick(); toggleConnectToolsPanel(); });
 bindClick('sidebar-brain-btn', () => { playNormalClick(); toggleBrainPanel(); });
 bindClick('sidebar-docs-btn', () => { playNormalClick(); openDocs(); });

@@ -1,0 +1,419 @@
+/* Video Studio Panel — scoped under #video-studio-view
+ *
+ * Mirrors content-writer-panel.css (same theme tokens, same card shape) so it
+ * inherits skin/theme switches automatically. Adds a segmented aspect-ratio
+ * control unique to this surface.
+ */
+
+#video-studio-view {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#video-studio-view.active {
+  display: flex;
+}
+
+/* Header */
+#video-studio-view .vs-header {
+  background: var(--bg-secondary);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+#video-studio-view .vs-header h1 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+#video-studio-view .vs-header h1 span {
+  color: var(--text-primary);
+}
+
+#video-studio-view .vs-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Scrollable body */
+#video-studio-view .vs-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+#video-studio-view .vs-container::-webkit-scrollbar { width: 6px; }
+#video-studio-view .vs-container::-webkit-scrollbar-track { background: transparent; }
+#video-studio-view .vs-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+#video-studio-view .vs-intro {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 4px;
+}
+
+/* Cards */
+#video-studio-view .vs-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+#video-studio-view .vs-card[data-state="ok"] {
+  border-color: var(--accent);
+}
+
+#video-studio-view .vs-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+#video-studio-view .vs-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+#video-studio-view .vs-card-title h2 {
+  font-family: 'Cal Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+#video-studio-view .vs-card-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+#video-studio-view .vs-card-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+#video-studio-view .vs-card[data-state="ok"] .vs-card-badge {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
+#video-studio-view .vs-card[data-state="missing"] .vs-card-badge,
+#video-studio-view .vs-card[data-state="invalid"] .vs-card-badge {
+  background: #f0ad4e;
+  color: #fff;
+}
+
+#video-studio-view .vs-card-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm, 6px);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#video-studio-view .vs-card-toggle:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
+}
+
+/* Collapsible body */
+#video-studio-view .vs-card-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  padding: 0 16px;
+}
+
+#video-studio-view .vs-card.expanded .vs-card-body {
+  max-height: 1400px;
+  padding: 0 16px 16px;
+}
+
+#video-studio-view .vs-steps {
+  margin: 4px 0 12px 18px;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+#video-studio-view .vs-steps li {
+  margin-bottom: 6px;
+}
+
+#video-studio-view .vs-link-btn {
+  display: inline-block;
+  margin-left: 6px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+#video-studio-view .vs-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+/* Inline form rows */
+#video-studio-view .vs-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+#video-studio-view .vs-form-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#video-studio-view .vs-form-row input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+#video-studio-view .vs-form-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#video-studio-view .vs-brand-picker {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+#video-studio-view .vs-brand-picker:focus { outline: none; border-color: var(--accent); }
+#video-studio-view .vs-brand-picker:disabled { opacity: 0.6; cursor: default; }
+
+#video-studio-view .vs-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#video-studio-view .vs-primary-btn {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+#video-studio-view .vs-primary-btn:hover { opacity: 0.88; }
+#video-studio-view .vs-primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#video-studio-view .vs-form-message {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+#video-studio-view .vs-form-message.ok { color: var(--accent); }
+#video-studio-view .vs-form-message.err { color: #d9534f; }
+
+/* ---- Aspect-ratio segmented control ---- */
+#video-studio-view .vs-aspect-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+#video-studio-view .vs-aspect-option {
+  flex: 1 1 0;
+  min-width: 150px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+#video-studio-view .vs-aspect-option:hover {
+  border-color: var(--accent);
+}
+
+#video-studio-view .vs-aspect-option.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* Little proportional preview rectangle */
+#video-studio-view .vs-aspect-thumb {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#video-studio-view .vs-aspect-thumb i {
+  display: block;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+#video-studio-view .vs-aspect-option.selected .vs-aspect-thumb i {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+#video-studio-view .vs-aspect-thumb i.r916 { width: 18px; height: 32px; }
+#video-studio-view .vs-aspect-thumb i.r169 { width: 32px; height: 18px; }
+#video-studio-view .vs-aspect-thumb i.r11  { width: 26px; height: 26px; }
+
+#video-studio-view .vs-aspect-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+#video-studio-view .vs-aspect-text strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+#video-studio-view .vs-aspect-text small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Start-button footer */
+#video-studio-view .vs-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 0;
+}
+
+#video-studio-view .vs-start-btn {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 280px;
+  transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+#video-studio-view .vs-start-btn:hover:not(:disabled) { opacity: 0.9; }
+#video-studio-view .vs-start-btn:active:not(:disabled) { transform: translateY(1px); }
+#video-studio-view .vs-start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#video-studio-view .vs-actions-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ---- Inline action buttons under Video Studio assistant messages ---- */
+/* Rendered as a sibling div directly after the assistant bubble, NOT inside
+   #video-studio-view (that panel is hidden when chat is active). */
+
+.vs-action-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 0 16px 16px;
+  margin-top: -4px;
+}
+
+.vs-action-row button {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+}
+
+.vs-action-row button.primary {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+}
+
+.vs-action-row button.primary:hover:not(:disabled) { opacity: 0.88; }
+
+.vs-action-row button.secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.vs-action-row button.secondary:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
+}
+
+.vs-action-row button:disabled { opacity: 0.5; cursor: not-allowed; }
