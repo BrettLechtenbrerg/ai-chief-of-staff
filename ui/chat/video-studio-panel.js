@@ -241,6 +241,11 @@ function _vsRenderBrandPicker() {
 function _vsRenderAspect() {
   const group = document.getElementById('vs-aspect-group');
   if (!group) return;
+  // The aspect card isn't routed through _vsRenderCard (which adds .expanded for
+  // workspace/brand), so expand it here — otherwise its body stays collapsed at
+  // max-height:0 and the 9:16 / 16:9 / 1:1 options never show.
+  const card = group.closest('.vs-card');
+  if (card) card.classList.add('expanded');
   group.querySelectorAll('.vs-aspect-option').forEach((el) => {
     el.classList.toggle('selected', el.dataset.aspect === _vsAspect);
   });

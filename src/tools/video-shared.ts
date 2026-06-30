@@ -17,7 +17,14 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { exec } from 'child_process';
+import { fileURLToPath } from 'url';
 import { app } from 'electron';
+
+// This file compiles to ESM (tsconfig module: ES2022), where Node's CommonJS
+// `__dirname` is not defined. Derive it from import.meta.url — the same pattern
+// used across src/main (windows.ts, index.ts, tray.ts).
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Aspect-ratio presets surfaced in the Video Studio panel. The panel passes one
