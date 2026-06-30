@@ -242,6 +242,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     resetOnboarding: () => ipcRenderer.invoke('settings:resetOnboarding'),
     initializeKeychain: () => ipcRenderer.invoke('settings:initializeKeychain'),
     getAvailableModels: () => ipcRenderer.invoke('settings:getAvailableModels'),
+    discoverModels: () => ipcRenderer.invoke('settings:discoverModels'),
   },
 
   // ─── Validation ──────────────────────────────────────────────────────
@@ -804,6 +805,13 @@ declare global {
         resetOnboarding: () => Promise<{ success: boolean }>;
         initializeKeychain: () => Promise<{ available: boolean; error?: string }>;
         getAvailableModels: () => Promise<Array<{ id: string; name: string; provider: string }>>;
+        discoverModels: () => Promise<{
+          ok: boolean;
+          added: number;
+          discovered: number;
+          models: Array<{ id: string; name: string; provider: string }>;
+          error?: string;
+        }>;
       };
 
       validate: {

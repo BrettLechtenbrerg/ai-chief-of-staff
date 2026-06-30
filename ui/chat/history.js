@@ -128,15 +128,69 @@ async function updateModelBadge() {
       opt.selected = true;
       badge.appendChild(opt);
     }
+
+    // Sentinel row: lets the user pull newly-released models on demand. Picking
+    // it runs discovery instead of switching the model (handled below).
+    const discover = document.createElement('option');
+    discover.value = '__discover__';
+    discover.textContent = '🔄 Check for new models…';
+    badge.appendChild(discover);
   } catch (err) {
     console.error('Failed to load model:', err);
   }
+}
+
+let _modelDiscoverNotyf = null;
+function _modelDiscoverToast(message, type) {
+  try {
+    if (!_modelDiscoverNotyf) {
+      _modelDiscoverNotyf = new Notyf({
+        duration: 3500,
+        position: { x: 'right', y: 'bottom' },
+        dismissible: true,
+        types: [
+          { type: 'success', background: '#4ade80' },
+          { type: 'error', background: '#f87171' },
+        ],
+      });
+    }
+    _modelDiscoverNotyf[type === 'error' ? 'error' : 'success'](message);
+  } catch (_) { /* Notyf unavailable — ignore */ }
 }
 
 // Model badge change handler — switch model and auto-reboot
 document.getElementById('model-badge').addEventListener('change', async (e) => {
   const newModel = e.target.value;
   const badge = e.target;
+
+  // "Check for new models…" sentinel — run live discovery, then restore the
+  // real selection. Never treated as an actual model switch.
+  if (newModel === '__discover__') {
+    badge.disabled = true;
+    _modelDiscoverToast('Checking for new models…', 'success');
+    try {
+      const res = await window.pocketAgent.settings.discoverModels();
+      await updateModelBadge();
+      if (res && res.ok) {
+        _modelDiscoverToast(
+          res.added > 0
+            ? `Added ${res.added} new model${res.added === 1 ? '' : 's'} 🎉`
+            : 'You\'re up to date — no new models found',
+          'success'
+        );
+      } else {
+        _modelDiscoverToast((res && res.error) || 'Could not check for models', 'error');
+      }
+    } catch (err) {
+      console.error('Model discovery failed:', err);
+      await updateModelBadge();
+      _modelDiscoverToast('Could not check for models', 'error');
+    } finally {
+      badge.disabled = false;
+    }
+    return;
+  }
+
   try {
     // Save new model setting
     await window.pocketAgent.settings.set('agent.model', newModel);

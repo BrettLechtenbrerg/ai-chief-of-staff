@@ -68,7 +68,93 @@ export function getAvailableModels(): Array<{ id: string; name: string; provider
     );
   }
 
-  return models;
+  // Fold in any models found by live discovery ("Check for new models" in
+  // Settings). Only surface a discovered model when the user is actually
+  // authed for its provider, and never duplicate a curated id.
+  const authedProviders = new Set(models.map((m) => m.provider));
+  const known = new Set(models.map((m) => m.id));
+  for (const m of getDiscoveredModels()) {
+    if (!authedProviders.has(m.provider)) continue;
+    if (known.has(m.id)) continue;
+    known.add(m.id);
+    models.push(m);
+  }
+
+  return sortModelsForDisplay(models);
+}
+
+/**
+ * Order the model list for the picker: keep providers grouped (in the order
+ * they first appear — Anthropic, then OpenAI, then the rest), keep each model
+ * family together, and within a family list the newest version first
+ * (Opus 4.8 → 4.7 → 4.6 …). Families are ordered by their newest member, so the
+ * family with the latest model sits at the top of each provider block.
+ */
+function sortModelsForDisplay<T extends { name: string; provider: string }>(models: T[]): T[] {
+  // Numeric version embedded in the display name, e.g. 'Opus 4.8' → [4, 8].
+  const versionOf = (name: string): number[] => {
+    const match = String(name).match(/(\d+(?:\.\d+)*)/);
+    return match ? match[1].split('.').map(Number) : [];
+  };
+  // Family = the name with its version number stripped, e.g. 'GPT-5.5 Pro' → 'gpt- pro'.
+  const familyOf = (name: string): string =>
+    String(name).replace(/\d+(?:\.\d+)*/, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  // Compare two version arrays, newest first.
+  const cmpVerDesc = (a: number[], b: number[]): number => {
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const d = (b[i] ?? 0) - (a[i] ?? 0);
+      if (d) return d;
+    }
+    return 0;
+  };
+
+  // First-seen provider order, and each family's newest version.
+  const providerOrder: string[] = [];
+  const familyMax = new Map<string, number[]>();
+  for (const m of models) {
+    if (!providerOrder.includes(m.provider)) providerOrder.push(m.provider);
+    const key = `${m.provider}|${familyOf(m.name)}`;
+    const ver = versionOf(m.name);
+    const cur = familyMax.get(key);
+    if (!cur || cmpVerDesc(ver, cur) < 0) familyMax.set(key, ver);
+  }
+
+  return [...models].sort((a, b) => {
+    const pa = providerOrder.indexOf(a.provider);
+    const pb = providerOrder.indexOf(b.provider);
+    if (pa !== pb) return pa - pb;
+
+    const fa = familyOf(a.name);
+    const fb = familyOf(b.name);
+    if (fa !== fb) {
+      const d = cmpVerDesc(familyMax.get(`${a.provider}|${fa}`) ?? [], familyMax.get(`${b.provider}|${fb}`) ?? []);
+      if (d) return d;
+      return fa < fb ? -1 : 1;
+    }
+
+    const d = cmpVerDesc(versionOf(a.name), versionOf(b.name));
+    if (d) return d;
+    return a.name < b.name ? -1 : 1;
+  });
+}
+
+/** Settings key holding the JSON cache of discovery results. */
+const DISCOVERED_MODELS_KEY = 'models.discovered';
+
+/** Read the cached discovered-model list (persisted across restarts). */
+export function getDiscoveredModels(): Array<{ id: string; name: string; provider: string }> {
+  try {
+    const raw = SettingsManager.get(DISCOVERED_MODELS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (m) => m && typeof m.id === 'string' && typeof m.name === 'string' && typeof m.provider === 'string'
+    );
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -331,6 +417,42 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
 
   ipcMain.handle('settings:getAvailableModels', async () => {
     return getAvailableModels();
+  });
+
+  // Live model discovery — triggered by the "Check for new models" button.
+  // Queries Anthropic + OpenAI, merges anything new into the persisted cache,
+  // and returns how many new ids were added plus the refreshed model list.
+  ipcMain.handle('settings:discoverModels', async () => {
+    try {
+      const { discoverModels } = await import('../../agent/model-discovery.js');
+      const found = await discoverModels();
+
+      // Replace results PER PROVIDER rather than accumulating forever: any
+      // provider that returned models has its cached entries fully replaced (so
+      // models that vanish upstream, or that a tightened filter now excludes,
+      // drop out cleanly). Providers that returned nothing this run keep their
+      // previously-discovered entries, so a single timeout never wipes them.
+      const existing = getDiscoveredModels();
+      const refreshedProviders = new Set<string>(found.map((m) => m.provider));
+      const kept = existing.filter((m) => !refreshedProviders.has(m.provider));
+
+      const prevIds = new Set(existing.map((m) => m.id));
+      const added = found.filter((m) => !prevIds.has(m.id)).length;
+
+      const merged = [...kept, ...found];
+      SettingsManager.set(DISCOVERED_MODELS_KEY, JSON.stringify(merged));
+
+      return { ok: true, added, discovered: found.length, models: getAvailableModels() };
+    } catch (err) {
+      console.error('[Settings] discoverModels failed:', err);
+      return {
+        ok: false,
+        added: 0,
+        discovered: 0,
+        models: getAvailableModels(),
+        error: err instanceof Error ? err.message : 'Discovery failed',
+      };
+    }
   });
 
   // Customize - System prompt (read-only, developer-controlled content only)

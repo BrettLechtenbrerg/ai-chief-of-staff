@@ -88,5 +88,60 @@ export const MODEL_PROVIDERS: Record<string, ProviderType> = {
 };
 
 export function getProviderForModel(model: string): ProviderType {
-  return MODEL_PROVIDERS[model] || 'anthropic';
+  const exact = MODEL_PROVIDERS[model];
+  if (exact) return exact;
+  return inferProviderFromId(model);
+}
+
+/**
+ * Infer the provider for a model id we don't have an explicit mapping for.
+ * This is what lets newly-released models (e.g. a future `claude-opus-4-8` or
+ * `gpt-5.6`) route correctly the moment they appear in the picker, instead of
+ * blindly falling back to Anthropic. Prefix-based, ordered most-specific first.
+ */
+export function inferProviderFromId(model: string): ProviderType {
+  const m = String(model || '').toLowerCase();
+  if (m.startsWith('claude-') || m.startsWith('claude')) return 'anthropic';
+  if (m.startsWith('gpt-') || m.startsWith('gpt') || m.startsWith('codex') || /^o[1-9]/.test(m))
+    return 'openai';
+  if (m.startsWith('kimi')) return 'moonshot';
+  if (m.startsWith('glm')) return 'glm';
+  if (m.startsWith('mimo')) return 'xiaomi';
+  if (m.startsWith('minimax')) return 'minimax';
+  if (m.startsWith('deepseek')) return 'deepseek';
+  return 'anthropic';
+}
+
+/**
+ * Best-effort human label for a model id that isn't in the curated list (i.e.
+ * one returned by live discovery). Curated models keep their hand-written names;
+ * this only has to be "good enough" for brand-new ids.
+ */
+export function friendlyModelName(id: string): string {
+  const provider = inferProviderFromId(id);
+  // Drop a trailing date stamp like -20251101 so 'claude-opus-4-5-20251101'
+  // reads as 'Opus 4.5'.
+  const base = String(id || '').replace(/-\d{8}$/, '');
+
+  if (provider === 'anthropic') {
+    const match = base.match(/^claude-(opus|sonnet|haiku)-(.+)$/i);
+    if (match) {
+      const family = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+      const version = match[2].replace(/-/g, '.');
+      return `${family} ${version}`;
+    }
+  }
+
+  if (provider === 'openai') {
+    if (/^codex/i.test(base)) return base.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return base
+      .replace(/^gpt-/i, 'GPT-')
+      .replace(/-mini\b/i, ' Mini')
+      .replace(/-pro\b/i, ' Pro')
+      .replace(/-codex\b/i, ' Codex')
+      .replace(/-turbo\b/i, ' Turbo')
+      .replace(/-highspeed\b/i, ' Highspeed');
+  }
+
+  return base;
 }
