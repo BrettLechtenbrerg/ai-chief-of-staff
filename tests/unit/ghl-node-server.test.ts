@@ -66,8 +66,9 @@ describe('ghl-node-server tool mapping', () => {
     vi.restoreAllMocks();
   });
 
-  it('exposes exactly 91 tools', () => {
-    expect(TOOLS.length).toBe(91);
+  it('exposes exactly 92 tools', () => {
+    // 91 ported from the Python server + delete_contact (added for smoke-test cleanup)
+    expect(TOOLS.length).toBe(92);
   });
 
   it('every tool has a name, description, inputSchema, annotations, and handler', () => {
