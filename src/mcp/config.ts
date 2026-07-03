@@ -41,6 +41,15 @@ export function loadMCPConfig(userDataDir: string): ExternalMCPServersFile {
     return { mcpServers: {} };
   }
 
+  // Tighten perms on files written by older versions (pre-0600) — server
+  // entries can carry credentials in env fields. Best-effort; Windows ACLs
+  // don't map to POSIX modes and chmod is a no-op there.
+  try {
+    fs.chmodSync(configPath, 0o600);
+  } catch {
+    /* ignore — read below surfaces any real access problem */
+  }
+
   let raw: string;
   try {
     raw = fs.readFileSync(configPath, 'utf8');
@@ -248,7 +257,9 @@ export function saveMCPConfig(userDataDir: string, file: ExternalMCPServersFile)
   // Write + fsync + rename. fsync ensures the bytes hit disk before the
   // rename, so a power loss between the two leaves either the old file
   // or the complete new file — never a truncated tmp.
-  const fd = fs.openSync(tmpPath, 'w');
+  // 0600: server entries can carry credentials in env (GHL token, DataForSEO
+  // password) — owner read/write only
+  const fd = fs.openSync(tmpPath, 'w', 0o600);
   try {
     fs.writeFileSync(fd, json);
     fs.fsyncSync(fd);

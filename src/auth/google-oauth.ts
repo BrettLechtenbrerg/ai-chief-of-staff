@@ -494,7 +494,8 @@ class GoogleOAuthManager {
     const dir = path.dirname(target);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const tmp = `${target}.tmp`;
-    const fd = fs.openSync(tmp, 'w');
+    // 0600: refresh tokens are credentials — owner read/write only
+    const fd = fs.openSync(tmp, 'w', 0o600);
     try {
       fs.writeFileSync(fd, JSON.stringify(tokens, null, 2) + '\n');
       fs.fsyncSync(fd);
@@ -512,6 +513,13 @@ class GoogleOAuthManager {
   private readTokens(): GoogleStoredTokens | null {
     const target = this.getTokensPath();
     if (!fs.existsSync(target)) return null;
+    // Tighten perms on files written by older versions (pre-0600).
+    // Best-effort; no-op on Windows.
+    try {
+      fs.chmodSync(target, 0o600);
+    } catch {
+      /* ignore — read below surfaces any real access problem */
+    }
     try {
       const raw = fs.readFileSync(target, 'utf8');
       const parsed = JSON.parse(raw);

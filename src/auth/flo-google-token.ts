@@ -90,7 +90,8 @@ export function floHasSearchConsoleScope(): boolean {
 /** Persist refreshed flo tokens back to disk (same file flo's servers read). */
 function persistFloTokens(tokens: FloStoredTokens): void {
   try {
-    fs.writeFileSync(FLO_TOKEN_PATH, JSON.stringify(tokens, null, 2) + '\n');
+    // 0600: refresh tokens are credentials — owner read/write only
+    fs.writeFileSync(FLO_TOKEN_PATH, JSON.stringify(tokens, null, 2) + '\n', { mode: 0o600 });
   } catch (err) {
     console.error('[FloToken] Failed to persist refreshed token:', (err as Error).message);
   }
