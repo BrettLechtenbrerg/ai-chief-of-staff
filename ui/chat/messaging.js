@@ -71,9 +71,15 @@ async function stopQuery() {
     }
 
     // Remove 'queued' class from any queued messages and clear tracking
+    // for THIS session only (queuedMessageElements spans all sessions —
+    // a global clear() would orphan other sessions' queued-message tracking)
     const queuedMsgs = messagesDiv.querySelectorAll('.message.queued');
     queuedMsgs.forEach(msg => msg.classList.remove('queued'));
-    queuedMessageElements.clear();
+    const stoppedQueuedIds = queuedMessageIdsBySession.get(sessionId);
+    if (stoppedQueuedIds) {
+      stoppedQueuedIds.forEach(msgId => queuedMessageElements.delete(msgId));
+      queuedMessageIdsBySession.delete(sessionId);
+    }
 
     addMessage('system', 'query stopped', true, [], null, false);
     requestAnimationFrame(() => enableAutoAnimate());
@@ -189,8 +195,11 @@ async function sendMessage() {
     if (pendingMsgs) pendingMsgs.delete(messageId);
 
     // Clean up loading state regardless of which tab is active
-    // (otherwise indicators persist if user switched tabs mid-query)
-    const hasMoreQueued = queuedMessageElements.size > 0;
+    // (otherwise indicators persist if user switched tabs mid-query).
+    // Only THIS session's queue matters — the global element map spans all
+    // sessions, and a queued message in another tab must not block cleanup here.
+    const queuedIdsForSession = queuedMessageIdsBySession.get(sessionId);
+    const hasMoreQueued = queuedIdsForSession && queuedIdsForSession.size > 0;
 
     if (!hasMoreQueued) {
       // Clean up status listener
@@ -298,8 +307,10 @@ async function sendMessage() {
     const pendingMsgsErr = pendingUserMessagesBySession.get(sessionId);
     if (pendingMsgsErr) pendingMsgsErr.delete(messageId);
 
-    // Check if there are more queued messages
-    const hasMoreQueued = queuedMessageElements.size > 0;
+    // Check if there are more queued messages in THIS session (the global
+    // element map spans all sessions and must not block cleanup here)
+    const queuedIdsForSession = queuedMessageIdsBySession.get(sessionId);
+    const hasMoreQueued = queuedIdsForSession && queuedIdsForSession.size > 0;
 
     if (!hasMoreQueued) {
       // Clean up status listener

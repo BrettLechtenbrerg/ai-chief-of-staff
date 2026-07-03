@@ -324,8 +324,18 @@ function updateStatusIndicator(status, sessionId) {
     return;
   }
 
-  const statusEl = statusElBySession.get(targetSession);
-  if (!statusEl) return;
+  let statusEl = statusElBySession.get(targetSession);
+  if (!statusEl) {
+    // Status event arrived with no indicator on screen (e.g. the per-message
+    // 'done' for a finished message removed it while queued messages are still
+    // being processed). Recreate it so the user never loses the working state.
+    if (status.type === 'done') return;
+    statusEl = addStatusIndicator(status.message || '*stretches paws* thinking...');
+    statusElBySession.set(targetSession, statusEl);
+    isLoadingBySession.set(targetSession, true);
+    renderTabs();
+    setButtonState(true);
+  }
 
   const actionEl = statusEl.querySelector('.status-action');
   const detailEl = statusEl.querySelector('.status-detail');
@@ -625,9 +635,13 @@ function updateStatusIndicator(status, sessionId) {
     }
 
     // Safety net: clean up thinking indicator if still present (e.g. cron job errors
-    // where the normal response handler never fires)
+    // where the normal response handler never fires). Skip if this session still
+    // has queued messages — the backend emits 'done' per message, and tearing the
+    // indicator down here would drop all status events for the next queued message.
+    const queuedIds = queuedMessageIdsBySession.get(targetSession);
+    const hasQueuedMessages = queuedIds && queuedIds.size > 0;
     const doneStatusEl = statusElBySession.get(targetSession);
-    if (doneStatusEl) {
+    if (doneStatusEl && !hasQueuedMessages) {
       doneStatusEl.remove();
       statusElBySession.delete(targetSession);
       toolCountBySession.delete(targetSession);
