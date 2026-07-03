@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, shell } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { SettingsManager } from '../settings';
@@ -138,6 +138,25 @@ export function createWindow(options: CreateWindowOptions): BrowserWindow {
 
   // 3. Create the window
   const win = new BrowserWindow(windowOptions);
+
+  // Navigation hardening: renderer windows only ever display our bundled
+  // file:// pages. Any attempt to navigate elsewhere (e.g. a crafted link
+  // that survives sanitization) is blocked; http(s) targets open in the
+  // system browser instead of inside the app shell.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      void shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file://')) {
+      event.preventDefault();
+      if (/^https?:\/\//i.test(url)) {
+        void shell.openExternal(url);
+      }
+    }
+  });
 
   // 4. Load HTML file
   const loadOptions: Electron.LoadFileOptions = {};
