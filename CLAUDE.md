@@ -64,6 +64,8 @@ grep -ri "gg-pixel\|buzzbeamaustralia" . --exclude-dir=node_modules --exclude-di
 # expected: no matches
 ```
 
+**Known-safe transitive dep (audited Jul 3, 2026):** `@kenkaiiii/gg-pixel` still exists in `node_modules` as a transitive dependency of `@kenkaiiii/ggcoder@4.3.151` (pinned). It is inert in ACOS: the only static import reachable from our code is the constant `DEFAULT_INGEST_URL` (via ggcoder's `PixelOverlay`, a TUI component ACOS never renders); its error-reporting handlers and network emission only activate via an explicit `install({ projectKey })` call, which nothing in ACOS makes; the remaining pixel code paths are dynamic imports inside ggcoder's own CLI (`cli.js` / `ui/App.js`), which ACOS never runs. If a future ggcoder bump changes this (e.g. `install(` called from its `index.js` module graph), that's a regression — re-audit before shipping.
+
 ## Project Structure (high-level)
 
 ```
@@ -154,6 +156,13 @@ gh auth switch --user BrettLechtenbrerg
 - **API keys** live in the OS keychain via Electron `safeStorage`. Never log, never store in JSON.
 
 ## Work History
+
+### Jul 3, 2026 — Queued-message spinner bug (partner report) + queue tracking made session-scoped
+- Brett's partner reported the chat sometimes stops showing the "thinking" indicator while the agent is still working, and supplied a proposed patch in `COS Bug.docx`. Verified the diagnosis against the backend before applying: `chat-engine.ts` emits `done` after EVERY message (then `processQueue()` starts the next queued one), but the renderer's `done` handler tore the status indicator down unconditionally — so all subsequent `queue_processing`/`thinking`/`tool_start` events for queued messages hit `if (!statusEl) return;` and were silently dropped. Result: agent working with no spinner, no stop button, tab showing idle.
+- Fixes in `ui/chat/message-renderer.js`: (1) `done` cleanup now skips teardown while the session still has queued messages; (2) if a non-`done` status arrives with no indicator on screen (out-of-order events, external triggers), the indicator is recreated instead of dropping the event — safe because the currentSession guard runs first and the per-session listener is removed on final cleanup.
+- Fixes in `ui/chat/messaging.js`: both send-cleanup paths checked the GLOBAL `queuedMessageElements.size` — a queued message in another tab blocked this session's cleanup (stuck-spinner variant). Now checks `queuedMessageIdsBySession` for the specific session. Same class of bug in `stopQuery()`: it called `queuedMessageElements.clear()` globally, orphaning other sessions' queued tracking — now clears only the stopped session's ids.
+- Also fixed a stale test found during full-suite run: `ghl-node-server.test.ts` still asserted 91 tools, but beta.19's `d8e02e4` added `delete_contact` (→ 92). Suite now 1248/1248 passing, typecheck + lint clean.
+- Telemetry audit: traced why `gg-pixel` appears in `package-lock.json` — transitive dep of pinned ggcoder, verified inert (see Privacy Posture note above).
 
 ### May 18, 2026 (afternoon) — Connections settings UI + onboarding connectors mockup (beta.9)
 - Closed the "zero UI for connected tools" gap. New **Settings → Connections** section (nav item between Browser and Chat) lists every entry in `<userData>/mcp-servers.json` with live status from `MCPServerManager`, tool counts, and last-error tooltips. Add / edit / delete / toggle / Test-Connection / Open-config-file actions all work end-to-end.
