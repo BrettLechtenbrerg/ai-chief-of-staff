@@ -1,9 +1,9 @@
 # AI Chief of Staff — Resume Prompt (current)
 
-> Updated June 29, 2026. This is the up-to-date paste-into-chat kickoff.
-> `RECOVERY.md` remains the canonical, full-history source of truth — read it
-> for the build pipeline, the per-release rollback table, and gotchas. This
-> file is the short, current-state bookmark.
+> Updated July 3, 2026 (post-beta.20 ship). This is the up-to-date
+> paste-into-chat kickoff. `RECOVERY.md` remains the canonical, full-history
+> source of truth — read it for the build pipeline, the per-release rollback
+> table, and gotchas. This file is the short, current-state bookmark.
 
 ---
 
@@ -16,10 +16,11 @@ desktop AI agent (Electron app, MIT rebrand of KenKaiii/pocket-agent).
 **GitHub:** https://github.com/BrettLechtenbrerg/ai-chief-of-staff
   (note: the `Lechtenbrerg` spelling is the REAL handle — not a typo. The
   "corrected" `BrettLechtenberg` 404s. Never auto-fix it.)
-**Latest release:** v1.0.0-beta.18 (public prerelease, tag `3814b8c`). `git log`
-  head is `7126e95`. Unreleased on `main` since beta.18: **Silence Trimmer**,
-  **Hook Lab**, **Video Studio**, and **Campaign-ops Phase 1** — none tagged or
-  built into a release yet. Nothing past beta.18 is tagged.
+**Latest release:** v1.0.0-beta.20 (public prerelease, Jul 3 2026). `git log`
+  head is `a9d3080`. Repo clean — everything on `main` is shipped. 18 release
+  assets live, download links verified HTTP 200, landing page serving beta.20
+  (`TSAI-Site@a44e1c8`). Installed beta.7+ apps (Brett's + Manny's) auto-update
+  to beta.20 on next quit/reopen.
 **Landing page:** https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app
   (Vercel auto-deploys from BrettLechtenbrerg/TSAI-Site)
 **Upstream:** https://github.com/KenKaiii/pocket-agent (MIT, fork point
@@ -44,61 +45,34 @@ Before starting:
 
 ---
 
-## Unreleased on `main` (built since beta.18, NOT yet tagged/built)
+## Shipped in beta.20 (Jul 3, 2026)
 
-Several workstreams sit on `main` past the beta.18 tag. All need a live test
-before the next release tag.
+- **Queued-message spinner fix** (Manny's `COS Bug.docx` report, `3378a6b`) —
+  the thinking indicator vanished while the agent was still working: backend
+  emits `done` per message before `processQueue()` starts the next, but the
+  renderer tore the indicator down unconditionally, dropping all status events
+  for queued messages. Fixed in `message-renderer.js` (skip teardown while
+  queued messages remain; recreate indicator for non-`done` events) +
+  `messaging.js` (cleanup checks session-scoped `queuedMessageIdsBySession`,
+  not the global map; `stopQuery()` clears only its own session's queue).
+- **Security hardening** (from a full audit — Electron config, credential
+  storage, IPC, XSS paths): credential files 0600 + chmod-down of old installs
+  (`52b33a3`); `will-navigate`/`setWindowOpenHandler` guards on all
+  `createWindow()` windows (`21ef090`); upstream chat server removed from
+  `chat.html` CSP connect-src (`acffa8d`). Audit also confirmed solid:
+  contextIsolation, safeStorage, DOMPurify, openExternal gating, bash safety
+  patterns. gg-pixel verified inert (transitive dep, never activated —
+  documented in CLAUDE.md Privacy Posture).
+- Stale test fix: GHL tool count 91 → 92 (`1004cc0`). Suite 1248/1248.
+- **Gotcha found:** TSAI-Site's bot-protection edge proxy 404s bare curl —
+  verify the landing page with a browser User-Agent, not plain curl.
 
-- **Silence Trimmer** (unreleased) — `trim_video_silence` tool removes filler
-  words ("um/uh/ah/hmm") + dead air from any video/audio file, exporting a
-  clean in-sync file to `~/Desktop/Trimmed/`. Shells out to the bundled
-  `assets/skills/video-silence-trimmer/trimmer.py` (faster-whisper on-device by
-  default; optional openai/elevenlabs engines). `src/tools/video-trim.ts`,
-  registered in `getCustomTools`. No panel — the agent calls it on request
-  ("trim the silence out of this video"), pairs with Video Studio output.
-  EXTERNAL deps (ffmpeg + faster-whisper) live on the user's machine — the tool
-  self-gates with install guidance; nothing heavy is bundled. **LIVE-TESTED
-  Jun 29** on this Mac (ffmpeg 8.1.2 + faster-whisper 1.2.1, both now installed):
-  ran `trimmer.py` directly on a real video AND audio clip — fillers + silences
-  removed, output in-sync (0.03s drift), original untouched, explicit same-path
-  overwrite honored, audio-only stays audio-only. Note: filler-word accuracy
-  depends on the Whisper model (the `base` default can miss synthetic-TTS
-  "um/uh"; `small`+ is tighter) — documented in SKILL.md. **App was rebuilt
-  (`rebuild:native`) + rebuilt JS + relaunched Jun 29**, so the tool is loaded
-  in the running app (433 tools) — the only thing not yet exercised is the agent
-  calling `trim_video_silence` live in chat.
-- **Hook Lab** (`0fb3ee7`) — short-form hook strategist. Sidebar
-  `sidebar-hook-lab-btn` → `ui/chat/hook-lab-panel.js` (`startHookLab`). Panel:
-  idea textarea + optional goal chips + optional brand picker. Boots a "Hook
-  Lab" automation session that returns a full hook system (best main format +
-  specific type, 5 options for each of the 5 hook elements, /25 score, 15–30s
-  script, CTAs) per `assets/skills/hook-lab/SKILL.md`. Auto Lead-Gen + Rewrite
-  modes; conversational (no approval markers); bridges to Video Studio. Built
-  from Brett's Hook Lab™ system instructions. Pure renderer UI + injected
-  prompt — no `src/`/IPC changes.
-- **Video Studio** (`72fc7ad`) — programmatic branded video via Remotion.
-  Sidebar `sidebar-video-studio-btn` → `ui/chat/video-studio-panel.js`
-  (`startVideoStudio`). Panel: workspace + brand + **aspect picker** (9:16 /
-  16:9 / 1:1) + optional OpenAI. Boots a "Video Studio" automation session that
-  designs → builds → renders an MP4 to `~/Desktop/Videos/YYYY-MM-DD-<slug>/`.
-  Tools `scaffold_video_project` + `render_video` (`src/tools/video-*.ts`,
-  registered in `getCustomTools`). **Remotion is EXTERNAL** — renders in
-  `~/dev/_video-studio` driven by the agent's shell, NEVER bundled into the
-  signed app (the renderer pulls a ~150 MB headless Chrome + ffmpeg). Only the
-  skill ships, at `assets/skills/remotion/SKILL.md`. First run does `npm
-  install` + lazily downloads the Chrome shell (one-time). See
-  `docs/VIDEO-STUDIO.md`. **Never add the renderer/headless Chromium to
-  `build.files` / `extraResources`.**
-- **Campaign Operations Phase 1** (`1ab9c27` and earlier) — GHL setup→test→
-  verify→enroll→status→message tools. See the workstream section below. Status:
-  built & pushed, **never tested live.**
+## Shipped in beta.19 (Jun 30) — all live-tested
 
-Verification done so far: typecheck + lint clean; Video Studio proven with a
-real dual-aspect Remotion render (1080×1920 + 1920×1080) consuming brand.json;
-Hook Lab panel layout confirmed via a CSS harness; Silence Trimmer proven with a
-real ffmpeg+whisper E2E run (script-level). The app is currently rebuilt +
-relaunched with all of it loaded. The remaining manual step for each is the
-in-app GUI/agent click-through (real agent turns with an API key).
+Silence Trimmer (`trim_video_silence`), Hook Lab, Video Studio (9:16/16:9/1:1
+branded MP4 renders), Campaign Ops Phase 1 (GHL campaign_* tools), and full
+model selection ('Check for new models' live discovery — surfaced + ran Opus
+4.8 on subscription auth, zero API keys). Details in RECOVERY.md beta.19 row.
 
 ---
 
@@ -173,28 +147,27 @@ in-app GUI/agent click-through (real agent turns with an API key).
 
 ## Open items / next candidates
 
-1. **Live-test the unreleased workstreams in the app, then tag a beta:**
-   - Silence Trimmer: in chat, ask the agent to trim a real clip
-     ("trim the silence + filler words out of ~/Desktop/.../clip.mp4"); confirm
-     it lands in `~/Desktop/Trimmed/` and the original is untouched. If it
-     under-cuts fillers on real audio, set `WHISPER_MODEL=small` (or make that
-     the tool default).
-   - Hook Lab: open it, try a lead-gen idea (confirm Lead-Gen Mode fires), check
-     the full 12-section output + /25 score; paste a weak hook for Rewrite Mode.
-   - Video Studio: pick a brand, render a 9:16 (~10s) and a 16:9; confirm the
-     skill lands at `~/dev/_video-studio/.agents/skills/remotion/SKILL.md` and
-     the Approve / Request-changes buttons appear/clear.
-   - Campaign Ops Phase 1: see the workstream section — `campaign_smoke_test`
-     first, after `rebuild:native` + relaunch + GHL connected.
-2. Tester feedback on Ad Creator + Ad Analyzer + brand publishing.
-3. **Autopost activation** (only when Brett asks): add a `metaAds.autopost`
+1. **Agent-performance upgrades (scoped for beta.21, ~half a day total):**
+   - Prompt-cache prefix hygiene: audit per-turn system-prompt/context
+     rebuilding in `chat-engine.ts` for stable ordering so Anthropic prompt
+     caching actually hits (~2–3 hrs; cost + latency win on every message).
+   - Per-tool result truncation budgets so huge GHL/DataForSEO payloads don't
+     flood context (~2–3 hrs).
+   - Compaction threshold tuning (currently ggcoder's 80% default) per model
+     (~1 hr; needs a long-conversation test).
+2. **Campaign Ops Phase 2:** Google Ads connector + ad-spend→GHL-lead stats
+   join. Needs Brett's Google Ads account/auth input before starting.
+3. Tester feedback on Ad Creator + Ad Analyzer + brand publishing.
+4. **Autopost activation** (only when Brett asks): add a `metaAds.autopost`
    toggle with an explicit confirm step; re-verify Meta OAuth scope first.
    Prompt plumbing already done.
-4. Brand → ad-account mapping for Meta recipes; brand-aware SEO report.
-5. Chores (RECOVERY.md): prune reference-only `vendor/ghl-mcp/` Python tree;
+5. Brand → ad-account mapping for Meta recipes; brand-aware SEO report.
+6. Chores (RECOVERY.md): prune reference-only `vendor/ghl-mcp/` Python tree;
    rotate GHL test tokens; `install:local` symlink seal (Goal b6168502); tray
    single-click flake; upstream the Flo `oauth.js` env-var patch; live Windows
    pass when hardware is available.
+7. **Flagged, not yet legally checked:** promoting Claude subscription OAuth
+   sign-in in a distributed commercial app may run against Anthropic's terms.
 
 ---
 
@@ -256,16 +229,16 @@ through `getMCPManager().callTool` — never raw curl):
   explicit `dryRun:false` after human approval).
 - `campaign_verify` — read-only assertions (expected tags, conversation activity).
 
-**NEXT STEP = TEST LIVE (Brett to drive).** Needs: `npm run rebuild:native` then
-relaunch the app (the tools call the running app's MCP manager, so the new
-`delete_contact` + tools only take effect after a rebuild/relaunch or next signed
-build); GHL connected in Settings → Connections; and a `workflowId` (or name)
-from a workflow built in the GHL UI to exercise enrollment. Run
-`campaign_smoke_test` first.
+**STATUS UPDATE (Jun 30, beta.19): Phase 1 LIVE-TESTED — PASSED.**
+`campaign_smoke_test` passed all steps (create_contact, verify_tag) on Brett's
+real GHL sub-account `Uj6CJxWXVU8HyNgI39xb`; enroll skipped (no workflowId),
+cleanup skipped (Brett's hand-managed Python `flo-ghl` lacks `delete_contact`;
+the vendored Node server subscribers use has it). Leftover synthetic contact
+deleted out-of-band + verified gone. Shipped in beta.19.
 
-After the test passes: Phase 2 — Google Ads connector (mirror the Meta /
-Pipeboard `mcp-remote` model) + the ad-spend→GHL-lead stats-join layer. Needs
-Brett's input on Google Ads accounts/auth before starting.
+**NEXT = Phase 2** — Google Ads connector (mirror the Meta / Pipeboard
+`mcp-remote` model) + the ad-spend→GHL-lead stats-join layer. Needs Brett's
+input on Google Ads accounts/auth before starting.
 
 ---
 
