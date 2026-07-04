@@ -94,7 +94,7 @@ model selection ('Check for new models' live discovery — surfaced + ran Opus
 - **GoHighLevel: Node MCP server** (beta.16, `vendor/ghl-mcp-node/`).
   Python-free, runs on Windows, spawned via Electron's bundled Node
   (`ELECTRON_RUN_AS_NODE=1`). 91 base tools + `delete_contact` added for
-  campaign-ops cleanup (now 93). Verified live against sub-account
+  campaign-ops cleanup (now 92). Verified live against sub-account
   `OfcMDEmwDKM6qQZahiuf` from inside the signed .app: reads (`get_pipelines`)
   + writes (`create_contact`) work. The old Python `vendor/ghl-mcp/` is
   reference-only — prune later.
