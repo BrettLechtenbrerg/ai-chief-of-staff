@@ -125,6 +125,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     openSettings: (tab?: string) => ipcRenderer.invoke('app:openSettings', tab),
     openChat: () => ipcRenderer.invoke('app:openChat'),
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
+    getStartupError: () => ipcRenderer.invoke('app:getStartupError'),
     getPlatform: () => process.platform,
     onNavigateTab: (callback: (tab: string) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, tab: string) => callback(tab);
@@ -708,6 +709,7 @@ declare global {
         openSettings: (tab?: string) => Promise<void>;
         openChat: () => Promise<void>;
         getVersion: () => Promise<string>;
+        getStartupError: () => Promise<string | null>;
         getPlatform: () => string;
         onNavigateTab: (callback: (tab: string) => void) => () => void;
         onOpenSettings: (callback: (tab?: string) => void) => () => void;

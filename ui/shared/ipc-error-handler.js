@@ -25,6 +25,43 @@
   var STALE_MESSAGE =
     'Your install is out of date. Please re-download from ' + REINSTALL_URL + '.';
 
+  // If main-process initialization failed (corrupt DB, unloadable native
+  // module, ...), 'app:getStartupError' returns the REAL error. In that state
+  // every other channel is also unregistered, so without this check safeIpc
+  // would mis-toast "install out of date" for a failure that has nothing to
+  // do with versions.
+  var _startupError = null;
+  function _checkStartupError() {
+    try {
+      var api = window.pocketAgent && window.pocketAgent.app;
+      if (!api || typeof api.getStartupError !== 'function') return;
+      api
+        .getStartupError()
+        .then(function (err) {
+          if (err) {
+            _startupError = err;
+            console.error('[acos] Main process failed to start:', err);
+            _toast(
+              'AI Chief of Staff failed to start: ' +
+                err +
+                ' \u2014 please send a screenshot of this message to support.'
+            );
+          }
+        })
+        .catch(function () {
+          // getStartupError itself unregistered — truly stale install; the
+          // per-call STALE_MESSAGE path still covers that case.
+        });
+    } catch (e) {
+      // Non-fatal — diagnostics only.
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _checkStartupError);
+  } else {
+    _checkStartupError();
+  }
+
   // Detect Electron's `Error invoking remote method ...: Error: No handler
   // registered for 'channel:name'` pattern. Match on the stable substring so
   // we don't depend on quoting.
@@ -70,10 +107,16 @@
     }
     return Promise.resolve(p).catch(function (err) {
       if (_isStaleHandlerError(err)) {
-        console.error('[safeIpc] Stale install detected on channel "' + name + '":', err);
-        _toast(STALE_MESSAGE);
-        var friendly = new Error(STALE_MESSAGE);
-        friendly.staleInstall = true;
+        // A recorded startup failure means handlers are missing because the
+        // main process crashed during init — show the real cause, not the
+        // stale-install message.
+        var message = _startupError
+          ? 'AI Chief of Staff failed to start: ' + _startupError
+          : STALE_MESSAGE;
+        console.error('[safeIpc] Missing handler on channel "' + name + '":', err);
+        _toast(message);
+        var friendly = new Error(message);
+        friendly.staleInstall = !_startupError;
         friendly.channel = name;
         throw friendly;
       }

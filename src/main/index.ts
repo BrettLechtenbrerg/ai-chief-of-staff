@@ -1,4 +1,4 @@
-import { app, Notification, globalShortcut, powerMonitor } from 'electron';
+import { app, Notification, globalShortcut, powerMonitor, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -58,6 +58,12 @@ fixPathForPackagedApp();
 let memory: MemoryManager | null = null;
 let scheduler: CronScheduler | null = null;
 let telegramBot: TelegramBot | null = null;
+
+// Set when app.whenReady() initialization throws. Exposed to the renderer via
+// 'app:getStartupError' so the UI can show the REAL failure (e.g. a corrupt
+// database or an unloadable native module) instead of the misleading
+// "install out of date" toast that fires on missing IPC handlers.
+let startupError: string | null = null;
 // tray menu updates are event-driven via IPC handlers
 let modelChangedHandler: ((model: string) => void) | null = null;
 
@@ -708,6 +714,24 @@ async function restartAgent(): Promise<void> {
 app.whenReady().then(async () => {
   console.log('[Main] App ready, starting initialization...');
 
+  // Register ALL IPC handlers FIRST, before anything that can throw (native
+  // SQLite opens, migrations, credential file setup). Registration only binds
+  // channels — handlers read mutable state through getters (getMemory(), the
+  // self-guarding SettingsManager), so it is safe to bind them before init.
+  // Previously setupIPC() ran AFTER the DB opens: one throw there meant ZERO
+  // handlers registered, the renderer got "No handler registered for ..." on
+  // every call, and ipc-error-handler.js mis-toasted "install out of date"
+  // (a beta tester hit exactly this).
+  ipcMain.handle('app:getStartupError', () => startupError);
+  try {
+    setupIPC();
+    setupUpdaterIPC();
+    console.log('[Main] IPC handlers registered');
+  } catch (err) {
+    startupError = err instanceof Error ? err.message : String(err);
+    console.error('[Main] FATAL ERROR registering IPC:', err);
+  }
+
   try {
     // Ensure the synthesized google-credentials.json exists at <userData>.
     // This is the file the bundled Flo MCP servers will read via
@@ -788,8 +812,6 @@ app.whenReady().then(async () => {
     memory = new MemoryManager(dbPath);
     console.log('[Main] Memory initialized');
 
-    setupIPC();
-    setupUpdaterIPC();
     console.log('[Main] Creating tray...');
     initTray({
       openChatWindow,
@@ -835,7 +857,14 @@ app.whenReady().then(async () => {
     // Tray menu is updated event-driven (after messages, cron changes, etc.)
     // No polling needed — updateTrayMenu() is called directly by IPC handlers
   } catch (error) {
+    startupError = error instanceof Error ? error.message : String(error);
     console.error('[Main] FATAL ERROR during initialization:', error);
+    // Surface the real failure immediately — a tray app with a broken main
+    // process otherwise looks "open but ignoring you".
+    dialog.showErrorBox(
+      'AI Chief of Staff failed to start',
+      `${startupError}\n\nData folder: ${app.getPath('userData')}\n\nPlease send a screenshot of this message to support.`
+    );
   }
 });
 
