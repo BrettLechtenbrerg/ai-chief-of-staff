@@ -121,8 +121,13 @@ export function getChatAgentTools(config: ToolsConfig, cwd: string): AgentTool[]
       name: tool.name,
       description: tool.description,
       parameters,
-      execute: async (args: unknown, _context: ToolContext) => {
-        return await wrapped(args as Record<string, unknown>);
+      execute: async (args: unknown, context: ToolContext) => {
+        // Bridge the framework's onUpdate into the handler so long-running
+        // tools (e.g. render_video) can emit heartbeat progress messages that
+        // surface as tool_call_update events → chat status indicator.
+        return await wrapped(args as Record<string, unknown>, {
+          onProgress: (message: string) => context.onUpdate?.({ message }),
+        });
       },
     });
   }
@@ -182,8 +187,12 @@ export function getCoderAgentTools(config: ToolsConfig, cwd: string): AgentTool[
       name: tool.name,
       description: tool.description,
       parameters,
-      execute: async (args: unknown, _context: ToolContext) => {
-        return await wrapped(args as Record<string, unknown>);
+      execute: async (args: unknown, context: ToolContext) => {
+        // Same onUpdate bridge as getChatAgentTools — heartbeats from
+        // long-running tools reach the status indicator in Coder mode too.
+        return await wrapped(args as Record<string, unknown>, {
+          onProgress: (message: string) => context.onUpdate?.({ message }),
+        });
       },
     });
   }

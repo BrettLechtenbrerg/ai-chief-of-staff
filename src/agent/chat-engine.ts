@@ -626,8 +626,23 @@ export class ChatEngine {
             });
             break;
 
+          case 'tool_call_update': {
+            // Heartbeat progress from long-running tools (e.g. render_video
+            // emits "rendering <slug>… 90s" every 10s). Surfaced as 'thinking'
+            // so the status indicator shows real activity — 'tool_start' would
+            // inflate the per-session tool counter on every beat.
+            const update = event.update as { message?: string } | undefined;
+            if (update?.message) {
+              this.emitStatus({
+                type: 'thinking',
+                sessionId,
+                message: update.message,
+              });
+            }
+            break;
+          }
+
           // thinking_delta — internal chain-of-thought, not user-facing
-          // tool_call_update — onUpdate from tools, no tools use it yet
           // steering_message — internal framework steering
         }
       }

@@ -105,7 +105,10 @@ function buildSummary(
   return lines.join('\n');
 }
 
-export async function renderVideo(input: RenderVideoInput): Promise<RenderVideoResult> {
+export async function renderVideo(
+  input: RenderVideoInput,
+  onProgress?: (message: string) => void
+): Promise<RenderVideoResult> {
   const err = validate(input);
   if (err) return { success: false, error: err };
 
@@ -145,11 +148,25 @@ export async function renderVideo(input: RenderVideoInput): Promise<RenderVideoR
   }
   const cmd = parts.join(' ');
 
-  const result = await runInWorkspace(cmd, {
-    cwd: workspace,
-    // First render pulls a headless Chrome shell (~150 MB) + encodes — allow time.
-    timeoutMs: 20 * 60 * 1000,
-  });
+  // Heartbeat: the render blocks for up to 20 minutes with zero output. Emit
+  // periodic progress so the chat status indicator keeps showing real activity
+  // ("rendering <slug>… 90s") instead of looking dead mid-render.
+  let elapsedSec = 0;
+  const heartbeat = setInterval(() => {
+    elapsedSec += 10;
+    onProgress?.(`rendering ${slug}… ${elapsedSec}s`);
+  }, 10_000);
+
+  let result;
+  try {
+    result = await runInWorkspace(cmd, {
+      cwd: workspace,
+      // First render pulls a headless Chrome shell (~150 MB) + encodes — allow time.
+      timeoutMs: 20 * 60 * 1000,
+    });
+  } finally {
+    clearInterval(heartbeat);
+  }
 
   if (!result.ok || !fs.existsSync(workspaceOut)) {
     const log = tailLog(`${result.stdout}\n${result.stderr}`, 40);
@@ -208,7 +225,10 @@ export function getRenderVideoToolDefinition() {
   };
 }
 
-export async function handleRenderVideoTool(input: unknown): Promise<string> {
-  const result = await renderVideo(input as RenderVideoInput);
+export async function handleRenderVideoTool(
+  input: unknown,
+  context?: { onProgress?: (message: string) => void }
+): Promise<string> {
+  const result = await renderVideo(input as RenderVideoInput, context?.onProgress);
   return JSON.stringify(result);
 }

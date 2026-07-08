@@ -71,7 +71,7 @@ import {
 export { setTelegramBotForTools } from './telegram-tool';
 import { getProjectTools } from './project-tools';
 import { getSwitchAgentTool } from './agent-mode-tools';
-import { logActiveToolsStatus } from './diagnostics';
+import { logActiveToolsStatus, ToolProgressContext } from './diagnostics';
 
 export { logActiveToolsStatus } from './diagnostics';
 
@@ -164,13 +164,13 @@ export function getCustomTools(config: ToolsConfig): Array<{
   name: string;
   description: string;
   input_schema: Record<string, unknown>;
-  handler: (input: unknown) => Promise<string>;
+  handler: (input: unknown, context?: ToolProgressContext) => Promise<string>;
 }> {
   const tools: Array<{
     name: string;
     description: string;
     input_schema: Record<string, unknown>;
-    handler: (input: unknown) => Promise<string>;
+    handler: (input: unknown, context?: ToolProgressContext) => Promise<string>;
   }> = [];
 
   // Memory tools (always enabled)
