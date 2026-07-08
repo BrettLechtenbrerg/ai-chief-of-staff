@@ -1,6 +1,6 @@
 {
   "name": "ai-chief-of-staff",
-  "version": "1.0.0-beta.20",
+  "version": "1.0.0-beta.21",
   "description": "AI Chief of Staff — a private desktop AI agent by Total Success AI. Persistent memory, scheduled routines, browser automation, and 40+ skill integrations, powered by the Claude Agent SDK.",
   "type": "module",
   "main": "dist/main/index.js",
@@ -40,7 +40,7 @@
   "build": {
     "appId": "com.totalsuccessai.ai-chief-of-staff",
     "productName": "AI Chief of Staff",
-    "afterPack": "scripts/verify-native-modules.cjs",
+    "afterPack": "./build/afterPack.cjs",
     "directories": {
       "output": "release"
     },
@@ -131,7 +131,6 @@
       ]
     },
     "asar": false,
-    "afterPack": "./build/afterPack.cjs",
     "afterAllArtifactBuild": "./build/afterAllArtifactBuild.cjs",
     "files": [
       "dist/**/*",

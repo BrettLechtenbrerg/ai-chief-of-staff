@@ -160,6 +160,12 @@ exports.default = async function(context) {
       console.log('[afterPack] bundle already properly signed, skipping re-sign');
     }
   }
+
+  // Final gate: verify every native module (.node) matches the target
+  // platform/arch. Throws (failing the build) on any mismatch — beta.20's
+  // arm64 mac app shipped a Windows PE better_sqlite3.node and bricked every
+  // Apple Silicon install. Runs LAST so it validates the final file set.
+  await require('../scripts/verify-native-modules.cjs').default(context);
 };
 
 function cleanDirectory(dir, extensions) {
