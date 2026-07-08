@@ -40,6 +40,7 @@
   "build": {
     "appId": "com.totalsuccessai.ai-chief-of-staff",
     "productName": "AI Chief of Staff",
+    "afterPack": "scripts/verify-native-modules.cjs",
     "directories": {
       "output": "release"
     },
