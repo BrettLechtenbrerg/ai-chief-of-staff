@@ -285,6 +285,40 @@ function addStatusIndicator(initialMessage) {
   return div;
 }
 
+// Streaming hides the status indicator (see the partial_text branch below), and
+// the only event-driven re-show requires ANOTHER status event to arrive. During
+// long silent tool calls (e.g. a 20-min Remotion render, or the agent polling a
+// background job via shell) no events arrive for minutes, so the indicator
+// stayed display:none and the app looked dead. This watchdog makes the re-show
+// time-driven: every partial_text chunk re-arms a short timer, and if the
+// stream goes quiet without a 'done', the indicator comes back.
+const STREAM_IDLE_MS = 2500;
+
+function armStreamWatchdog(sessionId) {
+  clearStreamWatchdog(sessionId);
+  const id = setTimeout(() => {
+    streamWatchdogBySession.delete(sessionId);
+    const statusEl = statusElBySession.get(sessionId);
+    // Only intervene while the query is still running and streaming hid the
+    // indicator. A torn-down indicator (statusEl gone / isLoading false) or a
+    // visible one means there is nothing to rescue.
+    if (statusEl && isLoadingBySession.get(sessionId) && statusEl.style.display === 'none') {
+      statusEl.style.display = '';
+      const actionEl = statusEl.querySelector('.status-action');
+      if (actionEl) actionEl.textContent = 'still working... \u{1F43E}';
+    }
+  }, STREAM_IDLE_MS);
+  streamWatchdogBySession.set(sessionId, id);
+}
+
+function clearStreamWatchdog(sessionId) {
+  const id = streamWatchdogBySession.get(sessionId);
+  if (id) {
+    clearTimeout(id);
+    streamWatchdogBySession.delete(sessionId);
+  }
+}
+
 function updateStatusIndicator(status, sessionId) {
   // Use status.sessionId (from the event) as authoritative source, fall back to listener's sessionId, then currentSessionId
   const targetSession = status.sessionId || sessionId || currentSessionId;
@@ -348,9 +382,14 @@ function updateStatusIndicator(status, sessionId) {
     previewEl.classList.add('hidden');
   }
 
-  // Re-show the status indicator when switching away from streaming text
-  if (status.type !== 'partial_text' && statusEl.style.display === 'none') {
-    statusEl.style.display = '';
+  // Re-show the status indicator when switching away from streaming text.
+  // A real (non-streaming) event also proves the backend isn't stalled, so the
+  // stream watchdog is no longer needed until the next partial_text chunk.
+  if (status.type !== 'partial_text') {
+    clearStreamWatchdog(targetSession);
+    if (statusEl.style.display === 'none') {
+      statusEl.style.display = '';
+    }
   }
 
   if (status.type === 'thinking') {
@@ -541,6 +580,10 @@ function updateStatusIndicator(status, sessionId) {
 
       // Skip rendering if there's no content yet
       if (!accumulated) return;
+
+      // Streaming content will hide the indicator (below, in the RAF); re-arm
+      // the watchdog on every chunk so it only fires if the stream goes quiet.
+      armStreamWatchdog(status.sessionId);
 
       let bubble = streamingBubbleBySession.get(status.sessionId);
       if (!bubble) {

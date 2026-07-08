@@ -56,6 +56,7 @@ async function stopQuery() {
       statusElBySession.delete(sessionId);
     }
     toolCountBySession.delete(sessionId);
+    clearStreamWatchdog(sessionId);
 
     // Remove streaming bubble if present
     const streamBubble = streamingBubbleBySession.get(sessionId);
@@ -216,6 +217,7 @@ async function sendMessage() {
         statusElBySession.delete(sessionId);
       }
       toolCountBySession.delete(sessionId);
+      clearStreamWatchdog(sessionId);
 
       isLoadingBySession.set(sessionId, false);
       renderTabs();
@@ -326,6 +328,7 @@ async function sendMessage() {
         statusElBySession.delete(sessionId);
       }
       toolCountBySession.delete(sessionId);
+      clearStreamWatchdog(sessionId);
 
       isLoadingBySession.set(sessionId, false);
       renderTabs();

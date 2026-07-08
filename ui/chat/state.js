@@ -36,6 +36,7 @@ let statusElBySession = new Map(); // Track status elements per session
 let streamingBubbleBySession = new Map(); // Track live-updating assistant bubble per session
 let streamingTextBySession = new Map(); // Persist accumulated partial text across session switches
 let streamingRafBySession = new Map(); // Track pending rAF for streaming render throttle
+let streamWatchdogBySession = new Map(); // Re-show status indicator when a stream goes quiet mid-query
 let streamingDirtyBySession = new Map(); // Track whether streaming text needs re-render
 let toolCountBySession = new Map(); // Track tool call count per session
 let suggestionBySession = new Map(); // Track ghost suggestions per session
