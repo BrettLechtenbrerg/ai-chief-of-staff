@@ -35,7 +35,9 @@ describe('wrapToolHandler', () => {
       await vi.runAllTimersAsync();
       const result = await resultPromise;
 
-      expect(handler).toHaveBeenCalledWith(input);
+      // The wrapper forwards an optional progress context as the second arg
+      // (undefined when the caller doesn't supply one).
+      expect(handler).toHaveBeenCalledWith(input, undefined);
       expect(result).toBe('success');
     });
 
@@ -393,6 +395,46 @@ describe('TOOL_TIMEOUTS', () => {
     // Browser tools should have longer timeouts
     expect(TOOL_TIMEOUTS.browser).toBeGreaterThanOrEqual(30000);
   });
+
+  it('should give video tools wrapper timeouts that OUTLAST their internal runInWorkspace timeouts', () => {
+    // Regression guard for the beta.21 tester report: render_video was missing
+    // from TOOL_TIMEOUTS, so the 30s default wrapper killed the tool call while
+    // the real render ran up to 20 min — stranding the agent on silent
+    // background polling with no status events. The wrapper must always lose
+    // the race to the tool's own timeout so the structured error surfaces.
+    expect(TOOL_TIMEOUTS.scaffold_video_project).toBeGreaterThan(12 * 60 * 1000);
+    expect(TOOL_TIMEOUTS.render_video).toBeGreaterThan(20 * 60 * 1000);
+    expect(TOOL_TIMEOUTS.trim_video_silence).toBeGreaterThan(30 * 60 * 1000);
+  });
+});
+
+describe('progress context forwarding', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('should forward the progress context to the handler', async () => {
+    const handler = vi.fn().mockImplementation(async (_input, context) => {
+      context?.onProgress?.('halfway there');
+      return 'done';
+    });
+    const wrappedHandler = wrapToolHandler('progressTool', handler);
+
+    const onProgress = vi.fn();
+    const resultPromise = wrappedHandler({ key: 'value' }, { onProgress });
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toBe('done');
+    expect(handler).toHaveBeenCalledWith({ key: 'value' }, { onProgress });
+    expect(onProgress).toHaveBeenCalledWith('halfway there');
+  });
 });
 
 describe('synchronous handler support', () => {
@@ -417,6 +459,6 @@ describe('synchronous handler support', () => {
     const result = await resultPromise;
 
     expect(result).toBe('sync-like result');
-    expect(handler).toHaveBeenCalledWith({ data: 'test' });
+    expect(handler).toHaveBeenCalledWith({ data: 'test' }, undefined);
   });
 });

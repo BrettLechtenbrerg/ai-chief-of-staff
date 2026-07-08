@@ -37,14 +37,23 @@ function logTool(
 }
 
 /**
+ * Optional per-call context threaded from the agent framework into tool
+ * handlers. `onProgress` lets long-running tools (e.g. render_video) emit
+ * periodic heartbeat messages that surface in the chat status indicator.
+ */
+export interface ToolProgressContext {
+  onProgress?: (message: string) => void;
+}
+
+/**
  * Wrap a tool handler with diagnostics and timeout
  */
 export function wrapToolHandler<T>(
   toolName: string,
-  handler: (input: T) => Promise<string>,
+  handler: (input: T, context?: ToolProgressContext) => Promise<string>,
   timeoutMs: number = TOOL_TIMEOUT_MS
-): (input: T) => Promise<string> {
-  return async (input: T): Promise<string> => {
+): (input: T, context?: ToolProgressContext) => Promise<string> {
+  return async (input: T, context?: ToolProgressContext): Promise<string> => {
     const callId = `${toolName}-${++toolCallId}`;
     const timing: ToolTiming = {
       name: toolName,
@@ -75,7 +84,7 @@ export function wrapToolHandler<T>(
 
     try {
       // Race between handler and timeout
-      const result = await Promise.race([handler(input), timeoutPromise]);
+      const result = await Promise.race([handler(input, context), timeoutPromise]);
 
       clearTimeout(timeoutId!);
       timing.status = 'success';
@@ -169,6 +178,16 @@ export const TOOL_TIMEOUTS = {
   // Pure file I/O — fast, but allow generous headroom in case the
   // inbox folder needs creation or the cron passes a huge image path.
   write_daily_posting_packet: 15000,
+
+  // Video Studio tools shell out to long-running external processes and
+  // enforce their own runInWorkspace timeouts (scaffold 12 min, render 20 min,
+  // trim 30 min). The wrapper timeout must OUTLAST the tool's internal one so
+  // the tool returns its structured error instead of the wrapper racing it out
+  // at the 30s default — which stranded renders mid-flight with the agent
+  // falling back to silent background polling (beta.21 tester report).
+  scaffold_video_project: 13 * 60 * 1000,
+  render_video: 21 * 60 * 1000,
+  trim_video_silence: 31 * 60 * 1000,
 } as const;
 
 /**
