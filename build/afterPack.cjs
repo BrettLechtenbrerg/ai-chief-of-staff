@@ -94,7 +94,17 @@ exports.default = async function(context) {
 
   console.log('[afterPack] Cleanup complete');
 
-  // 4. macOS only: apply a proper ad-hoc codesign if electron-builder skipped
+  // 4. Native-module gate: verify every .node matches the target platform/arch.
+  //    Throws (failing the build) on any mismatch — beta.20's arm64 mac app
+  //    shipped a Windows PE better_sqlite3.node and bricked every Apple Silicon
+  //    install. MUST run before the signing section below: the signed-release
+  //    branch early-returns (electron-builder signs after this hook), which
+  //    silently skipped this gate on every dist:signed build when it was
+  //    chained at the bottom of the hook. Runs after cleanup + symlinks so it
+  //    validates the final file set; signing never alters .node contents.
+  await require('../scripts/verify-native-modules.cjs').default(context);
+
+  // 5. macOS only: apply a proper ad-hoc codesign if electron-builder skipped
   //    signing (i.e. local unsigned builds). Without this the bundle keeps the
   //    linker's default ad-hoc signature with Identifier=Electron and an
   //    unsealed Info.plist, which Finder shows as a 'no entry' icon and
@@ -160,12 +170,6 @@ exports.default = async function(context) {
       console.log('[afterPack] bundle already properly signed, skipping re-sign');
     }
   }
-
-  // Final gate: verify every native module (.node) matches the target
-  // platform/arch. Throws (failing the build) on any mismatch — beta.20's
-  // arm64 mac app shipped a Windows PE better_sqlite3.node and bricked every
-  // Apple Silicon install. Runs LAST so it validates the final file set.
-  await require('../scripts/verify-native-modules.cjs').default(context);
 };
 
 function cleanDirectory(dir, extensions) {
