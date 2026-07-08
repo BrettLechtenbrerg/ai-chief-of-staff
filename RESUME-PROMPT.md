@@ -1,6 +1,6 @@
 # AI Chief of Staff — Resume Prompt (current)
 
-> Updated July 3, 2026 (post-beta.20 ship). This is the up-to-date
+> Updated July 7, 2026 (post-beta.21 emergency ship). This is the up-to-date
 > paste-into-chat kickoff. `RECOVERY.md` remains the canonical, full-history
 > source of truth — read it for the build pipeline, the per-release rollback
 > table, and gotchas. This file is the short, current-state bookmark.
@@ -16,11 +16,10 @@ desktop AI agent (Electron app, MIT rebrand of KenKaiii/pocket-agent).
 **GitHub:** https://github.com/BrettLechtenbrerg/ai-chief-of-staff
   (note: the `Lechtenbrerg` spelling is the REAL handle — not a typo. The
   "corrected" `BrettLechtenberg` 404s. Never auto-fix it.)
-**Latest release:** v1.0.0-beta.20 (public prerelease, Jul 3 2026). `git log`
-  head is `a9d3080`. Repo clean — everything on `main` is shipped. 18 release
-  assets live, download links verified HTTP 200, landing page serving beta.20
-  (`TSAI-Site@a44e1c8`). Installed beta.7+ apps (Brett's + Manny's) auto-update
-  to beta.20 on next quit/reopen.
+**Latest release:** v1.0.0-beta.21 (public prerelease, Jul 7 2026 — same-day
+  emergency incident response). `git log` head is `162c9a9`. Repo clean —
+  everything on `main` is shipped. 16 release assets live, links verified.
+  Landing page serving beta.21 (`TSAI-Site@8a9baf6`).
 **Landing page:** https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app
   (Vercel auto-deploys from BrettLechtenbrerg/TSAI-Site)
 **Upstream:** https://github.com/KenKaiii/pocket-agent (MIT, fork point
@@ -45,27 +44,62 @@ Before starting:
 
 ---
 
-## Shipped in beta.20 (Jul 3, 2026)
+## Shipped in beta.21 (Jul 7, 2026) — CRITICAL Apple Silicon brick fix
 
-- **Queued-message spinner fix** (Manny's `COS Bug.docx` report, `3378a6b`) —
-  the thinking indicator vanished while the agent was still working: backend
-  emits `done` per message before `processQueue()` starts the next, but the
-  renderer tore the indicator down unconditionally, dropping all status events
-  for queued messages. Fixed in `message-renderer.js` (skip teardown while
-  queued messages remain; recreate indicator for non-`done` events) +
-  `messaging.js` (cleanup checks session-scoped `queuedMessageIdsBySession`,
-  not the global map; `stopQuery()` clears only its own session's queue).
-- **Security hardening** (from a full audit — Electron config, credential
-  storage, IPC, XSS paths): credential files 0600 + chmod-down of old installs
-  (`52b33a3`); `will-navigate`/`setWindowOpenHandler` guards on all
-  `createWindow()` windows (`21ef090`); upstream chat server removed from
-  `chat.html` CSP connect-src (`acffa8d`). Audit also confirmed solid:
-  contextIsolation, safeStorage, DOMPurify, openExternal gating, bash safety
-  patterns. gg-pixel verified inert (transitive dep, never activated —
-  documented in CLAUDE.md Privacy Posture).
-- Stale test fix: GHL tool count 91 → 92 (`1004cc0`). Suite 1248/1248.
-- **Gotcha found:** TSAI-Site's bot-protection edge proxy 404s bare curl —
-  verify the landing page with a browser User-Agent, not plain curl.
+**THE INCIDENT (read RECOVERY.md beta.21 row for the full story):**
+beta.20's **arm64 mac assets shipped a Windows PE DLL as
+`better_sqlite3.node`** (Docker `dist:win` likely overwrote shared
+node_modules before the arm64 pack copied it). `dlopen` failed → main-process
+init threw → the old `app.whenReady` catch swallowed it → `setupIPC()` never
+ran → **ZERO IPC handlers**. Symptom fingerprint (Manny, patient zero): chat
+fails `No handler registered for 'agent:send'`, Updates stuck "Current
+Version: Loading…", Claude/OpenAI sign-in stuck "Checking…", misleading
+"install out of date" toast — **surviving uninstall/reinstall** (same corrupt
+DMG re-downloaded). Brett never saw it: he's Intel x64 (that pack was healthy).
+Diagnosed via `tee`'d Terminal launch of Manny's app.
+
+**Fixes shipped:**
+- `c9e1340` — **startup hardening**: `setupIPC()`/`setupUpdaterIPC()` now run
+  FIRST in `app.whenReady`, before the throwable native-SQLite opens
+  (registration only binds channels; handlers read state via self-guarding
+  getters). Init failures → `startupError` → new `app:getStartupError` IPC +
+  preload bridge + native `dialog.showErrorBox`; `ui/shared/ipc-error-handler.js`
+  now shows the REAL error (stale-install toast only when startup succeeded).
+- `28cbf9a` + `0866304` — **build-pipeline guard**:
+  `scripts/verify-native-modules.cjs` reads magic bytes of every `.node` in
+  each packed app (Mach-O cputype vs target arch, PE, ELF; self-labeled
+  multi-arch prebuilds like sharp/onnxruntime/canvas checked against their own
+  path label; better-sqlite3's test-only `test_extension.node` ignored) and
+  THROWS to fail the build. **GOTCHA: it must be chained INSIDE
+  `build/afterPack.cjs` (final step)** — adding a second `"afterPack"` key in
+  package.json silently loses (JSON dup key + sync-version rewrite dedupes).
+  Verified: rejects the actual corrupt beta.20 arm64 pack (names
+  better_sqlite3), accepts all healthy shipped packs.
+- `43850de` — `scripts/tester-rescue.sh`: tester support script (refuses while
+  app runs; chip-vs-app arch check; sqlite integrity check; timestamped DB
+  set-aside — never deletes).
+
+**Emergency mitigations used mid-incident (both since superseded):** landing
+page Apple Silicon button pinned to beta.19; arm64 entries stripped from
+beta.20's live `latest-mac.yml` via `gh release upload --clobber` (verified in
+electron-updater 6.8.3 source: arm64 macs fall back to x64/Rosetta by design).
+
+**Release mechanics:** mac-only rebuild. Windows was NOT rebuilt — beta.20's
+healthy `latest.yml` + all 3 setup.exe/blockmaps are **mirrored under the
+beta.21 tag** so Windows updaters resolve against the newest release (a no-op
+update for them). Next Windows rebuild replaces those mirrors.
+
+**Open loop:** confirm Manny (and any other Apple Silicon testers) are live on
+beta.21 — his first successful chat message closes the incident.
+
+## Shipped in beta.20 (Jul 3) — NOTE: arm64 assets were the broken ones
+
+- Queued-message spinner fix (`3378a6b`) — indicator survives queued messages;
+  session-scoped queue cleanup in `messaging.js`.
+- Security hardening: credential files 0600 (`52b33a3`); navigation guards on
+  all windows (`21ef090`); upstream chat server out of CSP (`acffa8d`).
+- gg-pixel verified inert (documented CLAUDE.md). GHL tool count test 91→92.
+- x64 mac + all Windows beta.20 assets were always healthy.
 
 ## Shipped in beta.19 (Jun 30) — all live-tested
 
@@ -74,99 +108,78 @@ branded MP4 renders), Campaign Ops Phase 1 (GHL campaign_* tools), and full
 model selection ('Check for new models' live discovery — surfaced + ran Opus
 4.8 on subscription auth, zero API keys). Details in RECOVERY.md beta.19 row.
 
----
-
 ## Live as of beta.18
 
-- **Meta Ad Creator** (beta.18, `d6dfff8`) — draft-only ad recipe.
-  `ui/chat/meta-ad-creator-panel.js` (`startMetaAdCreator`); sidebar button
-  `sidebar-ad-creator-btn`. Flow: brand voice → brief → optional READ-ONLY
-  Meta perf snapshot → 3 concepts → landscape+square images to
-  `~/Desktop/Ads/YYYY-MM-DD-<slug>/` → approval → `ad.md` + Ads Manager paste
-  checklist. HARD RULE in prompt: never call Meta write tools. Dormant
-  autopost (`metaAds.autopost`, nothing sets it yet) — see RECOVERY workstream D.
-- **Meta Ad Analyzer** (beta.18, `f2bb707`) — read-only Meta Ads analysis +
-  Connect Tools card.
-- **Brand ↔ publish-profile unify** (beta.18, `0552c5c`) — in-app brands map to
-  `~/dev/_brand-profiles`. `brands.site_url` exists (enables brand-aware SEO).
-  Brands table: id/name/slug/brand_style/writing_rules/business/site_url/
-  profile_slug/is_default; sessions carry a nullable `brand_id`.
-- **GoHighLevel: Node MCP server** (beta.16, `vendor/ghl-mcp-node/`).
-  Python-free, runs on Windows, spawned via Electron's bundled Node
-  (`ELECTRON_RUN_AS_NODE=1`). 91 base tools + `delete_contact` added for
-  campaign-ops cleanup (now 92). Verified live against sub-account
-  `OfcMDEmwDKM6qQZahiuf` from inside the signed .app: reads (`get_pipelines`)
-  + writes (`create_contact`) work. The old Python `vendor/ghl-mcp/` is
-  reference-only — prune later.
-- **Content Writer** (beta.11/.12) — one-click SEO blog pipeline →
-  `~/Desktop/Blogs/`. The pattern Video Studio + Hook Lab were modeled on.
-- **Connect Tools marketplace + Google OAuth** (beta.12) — Gmail/Calendar/Drive/
-  Bookmarks/GHL/DataForSEO/Firecrawl. Google tokens at `<userData>/google-tokens.json`.
-- **Scheduler** on `croner@10` (beta.10 fixed the node-cron DOW bug).
+- **Meta Ad Creator** (`d6dfff8`) — draft-only ad recipe; HARD RULE: never
+  call Meta write tools. Dormant autopost (`metaAds.autopost`).
+- **Meta Ad Analyzer** (`f2bb707`) — read-only analysis + Connect Tools card.
+- **Brand ↔ publish-profile unify** (`0552c5c`) — brands map to
+  `~/dev/_brand-profiles`; `brands.site_url` exists; sessions carry `brand_id`.
+- **GoHighLevel Node MCP server** (beta.16, `vendor/ghl-mcp-node/`) —
+  Python-free, 92 tools (91 base + `delete_contact`), verified live from the
+  signed .app. Old Python `vendor/ghl-mcp/` is reference-only — prune later.
+- **Content Writer** (beta.11/.12) — one-click SEO blog pipeline → `~/Desktop/Blogs/`.
+- **Connect Tools marketplace + Google OAuth** (beta.12).
+- **Scheduler** on `croner@10`.
 
 ---
 
 ## Build / ship reminders (learned the hard way — full detail in RECOVERY.md)
 
+- **Native-module guard is now in the pipeline** (`build/afterPack.cjs` final
+  step). If it fails a build, run `npm run rebuild:native` (or clean `npm ci`)
+  and rebuild — do NOT bypass it. Never add a second `afterPack` key.
 - **Versioning is tag-driven.** `scripts/sync-version.cjs` overwrites
-  `package.json` version from the latest git tag at build time. Cut a release:
-  commit code → `git tag -a v1.0.0-beta.N` → THEN build. Hand-editing the
-  version gets reverted.
-- **Never hot-copy files into the installed signed `.app`** — it invalidates the
-  code signature and macOS silently denies entitlement-gated features (the
-  phantom-"you" mic bug). Ship a signed build or use the auto-updater.
-- **Run `dist:signed` / `dist:win` as a managed/detached background process**
-  (~16–20 min Mac notarization). A foreground build gets reaped mid-notarization,
-  leaving DMGs unstapled + `latest-mac.yml` unpatched.
-- **Before `dist:signed`:** confirm the notary profile resolves —
-  `xcrun notarytool history --keychain-profile AC_PASSWORD` (beta.16 lesson).
-- **`gh release create` with ~3.5GB assets times out** and leaves a DRAFT.
-  Create with the small manifests first, `gh release upload` big artifacts in
-  batches, then `gh release edit --draft=false`.
-- **No telemetry.** If `@kenkaiiii/gg-pixel` or `buzzbeamaustralia` reappears,
-  that's a regression — flag it. LICENSE must keep Ken's © line; README must
-  credit upstream.
-- Never use `window.prompt` in renderer UI (silent no-op) — inline inputs only.
-- New *panel* surfaces follow one pattern (Content Writer → Video Studio → Hook
-  Lab): sidebar button + `#<name>-view` in `chat.html` +
-  `ui/chat/<name>-panel.{js,css}` + a binding in `event-bindings.js` + an entry
-  in `_dismissOtherPanels` (settings-panel.js) so panels don't double-stack.
-  Session kind is only `'chat' | 'automation'` — it is NOT the agent tool mode
-  (that's global via `AgentManager.getMode()`).
-- New *tool-only* skills (Silence Trimmer) follow the bundled-skill pattern:
-  `assets/skills/<name>/` (SKILL.md + script) resolved via
-  `resolveBundledAsset()` in `video-shared.ts`, a thin `src/tools/<name>.ts`
-  registered in `getCustomTools`, heavy/native deps kept EXTERNAL on the user's
-  machine (self-gate with install guidance — never bundle them). Loads after
-  `rebuild:native` + JS build + relaunch.
-- **Never commit Python `__pycache__`/`*.pyc`** — running the bundled skill's
-  `py_compile` once leaked one into git + the `assets/**` ship glob; now
-  gitignored (fixed `7126e95`).
+  `package.json` from the latest git tag at build time. Commit → tag
+  `v1.0.0-beta.N` → THEN build.
+- **Never hot-copy files into the installed signed `.app`** — invalidates the
+  signature; macOS silently denies entitlement-gated features.
+- **Run `dist:signed` / `dist:win` as a detached background process**
+  (~16–35 min with notarization). Foreground builds get reaped mid-notarize.
+- **Before `dist:signed`:** `xcrun notarytool history --keychain-profile AC_PASSWORD`.
+- **`gh release create` with huge assets times out** → create draft with small
+  manifests first, `gh release upload` big artifacts in batches, then
+  `gh release edit --draft=false`.
+- **If Windows isn't rebuilt for a release, mirror the previous `latest.yml` +
+  setup.exe/blockmaps onto the new tag** so Windows auto-update keeps resolving.
+- **Verify the landing page with a browser User-Agent, not bare curl** — the
+  edge proxy 404s bare curl.
+- **Diagnosing a broken tester install:** `scripts/tester-rescue.sh`, or
+  Terminal-launch the app with `2>&1 | tee log.txt` and read
+  `[Main] FATAL ERROR`. "Reinstalled, same error" does NOT rule out the
+  download itself — the same corrupt DMG reinstalls the same bug.
+- **No telemetry.** gg-pixel/buzzbeamaustralia reappearing = regression.
+  LICENSE keeps Ken's © line; README credits upstream.
+- Never use `window.prompt` in renderer UI — inline inputs only.
+- New *panel* surfaces: sidebar button + `#<name>-view` in `chat.html` +
+  `ui/chat/<name>-panel.{js,css}` + binding in `event-bindings.js` + entry in
+  `_dismissOtherPanels` (settings-panel.js). Session kind is only
+  `'chat' | 'automation'` — not the agent tool mode.
+- New *tool-only* skills: `assets/skills/<name>/` via `resolveBundledAsset()`,
+  thin `src/tools/<name>.ts` in `getCustomTools`, heavy deps EXTERNAL.
+- Never commit `__pycache__`/`*.pyc` (gitignored since `7126e95`).
 
 ---
 
 ## Open items / next candidates
 
-1. **Agent-performance upgrades (scoped for beta.21, ~half a day total):**
-   - Prompt-cache prefix hygiene: audit per-turn system-prompt/context
-     rebuilding in `chat-engine.ts` for stable ordering so Anthropic prompt
-     caching actually hits (~2–3 hrs; cost + latency win on every message).
-   - Per-tool result truncation budgets so huge GHL/DataForSEO payloads don't
-     flood context (~2–3 hrs).
-   - Compaction threshold tuning (currently ggcoder's 80% default) per model
-     (~1 hr; needs a long-conversation test).
-2. **Campaign Ops Phase 2:** Google Ads connector + ad-spend→GHL-lead stats
+1. **Close the beta.21 incident loop:** confirm Manny + all Apple Silicon
+   testers are live on beta.21 (first chat message = healthy).
+2. **Agent-performance upgrades (re-queued for beta.22, ~half a day):**
+   - Prompt-cache prefix hygiene in `chat-engine.ts` (~2–3 hrs).
+   - Per-tool result truncation budgets for GHL/DataForSEO payloads (~2–3 hrs).
+   - Compaction threshold tuning per model (~1 hr).
+3. **Campaign Ops Phase 2:** Google Ads connector + ad-spend→GHL-lead stats
    join. Needs Brett's Google Ads account/auth input before starting.
-3. Tester feedback on Ad Creator + Ad Analyzer + brand publishing.
-4. **Autopost activation** (only when Brett asks): add a `metaAds.autopost`
-   toggle with an explicit confirm step; re-verify Meta OAuth scope first.
-   Prompt plumbing already done.
-5. Brand → ad-account mapping for Meta recipes; brand-aware SEO report.
-6. Chores (RECOVERY.md): prune reference-only `vendor/ghl-mcp/` Python tree;
-   rotate GHL test tokens; `install:local` symlink seal (Goal b6168502); tray
-   single-click flake; upstream the Flo `oauth.js` env-var patch; live Windows
-   pass when hardware is available.
-7. **Flagged, not yet legally checked:** promoting Claude subscription OAuth
+4. Tester feedback on Ad Creator + Ad Analyzer + brand publishing.
+5. **Autopost activation** (only when Brett asks) — confirm step + Meta OAuth
+   scope re-verify first. Prompt plumbing already done.
+6. Brand → ad-account mapping for Meta recipes; brand-aware SEO report.
+7. Chores (RECOVERY.md): prune `vendor/ghl-mcp/` Python tree; rotate GHL test
+   tokens; `install:local` symlink seal (Goal b6168502); tray single-click
+   flake; upstream the Flo `oauth.js` env-var patch; live Windows pass when
+   hardware is available; next Windows rebuild replaces the beta.20 mirrors.
+8. **Flagged, not yet legally checked:** promoting Claude subscription OAuth
    sign-in in a distributed commercial app may run against Anthropic's terms.
 
 ---
@@ -175,80 +188,48 @@ model selection ('Check for new models' live discovery — surfaced + ran Opus
 
 Goal (Brett, June 16): a single agent surface to **set up → test → verify →
 run → report** marketing campaigns without logging in/out of GHL, Meta, and
-(soon) Google Ads, and without checking five places to confirm wiring.
+(soon) Google Ads.
 
-Key facts that shape the plan:
-- **What an agent CAN drive via API:** GHL *data & messaging* (contacts, tags,
-  custom fields, conversations, SMS/email sends, opportunities, pipelines,
-  appointments) AND *campaigns* (legacy drip sequences — `create_campaign`,
-  `send_campaign_now`, `schedule_campaign`, `add_contact_to_campaign`,
-  `add_contact_to_workflow` all exist in `vendor/ghl-mcp-node/`).
-- **What stays manual:** GHL **workflow/funnel *logic*** (the visual canvas has
-  no create/edit API — only enroll/read). Build a workflow once in the UI; the
-  agent drives everything around it. There is NO `create_workflow` tool, by
-  design of GHL's API.
-- **Ad stats do NOT live in GHL.** GHL only sees leads after they arrive. True
-  ad→enrollment ROI needs the **Meta Marketing API** (FB/IG spend/CTR/CPL/ROAS)
-  + **Google Ads API** (when launched) joined to GHL leads. The join layer is
-  the same whether or not GHL is ever replaced — safe to build once.
-- **Build-our-own-CRM verdict:** NOT now. ACOS already owns a tested GHL
-  automation layer; rebuilding would mean re-acquiring Twilio + A2P 10DLC
-  registration + email deliverability from scratch. Phased path instead:
-  - **Phase 1 (built, untested):** wire `vendor/ghl-mcp-node/` into the agent
-    tool registry + add a verify/smoke-test loop. Kills ~70–80% of the pain
-    reusing proven code.
-  - **Phase 2:** Google Ads connector (mirror the Meta one) + stats-join layer
-    → cost-per-enrollment dashboard / morning digest.
-  - **Phase 3 (optional, later, only if GHL limits us):** graduate SMS→Twilio /
-    email→Postmark one channel at a time, behind the same agent tools, reusing
-    the PMMA Supabase data model. Don't pre-build.
-- **Companion data model already exists:** the PMMA repo
-  (`~/dev/PMMA-Website-2026-Master`) has a working, tested GHL integration
-  (`lib/student-create.ts` → `syncIntakeToGhl`, `scripts/ghl-*.mjs`) and a daily
-  digest cron — the proven blueprint to generalize for the COS tool layer.
+Key facts:
+- **Agent CAN drive via API:** GHL data & messaging (contacts, tags, custom
+  fields, conversations, SMS/email, opportunities, pipelines, appointments)
+  AND campaigns (legacy drips — `create_campaign`, `send_campaign_now`,
+  `schedule_campaign`, `add_contact_to_campaign`, `add_contact_to_workflow`).
+- **Stays manual:** GHL workflow/funnel *logic* (no create/edit API — only
+  enroll/read). Build the workflow once in the UI; agent drives around it.
+- **Ad stats do NOT live in GHL.** True ad→enrollment ROI needs Meta Marketing
+  API + Google Ads API joined to GHL leads. Join layer is GHL-independent.
+- **Build-our-own-CRM verdict: NOT now.** Phased: Phase 1 (SHIPPED beta.19,
+  live-tested) → Phase 2 (Google Ads + stats join) → Phase 3 (optional
+  channel-by-channel graduation, don't pre-build).
+- **Companion data model:** PMMA repo (`~/dev/PMMA-Website-2026-Master`) has
+  the proven GHL integration blueprint (`lib/student-create.ts`,
+  `scripts/ghl-*.mjs`, daily digest cron).
 
-**STATUS (June 16) — Phase 1 tools BUILT & pushed, not yet tested live.**
-Research + design DONE — see `docs/CAMPAIGN-OPERATIONS.md` (canonical: MCP
-registration path, three auth-once token models, the verified CAN/STAYS-MANUAL
-GHL surface). Key finding: GHL tools register into the agent **automatically**
-via `rebuildToolIndex` + `buildMCPAgentTools` — callable, not just spawned.
-Don't re-investigate.
-
-Built & pushed (in-process custom tools in `src/tools/`, registered in
-`getCustomTools`, all self-gating on a connected GHL MCP server, routing only
-through `getMCPManager().callTool` — never raw curl):
-- `delete_contact` added to `vendor/ghl-mcp-node/index.js`.
-- `src/tools/ghl-shared.ts` — `resolveGhlServer` (capability-based: matches
-  `ghl-mcp` / `flo-ghl` / `flo-ghl-brett`), `callGhl`, parsers, `resolveNameToId`.
-- `campaign_smoke_test` — synthetic contact → tag → optional enroll → assert →
-  `delete_contact` cleanup (always, via `finally`).
-- `campaign_setup_contact` — idempotent upsert by email/phone; tags additive.
-- `campaign_enroll` — workflow OR drip campaign; name→id; one-target enforced.
-- `campaign_status` — read-only snapshot (tags/conversations/opportunities).
-- `campaign_send_message` — SMS/Email, **dry-run default** (real send only on
-  explicit `dryRun:false` after human approval).
-- `campaign_verify` — read-only assertions (expected tags, conversation activity).
-
-**STATUS UPDATE (Jun 30, beta.19): Phase 1 LIVE-TESTED — PASSED.**
-`campaign_smoke_test` passed all steps (create_contact, verify_tag) on Brett's
-real GHL sub-account `Uj6CJxWXVU8HyNgI39xb`; enroll skipped (no workflowId),
-cleanup skipped (Brett's hand-managed Python `flo-ghl` lacks `delete_contact`;
-the vendored Node server subscribers use has it). Leftover synthetic contact
-deleted out-of-band + verified gone. Shipped in beta.19.
+**STATUS: Phase 1 LIVE-TESTED, PASSED (beta.19).** Tools in `src/tools/`
+(`campaign_smoke_test`, `campaign_setup_contact`, `campaign_enroll`,
+`campaign_status`, `campaign_send_message` (dry-run default),
+`campaign_verify`), all self-gating on a connected GHL MCP server, routing
+through `getMCPManager().callTool`. GHL tools register automatically via
+`rebuildToolIndex` + `buildMCPAgentTools` — don't re-investigate.
+Canonical design doc: `docs/CAMPAIGN-OPERATIONS.md`.
 
 **NEXT = Phase 2** — Google Ads connector (mirror the Meta / Pipeboard
-`mcp-remote` model) + the ad-spend→GHL-lead stats-join layer. Needs Brett's
-input on Google Ads accounts/auth before starting.
+`mcp-remote` model) + stats-join layer. Needs Brett's Google Ads auth input.
 
 ---
 
 ## Gotchas (quick list — full versions in RECOVERY.md)
 
-- better-sqlite3 ABI conflict (see step 6 above).
+- better-sqlite3 ABI conflict (step 6 above).
+- **Native-module guard failure = contaminated node_modules** — rebuild, never bypass.
 - Docker Desktop must be running before `dist:win`.
-- `sync-version.cjs` overwrites `package.json` from the latest git tag at build
-  time — tag BEFORE `dist:signed` for a new version.
+- `sync-version.cjs` overwrites `package.json` from the latest git tag — tag
+  BEFORE `dist:signed`.
 - Never work in any Google-Drive- or iCloud-synced path. Home is `~/dev/`.
-- Default mode is **General** (not Coder); default theme is **tsai** (navy/silver).
-- `_dismissOtherPanels` (settings-panel.js) must list every panel view, or two
-  panels can show at once (this bit Video Studio — now includes it + Hook Lab).
+- Default mode is **General** (not Coder); default theme is **tsai**.
+- `_dismissOtherPanels` (settings-panel.js) must list every panel view.
+- Landing-page checks need a browser User-Agent (edge proxy 404s bare curl).
+- The "install out of date" toast can mask a dead main process — as of
+  beta.21 it shows the real startup error instead; on pre-.21 installs,
+  Terminal-launch to diagnose.
