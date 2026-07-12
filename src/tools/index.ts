@@ -32,6 +32,10 @@ import {
   handleFetchSeoDataTool,
 } from './seo-report';
 import {
+  getFetchAeoVisibilityToolDefinition,
+  handleFetchAeoVisibilityTool,
+} from './aeo-visibility';
+import {
   getCampaignSmokeTestToolDefinition,
   handleCampaignSmokeTestTool,
 } from './campaign-smoke-test';
@@ -267,6 +271,17 @@ export function getCustomTools(config: ToolsConfig): Array<{
     description: seoDef.description,
     input_schema: seoDef.input_schema as Record<string, unknown>,
     handler: handleFetchSeoDataTool,
+  });
+
+  // fetch_aeo_visibility — runs the monthly AI-citation measurement (ChatGPT/
+  // Perplexity/Claude × 25 permanent prompts) for one brand. Always registered;
+  // self-gates on the _aeo-keys.json file at call time.
+  const aeoDef = getFetchAeoVisibilityToolDefinition();
+  tools.push({
+    name: aeoDef.name,
+    description: aeoDef.description,
+    input_schema: aeoDef.input_schema as Record<string, unknown>,
+    handler: handleFetchAeoVisibilityTool,
   });
 
   // campaign_smoke_test — end-to-end check of GHL campaign wiring. Creates a

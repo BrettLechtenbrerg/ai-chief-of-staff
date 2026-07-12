@@ -179,6 +179,11 @@ export const TOOL_TIMEOUTS = {
   // inbox folder needs creation or the cron passes a huge image path.
   write_daily_posting_packet: 15000,
 
+  // AEO measurement fires ~75 web-search AI calls (25 prompts × 3 engines)
+  // at concurrency 4; typical run 2–5 min, slow days longer. 12 min keeps
+  // the wrapper from racing a healthy-but-slow run.
+  fetch_aeo_visibility: 12 * 60 * 1000,
+
   // Video Studio tools shell out to long-running external processes and
   // enforce their own runInWorkspace timeouts (scaffold 12 min, render 20 min,
   // trim 30 min). The wrapper timeout must OUTLAST the tool's internal one so
