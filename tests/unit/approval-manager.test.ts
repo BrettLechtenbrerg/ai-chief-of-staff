@@ -48,6 +48,24 @@ describe('interactive approval manager', () => {
     expect(ApprovalManager.resolve(request!.id, 'approve', 'ui')).toBe(false);
   });
 
+  it('shows an enforced paid-request preview for AEO batches', async () => {
+    let request: ApprovalRequest | undefined;
+    ApprovalManager.setNotifier((next) => {
+      request = next;
+      return true;
+    });
+    const pending = ApprovalManager.request({
+      toolName: 'fetch_aeo_visibility',
+      capability: 'paid-action',
+      args: { brandSlug: 'tsai' },
+      sessionId: 'aeo-paid-preview',
+      channel: 'desktop',
+    });
+    expect(request?.summary).toContain('up to 75 provider requests');
+    ApprovalManager.resolve(request!.id, 'deny', 'ui');
+    await expect(pending).resolves.toBe(false);
+  });
+
   it('denies aborted and expired approvals', async () => {
     vi.useFakeTimers();
     const controller = new AbortController();

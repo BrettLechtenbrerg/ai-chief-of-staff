@@ -60,6 +60,7 @@ function describeStructure(value: unknown): Record<string, unknown> {
  */
 export interface ToolProgressContext {
   onProgress?: (message: string) => void;
+  signal?: AbortSignal;
 }
 
 /**

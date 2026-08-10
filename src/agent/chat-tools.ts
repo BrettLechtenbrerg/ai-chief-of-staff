@@ -147,6 +147,7 @@ export function getChatAgentTools(
         // surface as tool_call_update events → chat status indicator.
         return await wrapped(args as Record<string, unknown>, {
           onProgress: (message: string) => context.onUpdate?.({ message }),
+          signal: context.signal,
         });
       },
     });
@@ -231,6 +232,7 @@ export function getCoderAgentTools(
         // long-running tools reach the status indicator in Coder mode too.
         return await wrapped(args as Record<string, unknown>, {
           onProgress: (message: string) => context.onUpdate?.({ message }),
+          signal: context.signal,
         });
       },
     });

@@ -25,7 +25,9 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { z } from 'zod';
 import { SettingsManager } from '../settings/index.js';
+import type { ToolProgressContext } from './diagnostics.js';
 
 const BRAND_PROFILES_ROOT = path.join(os.homedir(), 'dev', '_brand-profiles');
 const AEO_OS_ROOT = path.join(os.homedir(), 'Desktop', 'AEO Operating System');
@@ -54,15 +56,28 @@ const ENGINE_NICE: Record<Engine, string> = {
 /** How many API calls run at once. Keeps a 75-call run ~2–4 minutes. */
 const CONCURRENCY = 4;
 
-interface AeoConfig {
-  slug: string;
-  name: string;
-  shortName: string;
-  domain: string;
-  brandNames: string[];
-  localSplit: number;
-  prompts: string[];
-}
+const AEO_CONFIG_SCHEMA = z
+  .object({
+    slug: z.string().min(1).max(32).regex(/^[a-z0-9-]+$/),
+    name: z.string().min(1).max(100),
+    shortName: z.string().min(1).max(50),
+    domain: z.string().min(3).max(253)
+      .transform((value) => value.toLowerCase().replace(/^www\./, '').replace(/\.$/, ''))
+      .refine((value) => /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(value), 'Invalid domain'),
+    brandNames: z.array(z.string().min(1).max(100)).min(1).max(20),
+    localSplit: z.number().int().min(0).max(25),
+    prompts: z.array(z.string().min(3).max(500)).length(25),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.localSplit > value.prompts.length) {
+      context.addIssue({ code: 'custom', path: ['localSplit'], message: 'localSplit exceeds prompts' });
+    }
+    if (new Set(value.prompts.map((prompt) => prompt.trim().toLowerCase())).size !== value.prompts.length) {
+      context.addIssue({ code: 'custom', path: ['prompts'], message: 'Prompts must be unique' });
+    }
+  });
+type AeoConfig = z.infer<typeof AEO_CONFIG_SCHEMA>;
 
 interface Row {
   prompt: string;
@@ -85,6 +100,8 @@ interface Summary {
   errors: number;
 }
 
+const FETCH_AEO_INPUT_SCHEMA = z.object({ brandSlug: z.enum(['pmma', 'tsai', 'brett']) }).strict();
+
 export interface FetchAeoVisibilityInput {
   brandSlug: 'pmma' | 'tsai' | 'brett';
 }
@@ -102,9 +119,14 @@ export interface FetchAeoVisibilityResult {
   reportFiles?: string[];
 }
 
-function readJson<T>(p: string): T | null {
+export function parseAeoConfig(value: unknown): AeoConfig | null {
+  const parsed = AEO_CONFIG_SCHEMA.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+function readConfig(configPath: string): AeoConfig | null {
   try {
-    return JSON.parse(fs.readFileSync(p, 'utf8')) as T;
+    return parseAeoConfig(JSON.parse(fs.readFileSync(configPath, 'utf8')));
   } catch {
     return null;
   }
@@ -122,6 +144,50 @@ function dedupeUrls(urls: string[]): string[] {
   return [...new Set(out)];
 }
 
+export async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  signal?: AbortSignal
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const timeoutSignal = AbortSignal.timeout(30_000);
+    const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+    try {
+      const response = await fetch(url, { ...init, signal: requestSignal });
+      if (![429, 500, 502, 503, 504].includes(response.status) || attempt === 2) return response;
+      await response.body?.cancel();
+      lastError = new Error(`Provider returned retryable HTTP ${response.status}`);
+    } catch (error) {
+      if (signal?.aborted) throw new Error('AEO run cancelled');
+      lastError = error;
+      if (attempt === 2) throw error;
+    }
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(new Error('AEO run cancelled'));
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve();
+      }, 500 * 2 ** attempt);
+      signal?.addEventListener('abort', onAbort, { once: true });
+    });
+  }
+  throw lastError instanceof Error ? lastError : new Error('Provider request failed');
+}
+
+export function isDomainOrSubdomain(url: string, domain: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '').replace(/\.$/, '');
+    const normalizedDomain = domain.toLowerCase().replace(/^www\./, '').replace(/\.$/, '');
+    return hostname === normalizedDomain || hostname.endsWith(`.${normalizedDomain}`);
+  } catch {
+    return false;
+  }
+}
+
 function judge(
   text: string,
   sources: string[],
@@ -131,15 +197,16 @@ function judge(
   const t = (text || '').toLowerCase();
   const mentioned =
     brandNames.some((b) => t.includes(b.toLowerCase())) || t.includes(domain.toLowerCase());
-  const cited = sources.some((u) => u.toLowerCase().includes(domain.toLowerCase()));
+  const cited = sources.some((url) => isDomainOrSubdomain(url, domain));
   return { mentioned, cited };
 }
 
 async function askOpenAI(
   key: string,
-  prompt: string
+  prompt: string,
+  signal?: AbortSignal
 ): Promise<{ text: string; sources: string[] }> {
-  const r = await fetch('https://api.openai.com/v1/responses', {
+  const r = await fetchWithRetry('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
     body: JSON.stringify({
@@ -147,7 +214,7 @@ async function askOpenAI(
       tools: [{ type: 'web_search' }],
       input: prompt,
     }),
-  });
+  }, signal);
   if (!r.ok) throw new Error('OpenAI ' + r.status + ': ' + (await r.text()).slice(0, 200));
   const j = (await r.json()) as {
     output?: { content?: { text?: string; annotations?: { url?: string }[] }[] }[];
@@ -165,16 +232,17 @@ async function askOpenAI(
 
 async function askPerplexity(
   key: string,
-  prompt: string
+  prompt: string,
+  signal?: AbortSignal
 ): Promise<{ text: string; sources: string[] }> {
-  const r = await fetch('https://api.perplexity.ai/chat/completions', {
+  const r = await fetchWithRetry('https://api.perplexity.ai/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
     body: JSON.stringify({
       model: process.env.PERPLEXITY_MODEL || 'sonar',
       messages: [{ role: 'user', content: prompt }],
     }),
-  });
+  }, signal);
   if (!r.ok) throw new Error('Perplexity ' + r.status + ': ' + (await r.text()).slice(0, 200));
   const j = (await r.json()) as {
     choices?: { message?: { content?: string } }[];
@@ -191,9 +259,10 @@ async function askPerplexity(
 
 async function askAnthropic(
   key: string,
-  prompt: string
+  prompt: string,
+  signal?: AbortSignal
 ): Promise<{ text: string; sources: string[] }> {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+  const r = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -206,7 +275,7 @@ async function askAnthropic(
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
       messages: [{ role: 'user', content: prompt }],
     }),
-  });
+  }, signal);
   if (!r.ok) throw new Error('Anthropic ' + r.status + ': ' + (await r.text()).slice(0, 200));
   const j = (await r.json()) as {
     content?: {
@@ -234,7 +303,7 @@ async function askAnthropic(
 
 const ASK: Record<
   Engine,
-  (key: string, prompt: string) => Promise<{ text: string; sources: string[] }>
+  (key: string, prompt: string, signal?: AbortSignal) => Promise<{ text: string; sources: string[] }>
 > = {
   openai: askOpenAI,
   perplexity: askPerplexity,
@@ -262,7 +331,7 @@ function summarize(rows: Row[], conf: AeoConfig): Summary {
     for (const u of r.sources) {
       try {
         const h = new URL(u).hostname.replace(/^www\./, '');
-        if (!h.includes(conf.domain)) hosts[h] = (hosts[h] || 0) + 1;
+        if (!isDomainOrSubdomain(u, conf.domain)) hosts[h] = (hosts[h] || 0) + 1;
       } catch {
         /* skip */
       }
@@ -297,10 +366,26 @@ async function runPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise
   return results;
 }
 
+export function atomicWriteFile(filePath: string, content: string): void {
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, content, { flag: 'wx', mode: 0o600 });
+    fs.renameSync(temporaryPath, filePath);
+  } catch (error) {
+    try { fs.unlinkSync(temporaryPath); } catch { /* best effort cleanup */ }
+    throw error;
+  }
+}
+
 export async function fetchAeoVisibility(
-  input: FetchAeoVisibilityInput
+  input: FetchAeoVisibilityInput,
+  context?: ToolProgressContext
 ): Promise<FetchAeoVisibilityResult> {
-  const slug = input.brandSlug;
+  const parsedInput = FETCH_AEO_INPUT_SCHEMA.safeParse(input);
+  if (!parsedInput.success) {
+    return { ok: false, status: 'no_config', message: 'Invalid AEO input. Choose pmma, tsai, or brett.' };
+  }
+  const slug = parsedInput.data.brandSlug;
   const folder = BRAND_SLUG_TO_FOLDER[slug];
   if (!folder) {
     return {
@@ -310,12 +395,12 @@ export async function fetchAeoVisibility(
     };
   }
 
-  const conf = readJson<AeoConfig>(path.join(BRAND_PROFILES_ROOT, folder, 'aeo.json'));
-  if (!conf || !Array.isArray(conf.prompts) || !conf.prompts.length) {
+  const conf = readConfig(path.join(BRAND_PROFILES_ROOT, folder, 'aeo.json'));
+  if (!conf || conf.slug !== slug) {
     return {
       ok: false,
       status: 'no_config',
-      message: `Missing or empty aeo.json for ${slug} in ${path.join(BRAND_PROFILES_ROOT, folder)}.`,
+      message: `Missing or invalid aeo.json for ${slug} in ${path.join(BRAND_PROFILES_ROOT, folder)}.`,
     };
   }
 
@@ -338,16 +423,25 @@ export async function fetchAeoVisibility(
   const jobs: { prompt: string; engine: Engine }[] = [];
   for (const prompt of conf.prompts) for (const engine of engines) jobs.push({ prompt, engine });
 
+  context?.onProgress?.(
+    `AEO paid batch approved: ${jobs.length} provider requests across ${engines.length} engine(s).`
+  );
+  let completed = 0;
   const rows: Row[] = await runPool(jobs, CONCURRENCY, async ({ prompt, engine }) => {
+    if (context?.signal?.aborted) throw new Error('AEO run cancelled');
     const row: Row = { prompt, engine, mentioned: false, cited: false, sources: [], error: null };
     try {
-      const { text, sources } = await ASK[engine]((keys[engine] as string).trim(), prompt);
+      const { text, sources } = await ASK[engine](keys[engine].trim(), prompt, context?.signal);
       const verdict = judge(text, sources, conf.domain, conf.brandNames);
       row.mentioned = verdict.mentioned;
       row.cited = verdict.cited;
       row.sources = sources;
-    } catch (e) {
-      row.error = String(e instanceof Error ? e.message : e).slice(0, 200);
+    } catch (error) {
+      if (context?.signal?.aborted) throw new Error('AEO run cancelled');
+      row.error = String(error instanceof Error ? error.message : error).slice(0, 200);
+    } finally {
+      completed += 1;
+      context?.onProgress?.(`AEO progress: ${completed}/${jobs.length} provider requests complete.`);
     }
     return row;
   });
@@ -371,7 +465,7 @@ export async function fetchAeoVisibility(
       source: 'ai-chief-of-staff',
     };
     const snapPath = path.join(reportDir, 'aeo-snapshot.json');
-    fs.writeFileSync(snapPath, JSON.stringify(snapshot, null, 2));
+    atomicWriteFile(snapPath, JSON.stringify(snapshot, null, 2));
     reportFiles.push(snapPath);
 
     const md = [
@@ -399,7 +493,7 @@ export async function fetchAeoVisibility(
       `_Import aeo-snapshot.json into the Visibility Edge scorecard (Scorecard → Import) to keep the canonical record._`,
     ].join('\n');
     const mdPath = path.join(reportDir, 'aeo-report.md');
-    fs.writeFileSync(mdPath, md);
+    atomicWriteFile(mdPath, md);
     reportFiles.push(mdPath);
   } catch {
     // Report writing is best-effort; the measurement result still returns.
@@ -435,7 +529,14 @@ export function getFetchAeoVisibilityToolDefinition() {
   };
 }
 
-export async function handleFetchAeoVisibilityTool(input: unknown): Promise<string> {
-  const result = await fetchAeoVisibility((input ?? {}) as FetchAeoVisibilityInput);
+export async function handleFetchAeoVisibilityTool(
+  input: unknown,
+  context?: ToolProgressContext
+): Promise<string> {
+  const parsed = FETCH_AEO_INPUT_SCHEMA.safeParse(input ?? {});
+  if (!parsed.success) {
+    return JSON.stringify({ ok: false, status: 'no_config', message: 'Invalid AEO input.' });
+  }
+  const result = await fetchAeoVisibility(parsed.data, context);
   return JSON.stringify(result);
 }

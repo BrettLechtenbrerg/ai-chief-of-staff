@@ -47,7 +47,10 @@ class ApprovalManagerImpl {
       id: randomUUID(),
       toolName: options.toolName,
       capability: options.capability,
-      summary: summarizeArguments(options.args),
+      summary:
+        options.toolName === 'fetch_aeo_visibility'
+          ? `Paid batch: up to 75 provider requests; provider charges apply. ${summarizeArguments(options.args)}`
+          : summarizeArguments(options.args),
       sessionId: options.sessionId,
       channel: options.channel,
       expiresAt: Date.now() + APPROVAL_TIMEOUT_MS,
