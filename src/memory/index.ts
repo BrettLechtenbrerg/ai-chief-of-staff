@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { hardenPrivateDatabaseFiles } from '../storage/database-backup';
 import type { AgentModeId } from '../agent/agent-modes';
 import {
   type Message,
@@ -119,6 +120,7 @@ export class MemoryManager {
   constructor(dbPath: string) {
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
+    hardenPrivateDatabaseFiles(dbPath);
     this.initialize();
 
     // Run importance decay on startup (reduces importance for stale facts)

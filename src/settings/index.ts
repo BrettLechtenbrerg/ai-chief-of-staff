@@ -11,6 +11,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { hardenPrivateDatabaseFiles } from '../storage/database-backup';
 import { SETTINGS_SCHEMA } from './schema';
 import type { SettingDefinition } from './schema';
 import { THEMES } from './themes';
@@ -51,6 +52,8 @@ class SettingsManagerClass {
    */
   initialize(dbPath: string): void {
     this.db = new Database(dbPath);
+    this.db.pragma('journal_mode = WAL');
+    hardenPrivateDatabaseFiles(dbPath);
     this.cache.clear();
     this.createTable();
     this.loadDefaults();

@@ -12,6 +12,10 @@ import { createScheduler, CronScheduler } from '../scheduler';
 import { createTelegramBot, TelegramBot } from '../channels/telegram';
 import { SettingsManager } from '../settings';
 import { DEFAULT_COMMANDS } from '../config/commands';
+import {
+  createRotatingDatabaseBackup,
+  restoreDatabaseBackup,
+} from '../storage/database-backup';
 import { getBrowserManager } from '../browser';
 import { initializeUpdater, setupUpdaterIPC, setSettingsWindow, setChatWindow } from './updater';
 import { createWindow, getWindow } from './windows';
@@ -752,6 +756,21 @@ async function restartAgent(): Promise<void> {
 
 app.whenReady().then(async () => {
   console.log('[Main] App ready, starting initialization...');
+  const earlyUserDataPath = app.getPath('userData');
+  const earlyDatabasePath = path.join(earlyUserDataPath, 'ai-chief-of-staff.db');
+  const restoreArgument = process.argv.find((argument) => argument.startsWith('--restore-backup='));
+  if (restoreArgument) {
+    const backupName = restoreArgument.slice('--restore-backup='.length);
+    try {
+      const result = await restoreDatabaseBackup(earlyDatabasePath, earlyUserDataPath, backupName);
+      console.log(`[Main] Restored database from ${path.basename(result.restoredFrom)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      dialog.showErrorBox('Database restore failed', message);
+      app.quit();
+      return;
+    }
+  }
   installPermissionPolicy(session.defaultSession);
   // Register ALL IPC handlers FIRST, before anything that can throw (native
   // SQLite opens, migrations, credential file setup). Registration only binds
@@ -853,6 +872,9 @@ app.whenReady().then(async () => {
     memory = new MemoryManager(dbPath);
     console.log('[Main] Memory initialized');
     writeStartupHealth({ sqliteLoaded: true });
+    void createRotatingDatabaseBackup(dbPath, userDataPath)
+      .then((backupPath) => console.log(`[Main] SQLite backup healthy: ${path.basename(backupPath)}`))
+      .catch((error) => console.warn('[Main] SQLite backup failed:', (error as Error).message));
 
     console.log('[Main] Creating tray...');
     initTray({
