@@ -52,6 +52,8 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   approval: {
     resolve: (id: string, decision: 'approve' | 'deny') =>
       ipcRenderer.invoke('approval:resolve', id, decision),
+    resolveVoice: (id: string, transcript: string) =>
+      ipcRenderer.invoke('approval:resolveVoice', id, transcript),
     onRequested: (
       callback: (request: {
         id: string;
@@ -200,6 +202,11 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     mintSecret: () => ipcRenderer.invoke('realtime:mintSecret'),
     askChief: (transcript: string, sessionId?: string, callId?: string) =>
       ipcRenderer.invoke('realtime:askChief', { transcript, sessionId, callId }),
+    onToggleRequested: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on('voice:toggle-requested', listener);
+      return () => ipcRenderer.removeListener('voice:toggle-requested', listener);
+    },
     onChiefDelta: (
       callback: (payload: {
         sessionId?: string;

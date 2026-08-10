@@ -45,15 +45,19 @@
    *        bridge to Claude (defaults to window.pocketAgent.realtime.askChief)
    * @param {() => Promise<{success: boolean, value?: string, error?: string}>} opts.mintSecret
    *        defaults to window.pocketAgent.realtime.mintSecret
-   * @param {(transcript: string) => void} [opts.onTranscript]  live user transcript
+   * @param {(transcript: string) => void} [opts.onTranscript] live user transcript
+   * @param {(transcript: string) => Promise<{handled:boolean,responseText?:string,status?:string}|null>} [opts.handleLocalCommand]
+   * @param {(error: Error) => void} [opts.onUnavailable] terminal startup failure callback
    * @param {(usage: {elapsedMs:number, turnCount:number, tokensUsed:number, maxCallMs:number, maxTurns:number}) => void} [opts.onUsage]
-   *        per-call cost usage snapshot (gate #3), reported once per completed turn
-   * @param {string} [opts.sessionId]  session id passed to the bridge
+   *        per-call cost usage snapshot, reported once per completed turn
+   * @param {string} [opts.sessionId] session id passed to the bridge
    */
   function createRealtimeSession(opts) {
     const onStatus = opts.onStatus || (() => {});
     const onActiveChange = opts.onActiveChange || (() => {});
     const onTranscript = opts.onTranscript || (() => {});
+    const handleLocalCommand = opts.handleLocalCommand || (async () => null);
+    const onUnavailable = opts.onUnavailable || (() => {});
     const sessionId = opts.sessionId || 'voice';
     const askChief =
       opts.askChief ||
@@ -111,6 +115,10 @@
     const onUsage = opts.onUsage || (() => {});
     const onDiagnostic = opts.onDiagnostic || (() => {});
     const handledToolCallIds = new Set();
+    // Local commands are accepted only from OpenAI's completed input-audio
+    // transcript event. Tool arguments are model output and can never authorize
+    // approval by themselves.
+    let pendingRecognizedCommand = null;
     // The tool call_id of the turn currently being spoken, and the set of
     // call_ids the user has barged in on. Streamed remainder sentences for an
     // interrupted call are dropped so stale audio never leaks after a barge-in.
@@ -396,8 +404,22 @@
       }
       const transcript = (args && args.transcript) || '';
       onTranscript(transcript);
-      setStatus('Thinking…');
       try {
+        let localResult = null;
+        if (
+          pendingRecognizedCommand &&
+          pendingRecognizedCommand.transcript.trim().toLowerCase() ===
+            transcript.trim().toLowerCase()
+        ) {
+          localResult = await pendingRecognizedCommand.result;
+          pendingRecognizedCommand = null;
+        }
+        if (localResult && localResult.handled) {
+          setStatus(localResult.status || 'Voice command completed');
+          sendToolOutput(callId, localResult.responseText || 'Done.');
+          return;
+        }
+        setStatus('Thinking…');
         const result = await askChief(transcript, callId);
         if (result && result.success && typeof result.response === 'string') {
           sendToolOutput(callId, result.response);
@@ -490,6 +512,10 @@
         typeof event.transcript === 'string'
       ) {
         onTranscript(event.transcript);
+        pendingRecognizedCommand = {
+          transcript: event.transcript,
+          result: Promise.resolve(handleLocalCommand(event.transcript)),
+        };
       }
 
       if (event.type === 'input_audio_buffer.speech_started') {
@@ -816,9 +842,12 @@
           teardownAttempt();
           const retryable = error && error.isRateLimit && attempt < backoffsMs.length;
           if (!retryable) {
-            setStatus(`Failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+            const terminalError =
+              error instanceof Error ? error : new Error('Unknown Realtime startup error');
+            setStatus(`Failed: ${terminalError.message}`);
             starting = false;
-            await stop();
+            await stop(`Realtime unavailable: ${terminalError.message}`);
+            onUnavailable(terminalError);
             return;
           }
           const waitMs = backoffsMs[attempt];
@@ -864,6 +893,7 @@
         removeChiefDelta = null;
       }
       handledToolCallIds.clear();
+      pendingRecognizedCommand = null;
       interruptedCallIds.clear();
       activeCallId = null;
       speakQueue.length = 0;
@@ -882,15 +912,18 @@
     return {
       start,
       stop,
+      cancel: () => stop('Voice cancelled.'),
+      setMuted(muted) {
+        if (localStream) {
+          for (const track of localStream.getAudioTracks()) track.enabled = !muted;
+        }
+      },
       isActive() {
         // Active includes the connecting/retry-backoff phase, not just a live PC.
         return peerConnection !== null || starting;
       },
       isHandshaking() {
-        // True only while attemptConnect() (mint + mic + SDP) is mid-flight. The
-        // UI ignores clicks during this brief window so a rapid click can't race
-        // a teardown against the greeting firing on the opening data channel. A
-        // click during a retry-backoff wait is NOT blocked — it cancels.
+        // True only while attemptConnect() (mint + mic + SDP) is mid-flight.
         return handshakeInFlight;
       },
     };

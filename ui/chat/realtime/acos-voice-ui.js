@@ -30,6 +30,82 @@
   // visibility alongside the status line).
   let lastStatus = '';
   let lastUsage = null;
+  let usingFallback = false;
+
+  async function handleLocalCommand(transcript) {
+    const command = window.AcosVoiceCommands && window.AcosVoiceCommands.parse(transcript);
+    if (!command) return null;
+
+    if (command.type === 'approval') {
+      const resolved = await window.resolvePendingToolApprovalFromVoice?.(transcript);
+      return {
+        handled: true,
+        responseText: resolved
+          ? command.decision === 'approve'
+            ? 'Approved.'
+            : 'Denied.'
+          : 'There is no action waiting for approval.',
+        status: resolved ? `Action ${command.decision}d by voice` : 'No pending approval',
+      };
+    }
+    if (command.type === 'cancel') {
+      setTimeout(() => {
+        void (session && typeof session.cancel === 'function' ? session.cancel() : session?.stop());
+      }, 100);
+      return { handled: true, responseText: 'Cancelled.', status: 'Cancelling…' };
+    }
+    if (command.type === 'mute' || command.type === 'unmute') {
+      session?.setMuted?.(command.type === 'mute');
+      return {
+        handled: true,
+        responseText: command.type === 'mute' ? 'Microphone muted.' : 'Microphone unmuted.',
+        status: command.type === 'mute' ? 'Microphone muted' : 'Listening',
+      };
+    }
+    if (command.type === 'new-chat') {
+      if (typeof createNewSession === 'function') await createNewSession();
+      return { handled: true, responseText: 'New chat opened.', status: 'New chat opened' };
+    }
+    if (command.type === 'open') {
+      const actions = {
+        settings: () => typeof showSettingsPanel === 'function' && showSettingsPanel(),
+        routines: () => typeof showRoutinesPanel === 'function' && showRoutinesPanel(),
+        'connect-tools': () =>
+          typeof showConnectToolsPanel === 'function' && showConnectToolsPanel(),
+      };
+      actions[command.target]?.();
+      return {
+        handled: true,
+        responseText: `${command.target.replace('-', ' ')} opened.`,
+        status: `${command.target.replace('-', ' ')} opened`,
+      };
+    }
+    if (command.type === 'switch-mode') {
+      const select = document.getElementById('mode-select');
+      const option =
+        select && Array.from(select.options).find((item) => item.value === command.mode);
+      if (select && option) {
+        select.value = command.mode;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return { handled: true, responseText: `${command.mode} mode selected.` };
+      }
+      return { handled: true, responseText: `${command.mode} mode is not available.` };
+    }
+    return null;
+  }
+
+  function createFallbackSession(reason) {
+    usingFallback = true;
+    setStatus(`Realtime unavailable — using durable fallback. ${reason.message}`);
+    session = window.AcosRealtime.createHalfDuplexSession({
+      sessionId: 'voice',
+      onStatus: setStatus,
+      onActiveChange: setActive,
+      onTranscript: () => {},
+      handleLocalCommand,
+    });
+    void session.start();
+  }
 
   function renderStatusLine() {
     let text = lastStatus || '';
@@ -37,12 +113,12 @@
       const mins = Math.floor(lastUsage.elapsedMs / 60000);
       const secs = Math.floor((lastUsage.elapsedMs % 60000) / 1000);
       const time = `${mins}:${String(secs).padStart(2, '0')}`;
-      const turns = lastUsage.maxTurns > 0
-        ? `${lastUsage.turnCount}/${lastUsage.maxTurns} turns`
-        : `${lastUsage.turnCount} turns`;
-      const tokens = lastUsage.tokensUsed > 0
-        ? ` · ${lastUsage.tokensUsed.toLocaleString()} tok`
-        : '';
+      const turns =
+        lastUsage.maxTurns > 0
+          ? `${lastUsage.turnCount}/${lastUsage.maxTurns} turns`
+          : `${lastUsage.turnCount} turns`;
+      const tokens =
+        lastUsage.tokensUsed > 0 ? ` · ${lastUsage.tokensUsed.toLocaleString()} tok` : '';
       const usage = `${time} · ${turns}${tokens}`;
       text = text ? `${text} — ${usage}` : usage;
     }
@@ -82,7 +158,11 @@
     button.setAttribute('aria-pressed', String(isActive));
     button.setAttribute(
       'data-tip',
-      isActive ? 'End voice call' : 'Voice mode — hands-free call with your chief of staff',
+      isActive
+        ? usingFallback
+          ? 'Send fallback recording'
+          : 'End voice call'
+        : 'Voice mode — call your chief of staff'
     );
     if (!isActive) {
       // Route through setStatus('') so the mic-denied click affordance (onclick
@@ -94,7 +174,7 @@
 
   async function toggle() {
     // Active call: a click ends it (unless mid-handshake — see below).
-    if (active && session) {
+    if (session && typeof session.isActive === 'function' && session.isActive()) {
       // Ignore clicks only during the brief connect handshake (minting the
       // secret, acquiring the mic, posting the SDP). Routing such a click to
       // stop() races the teardown against the greeting firing on the opening
@@ -115,6 +195,10 @@
     if (starting) {
       return;
     }
+    if (usingFallback && session) {
+      void session.start();
+      return;
+    }
     starting = true;
     try {
       // Voice mode is off by default. The button is always visible (so it's
@@ -133,18 +217,18 @@
         return;
       }
 
-      // Voice always uses a dedicated, persistent 'voice' session — deliberately
-      // NOT the active chat tab. Voice (short spoken turns) and typed chat (long
-      // threads with tool output, code, attachments) are different modes;
-      // keeping them separate stops the two histories from polluting each other
-      // and makes the session deterministic. Multi-turn voice context still
-      // works because every turn loads this same session's history (gate #2).
+      // Voice always uses a dedicated persistent session. Realtime is the
+      // preferred ears/mouth transport; its terminal startup failures switch to
+      // the explicit half-duplex transcription → ACOS → local-TTS path.
+      usingFallback = false;
       session = window.AcosRealtime.createRealtimeSession({
         sessionId: 'voice',
         remoteAudioElement: remoteAudioEl,
         onUsage: setUsage,
         onStatus: setStatus,
         onActiveChange: setActive,
+        handleLocalCommand,
+        onUnavailable: createFallbackSession,
       });
       // Fire and forget: the retry loop inside start() runs in the background
       // and reports progress via onStatus; awaiting it would block a cancel
@@ -156,6 +240,12 @@
   }
 
   button.addEventListener('click', () => {
+    void toggle();
+  });
+
+  // Explicit global call toggle (Alt+Shift+V). It opens/focuses chat in main,
+  // then emits this renderer event; it never enables an always-on microphone.
+  window.pocketAgent.realtime.onToggleRequested(() => {
     void toggle();
   });
 

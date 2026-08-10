@@ -26,6 +26,22 @@ export function registerAgentIPC(deps: IPCDependencies): void {
     if (decision !== 'approve' && decision !== 'deny') return { success: false };
     return { success: ApprovalManager.resolve(id, decision, 'ui') };
   });
+  trustedHandle('approval:resolveVoice', async (_, id: string, transcript: string) => {
+    const normalized =
+      typeof transcript === 'string'
+        ? transcript
+            .trim()
+            .toLowerCase()
+            .replace(/[.!?]+$/g, '')
+        : '';
+    const decision: ApprovalDecision | null = ['approve', 'approve it'].includes(normalized)
+      ? 'approve'
+      : ['deny', 'deny it', 'reject'].includes(normalized)
+        ? 'deny'
+        : null;
+    if (!decision) return { success: false };
+    return { success: ApprovalManager.resolve(id, decision, 'voice') };
+  });
   // Chat messages with status streaming
   trustedHandle(
     'agent:send',
@@ -39,14 +55,21 @@ export function registerAgentIPC(deps: IPCDependencies): void {
       try {
         let totalImageBytes = 0;
         for (const image of images || []) {
-          if (image?.type !== 'base64' || !['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(image.mediaType)) {
+          if (
+            image?.type !== 'base64' ||
+            !['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(image.mediaType)
+          ) {
             throw new Error('Unsupported image payload');
           }
           totalImageBytes += getValidatedBase64ByteLength(image.data, MAX_ATTACHMENT_BYTES);
         }
-        if (totalImageBytes > MAX_MEDIA_READ_BYTES) throw new Error('Images exceed the 20 MB total limit');
+        if (totalImageBytes > MAX_MEDIA_READ_BYTES)
+          throw new Error('Images exceed the 20 MB total limit');
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'Invalid image payload' };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Invalid image payload',
+        };
       }
 
       console.log(

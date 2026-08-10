@@ -7,7 +7,8 @@ function _approvalShowNext() {
   _approvalCurrent = _approvalQueue.shift();
   const overlay = document.getElementById('tool-approval-modal');
   document.getElementById('approval-tool-name').textContent = _approvalCurrent.toolName;
-  document.getElementById('approval-capability').textContent = _approvalCurrent.capability.replaceAll('-', ' ');
+  document.getElementById('approval-capability').textContent =
+    _approvalCurrent.capability.replaceAll('-', ' ');
   document.getElementById('approval-summary').textContent = _approvalCurrent.summary;
   overlay?.classList.add('show');
   document.getElementById('approval-deny-btn')?.focus();
@@ -15,16 +16,33 @@ function _approvalShowNext() {
 
 async function resolveToolApproval(decision) {
   const request = _approvalCurrent;
-  if (!request) return;
+  if (!request) return false;
   _approvalCurrent = null;
   document.getElementById('tool-approval-modal')?.classList.remove('show');
   try {
-    await window.pocketAgent.approval.resolve(request.id, decision);
+    const result = await window.pocketAgent.approval.resolve(request.id, decision);
+    return Boolean(result && result.success);
   } catch (error) {
     console.error('[Approval] Failed to resolve request:', error);
+    return false;
+  } finally {
+    _approvalShowNext();
   }
-  _approvalShowNext();
 }
+
+// Voice approval uses a separate main-process path. The main process accepts
+// only exact recognized phrases and records the source as `voice`; model output
+// cannot call this function directly through the Realtime tool bridge.
+window.resolvePendingToolApprovalFromVoice = async function (transcript) {
+  const request = _approvalCurrent;
+  if (!request) return false;
+  const result = await window.pocketAgent.approval.resolveVoice(request.id, transcript);
+  if (!result || !result.success) return false;
+  _approvalCurrent = null;
+  document.getElementById('tool-approval-modal')?.classList.remove('show');
+  _approvalShowNext();
+  return true;
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   window.pocketAgent.approval.onRequested((request) => {

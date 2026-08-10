@@ -350,6 +350,20 @@ function openChatWindow(): void {
   setChatWindow(win);
 }
 
+function requestVoiceToggle(): void {
+  openChatWindow();
+  const win = getWindow(WIN.CHAT);
+  if (!win || win.isDestroyed()) return;
+  const sendToggle = () => {
+    if (!win.isDestroyed()) win.webContents.send('voice:toggle-requested');
+  };
+  if (win.webContents.isLoadingMainFrame()) {
+    win.webContents.once('did-finish-load', sendToggle);
+  } else {
+    sendToggle();
+  }
+}
+
 function openCronWindow(): void {
   const win = createWindow({
     id: WIN.CRON,
@@ -485,7 +499,7 @@ function setupIPC(): void {
       // project root is two levels up. In packaged mode this is unused
       // (isPackaged=true → resourcesPath/vendor wins).
       projectRoot: path.join(__dirname, '../..'),
-    }),
+    })
   );
   // Voice mode (Realtime ears+mouth, Claude brain). Handlers are inert unless
   // the renderer opens a session, which is gated off-by-default by the
@@ -840,6 +854,14 @@ app.whenReady().then(async () => {
       console.log(`[Main] Global shortcut ${shortcut} registered`);
     } else {
       console.warn(`[Main] Failed to register global shortcut ${shortcut}`);
+    }
+
+    const voiceShortcut = 'Alt+Shift+V';
+    const voiceRegistered = globalShortcut.register(voiceShortcut, requestVoiceToggle);
+    if (voiceRegistered) {
+      console.log(`[Main] Voice shortcut ${voiceShortcut} registered`);
+    } else {
+      console.warn(`[Main] Failed to register voice shortcut ${voiceShortcut}`);
     }
 
     // Run workspace setup and version migration unconditionally — this handles
