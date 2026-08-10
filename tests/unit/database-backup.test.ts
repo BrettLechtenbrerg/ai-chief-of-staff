@@ -36,6 +36,8 @@ describe('permission-safe rotating SQLite backups', () => {
     const backupPath = await createRotatingDatabaseBackup(databasePath, root, {
       minimumIntervalMs: 0,
     });
+    expect(fs.existsSync(`${backupPath}.tmp-wal`)).toBe(false);
+    expect(fs.existsSync(`${backupPath}.tmp-shm`)).toBe(false);
     const backup = new Database(backupPath, { readonly: true });
     expect(backup.prepare('SELECT content FROM messages').pluck().all()).toEqual(['inside WAL']);
     expect(backup.pragma('quick_check', { simple: true })).toBe('ok');

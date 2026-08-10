@@ -28,6 +28,11 @@ vi.mock('electron', () => ({
   },
 }));
 
+vi.mock('../../src/main/ipc/trusted-ipc', () => ({
+  trustedHandle: (channel: string, handler: (...args: unknown[]) => unknown) => {
+    registeredHandlers.set(channel, handler);
+  },
+}));
 // Manager mock — we track every method call.
 const mockMgr = {
   addClient: vi.fn(async (_name: string, _cfg: unknown) => undefined),

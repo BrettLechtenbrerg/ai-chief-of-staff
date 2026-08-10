@@ -162,7 +162,9 @@
   "author": "Total Success AI — Brett Lechtenberg",
   "license": "MIT",
   "overrides": {
-    "better-sqlite3": "^13.0.3"
+    "better-sqlite3": "^13.0.3",
+    "pdfjs-dist": "6.2.108",
+    "sharp": "0.35.3"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.94.0",
@@ -180,9 +182,9 @@
     "mammoth": "^1.12.0",
     "marked": "18.0.9",
     "notyf": "3.10.0",
-    "officeparser": "^6.0.4",
+    "officeparser": "7.5.1",
     "openai": "^6.27.0",
-    "pdfjs-dist": "^5.7.284",
+    "pdfjs-dist": "6.2.108",
     "puppeteer-core": "^24.43.0",
     "ws": "^8.19.0"
   },
@@ -202,7 +204,7 @@
     "node-abi": "^4.33.0",
     "png-to-ico": "^3.0.1",
     "prettier": "^3.8.1",
-    "sharp": "^0.34.5",
+    "sharp": "0.35.3",
     "typescript": "^6.0.3",
     "vitest": "^4.0.18"
   }

@@ -53,22 +53,26 @@ async function extractPdf(filePath: string): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
   // pdfjs wants a Uint8Array, not a Node Buffer reference.
   const uint8 = new Uint8Array(data);
-  const doc = await pdfjsLib.getDocument({ data: uint8 }).promise;
+  const loadingTask = pdfjsLib.getDocument({ data: uint8 });
+  const doc = await loadingTask.promise;
 
-  const pageTexts: string[] = [];
-  for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-    const page = await doc.getPage(pageNum);
-    const content = await page.getTextContent();
-    const items = content.items as Array<{ str?: string }>;
-    const pageText = items
-      .map((it) => (typeof it.str === 'string' ? it.str : ''))
-      .join(' ')
-      .replace(/[ \t]+/g, ' ')
-      .trim();
-    if (pageText) pageTexts.push(pageText);
+  try {
+    const pageTexts: string[] = [];
+    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+      const page = await doc.getPage(pageNum);
+      const content = await page.getTextContent();
+      const items = content.items as Array<{ str?: string }>;
+      const pageText = items
+        .map((it) => (typeof it.str === 'string' ? it.str : ''))
+        .join(' ')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+      if (pageText) pageTexts.push(pageText);
+    }
+    return pageTexts.join('\n\n');
+  } finally {
+    await loadingTask.destroy();
   }
-  await doc.destroy();
-  return pageTexts.join('\n\n');
 }
 
 export function registerContextIPC(): void {

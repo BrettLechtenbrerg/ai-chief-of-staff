@@ -49,22 +49,16 @@ npm audit fix
 - All dependencies: 32 advisories — 1 critical, 27 high, 3 moderate, 1 low.
 - The critical `tar` chain and all low/moderate advisories had non-breaking lockfile fixes.
 
-### After safe fixes
+### After release-gate remediation
 
-- Production: 5 high, 0 critical, 0 moderate, 0 low.
-- All dependencies: 5 high, 0 critical, 0 moderate, 0 low.
-- `npm audit fix` updated the lockfile within declared ranges, including the patched `tar`, Electron 41.10.4, electron-builder/updater chains, MCP SDK, `ws`, `vite`, `undici`, `hono`, and related transitive packages.
-- npm initially selected `@kenkaiiii/ggcoder` 4.15.0 under the prior caret range, but that release changed `createTools()` to async and broke current callers. The dependency is now pinned exactly to the known-compatible 4.3.151; typecheck passes.
-
-### Blocked breaking upgrades
-
-These remaining advisories are release blockers, not accepted risk:
-
-1. **PDF.js (`GHSA-hq66-cqwq-w95j`)** — direct `pdfjs-dist` 5.7.284 and `officeparser` 6.1.1 depend on affected PDF.js. The fix requires PDF.js 6.2.108 and likely officeparser 7.x compatibility work. Until migrated and malicious-PDF regression tests pass, document/PDF parsing must be treated as unsafe for release.
-2. **sharp/libvips (`GHSA-f88m-g3jw-g9cj`)** — direct sharp 0.34.5 and the gg-core → Hugging Face chain depend on affected sharp. The fix requires sharp 0.35.3, which npm classifies as breaking. Upgrade and image/model smoke tests are required.
-3. **ggcoder transitive chain** — npm proposes downgrading `@kenkaiiii/ggcoder` to 4.2.22 to evade the affected dependency range. That is not a valid remediation for current functionality. The planned gg-agent/gg-ai/ggcoder 5.x migration remains deferred, but the sharp override/compatible 4.x resolution must remove this advisory before beta.23.
-
-No production high or critical advisory may remain when beta.23 is tagged unless a non-reachable path is demonstrated with executable test evidence and explicitly approved.
+- Production: **0 high, 0 critical, 0 moderate, 0 low** (`npm audit --omit=dev`, August 10, 2026).
+- All dependencies: **0 advisories** (`npm audit`, August 10, 2026).
+- `npm audit fix` first updated patched packages within declared ranges, including `tar`, electron-builder/updater chains, MCP SDK, `ws`, `vite`, `undici`, and `hono`.
+- Electron then moved to 43.3.0 and the native SQLite dependency moved to better-sqlite3 13.0.3.
+- PDF.js moved to 6.2.108 and officeparser to 7.5.1. ACOS uses officeparser's current AST `toText()` API and PDF.js's current loading-task lifecycle.
+- sharp/libvips moved to 0.35.3. An npm override keeps the gg-core and Hugging Face transitive paths on that patched version; image encode/decode smoke tests pass.
+- `@kenkaiiii/ggcoder` remains pinned exactly to compatible 4.3.151. Its deferred 5.x migration is not needed to clear the advisory chain and remains isolated from beta.23.
+- Full tests pass after the breaking dependency remediation; no non-reachability exception is requested or accepted.
 
 ## AEO release assessment
 

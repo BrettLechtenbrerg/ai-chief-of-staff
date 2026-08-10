@@ -74,6 +74,10 @@ function validateDatabase(databasePath: string): void {
   }
 }
 
+function removeSqliteSidecars(databasePath: string): void {
+  for (const suffix of ['-wal', '-shm']) fs.rmSync(`${databasePath}${suffix}`, { force: true });
+}
+
 async function onlineBackup(sourcePath: string, destinationPath: string): Promise<void> {
   const source = new Database(sourcePath, { fileMustExist: true });
   try {
@@ -82,7 +86,14 @@ async function onlineBackup(sourcePath: string, destinationPath: string): Promis
     source.close();
   }
   fs.chmodSync(destinationPath, PRIVATE_FILE_MODE);
-  validateDatabase(destinationPath);
+  try {
+    validateDatabase(destinationPath);
+  } finally {
+    // A backup of a WAL-mode source can briefly create empty sidecars while it
+    // is validated. The connection is closed/checkpointed, so they are stale
+    // and must not survive a DB rename or rotation.
+    removeSqliteSidecars(destinationPath);
+  }
 }
 
 export async function createRotatingDatabaseBackup(
@@ -147,7 +158,7 @@ export async function restoreDatabaseBackup(
   await onlineBackup(sourcePath, temporary);
 
   try {
-    for (const suffix of ['-wal', '-shm']) fs.rmSync(`${databasePath}${suffix}`, { force: true });
+    removeSqliteSidecars(databasePath);
     if (fs.existsSync(databasePath)) fs.renameSync(databasePath, replaced);
     fs.renameSync(temporary, databasePath);
     fs.rmSync(replaced, { force: true });
