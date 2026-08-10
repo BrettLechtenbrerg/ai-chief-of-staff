@@ -1,6 +1,7 @@
 import type { AgentTool } from '@kenkaiiii/gg-agent';
 import type { AgentMode } from './agent-modes.js';
 import type { MCPToolAnnotations } from '../mcp/types.js';
+import { ApprovalManager } from '../security/approval-manager.js';
 
 export type ToolCapability =
   | 'safe-local'
@@ -24,6 +25,11 @@ export interface ToolPolicy {
 }
 
 export type PolicyAwareAgentTool = AgentTool & { policy: ToolPolicy };
+
+export interface ToolExecutionContext {
+  sessionId: string;
+  channel: string;
+}
 
 const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
   read: 'local-read',
@@ -131,4 +137,25 @@ export function attachToolPolicy(
 
 export function filterToolsForMode<T extends { name: string }>(tools: T[], mode: AgentMode): T[] {
   return tools.filter((tool) => isToolAllowedForMode(tool.name, mode));
+}
+
+export function guardToolWithApproval(
+  tool: PolicyAwareAgentTool,
+  execution: ToolExecutionContext
+): PolicyAwareAgentTool {
+  if (!tool.policy.confirmationRequired) return tool;
+  const originalExecute = tool.execute.bind(tool);
+  tool.execute = async (args, context) => {
+    const approved = await ApprovalManager.request({
+      toolName: tool.name,
+      capability: tool.policy.capability,
+      args,
+      sessionId: execution.sessionId,
+      channel: execution.channel,
+      signal: context.signal,
+    });
+    if (!approved) return `Tool blocked: ${tool.name} requires user approval.`;
+    return originalExecute(args, context);
+  };
+  return tool;
 }

@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="chat/connect-tools-panel.css">
   <link rel="stylesheet" href="chat/personalize-panel.css">
   <link rel="stylesheet" href="chat/help-modal.css">
+  <link rel="stylesheet" href="chat/approval.css">
   <link rel="stylesheet" href="chat/realtime/acos-voice.css">
   <link rel="stylesheet" href="chat/onboarding.css">
   <script src="shared/theme-loader.js"></script>
@@ -1706,6 +1707,27 @@
 
   </div><!-- .app-layout -->
 
+  <div class="modal-overlay" id="tool-approval-modal" role="alertdialog" aria-modal="true" aria-labelledby="approval-title">
+    <div class="modal approval-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2 id="approval-title">Allow this action?</h2>
+          <p>The assistant is paused until you choose.</p>
+        </div>
+      </div>
+      <div class="modal-body approval-body">
+        <p class="approval-tool" id="approval-tool-name"></p>
+        <span class="approval-capability" id="approval-capability"></span>
+        <p class="approval-summary" id="approval-summary"></p>
+        <p class="approval-note">Only you can approve this request. Scheduled and remote runs are denied automatically.</p>
+        <div class="approval-actions">
+          <button class="approval-deny" id="approval-deny-btn" onclick="playNormalClick(); resolveToolApproval('deny')">Deny</button>
+          <button onclick="playNormalClick(); resolveToolApproval('approve')">Approve once</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Chat JavaScript (extracted from inline script) -->
   <script src="chat/onboarding.js"></script>
   <script src="chat/sidebar.js"></script>
@@ -1737,6 +1759,7 @@
   <script src="chat/connect-tools-panel.js"></script>
   <script src="chat/personalize-panel.js"></script>
   <script src="chat/help-modal.js"></script>
+  <script src="chat/approval.js"></script>
   <!-- Voice mode: realtime voice modules (load before the UI controller). -->
   <script src="chat/realtime/realtime-playback.js"></script>
   <script src="chat/realtime/realtime-response-queue.js"></script>

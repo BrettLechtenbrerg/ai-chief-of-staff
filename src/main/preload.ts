@@ -49,6 +49,24 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     restart: () => ipcRenderer.invoke('agent:restart'),
   },
 
+  approval: {
+    resolve: (id: string, decision: 'approve' | 'deny') =>
+      ipcRenderer.invoke('approval:resolve', id, decision),
+    onRequested: (callback: (request: {
+      id: string;
+      toolName: string;
+      capability: string;
+      summary: string;
+      sessionId: string;
+      expiresAt: number;
+    }) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, request: Parameters<typeof callback>[0]) =>
+        callback(request);
+      ipcRenderer.on('approval:requested', listener);
+      return () => ipcRenderer.removeListener('approval:requested', listener);
+    },
+  },
+
   // ─── Attachments ─────────────────────────────────────────────────────
   attachments: {
     save: (name: string, dataUrl: string) => ipcRenderer.invoke('attachment:save', name, dataUrl),
@@ -593,6 +611,21 @@ declare global {
         clearConversation: (sessionId?: string) => Promise<{ success: boolean }>;
         readMedia: (filePath: string) => Promise<string | null>;
         restart: () => Promise<{ success: boolean }>;
+      };
+
+      approval: {
+        resolve: (
+          id: string,
+          decision: 'approve' | 'deny'
+        ) => Promise<{ success: boolean }>;
+        onRequested: (callback: (request: {
+          id: string;
+          toolName: string;
+          capability: string;
+          summary: string;
+          sessionId: string;
+          expiresAt: number;
+        }) => void) => () => void;
       };
 
       attachments: {

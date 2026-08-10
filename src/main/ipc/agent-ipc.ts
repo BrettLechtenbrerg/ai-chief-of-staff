@@ -4,6 +4,7 @@ import fs from 'fs';
 import { app } from 'electron';
 import { AgentManager, ImageContent } from '../../agent';
 import { SettingsManager } from '../../settings';
+import { ApprovalManager, type ApprovalDecision } from '../../security/approval-manager.js';
 import {
   getValidatedBase64ByteLength,
   MAX_ATTACHMENT_BYTES,
@@ -15,7 +16,16 @@ import type { IPCDependencies } from './types';
 
 export function registerAgentIPC(deps: IPCDependencies): void {
   const { getMemory, getTelegramBot, updateTrayMenu, WIN } = deps;
-
+  ApprovalManager.setNotifier((request) => {
+    const chatWindow = getWindow(WIN.CHAT);
+    if (!chatWindow || chatWindow.isDestroyed()) return false;
+    chatWindow.webContents.send('approval:requested', request);
+    return true;
+  });
+  trustedHandle('approval:resolve', async (_, id: string, decision: ApprovalDecision) => {
+    if (decision !== 'approve' && decision !== 'deny') return { success: false };
+    return { success: ApprovalManager.resolve(id, decision, 'ui') };
+  });
   // Chat messages with status streaming
   trustedHandle(
     'agent:send',
@@ -148,6 +158,7 @@ export function registerAgentIPC(deps: IPCDependencies): void {
   });
 
   trustedHandle('agent:stop', async (_, sessionId?: string) => {
+    if (sessionId) ApprovalManager.cancelSession(sessionId);
     const stopped = AgentManager.stopQuery(sessionId);
     return { success: stopped };
   });

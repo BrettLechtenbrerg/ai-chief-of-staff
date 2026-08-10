@@ -36,6 +36,23 @@ function logTool(
   console.log(`${prefix} [Tool ${timestamp}] ${message}${dataStr}`);
 }
 
+function describeStructure(value: unknown): Record<string, unknown> {
+  if (value === null) return { type: 'null' };
+  if (typeof value === 'string') return { type: 'string', characters: value.length };
+  if (Array.isArray(value)) return { type: 'array', items: value.length };
+  if (typeof value !== 'object') return { type: typeof value };
+
+  const entries = Object.entries(value as Record<string, unknown>);
+  return {
+    type: 'object',
+    fields: entries.slice(0, 20).map(([key, field]) => ({
+      key,
+      type: Array.isArray(field) ? 'array' : field === null ? 'null' : typeof field,
+    })),
+    omittedFields: Math.max(0, entries.length - 20),
+  };
+}
+
 /**
  * Optional per-call context threaded from the agent framework into tool
  * handlers. `onProgress` lets long-running tools (e.g. render_video) emit
@@ -62,10 +79,8 @@ export function wrapToolHandler<T>(
     };
     activeTools.set(callId, timing);
 
-    // Log input (truncated for large inputs)
-    const inputStr = JSON.stringify(input);
-    const truncatedInput = inputStr.length > 200 ? inputStr.slice(0, 200) + '...' : inputStr;
-    logTool('info', `START ${toolName}`, { callId, input: truncatedInput });
+    const inputMetadata = describeStructure(input);
+    logTool('info', `START ${toolName}`, { callId, input: inputMetadata });
 
     // Create timeout promise
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -91,12 +106,10 @@ export function wrapToolHandler<T>(
       timing.endTime = Date.now();
       timing.duration = timing.endTime - timing.startTime;
 
-      // Log result (truncated)
-      const resultStr = result.length > 200 ? result.slice(0, 200) + '...' : result;
       logTool('info', `END ${toolName}`, {
         callId,
         duration: `${timing.duration}ms`,
-        result: resultStr,
+        result: { type: typeof result, characters: result.length },
       });
 
       return result;
@@ -110,7 +123,7 @@ export function wrapToolHandler<T>(
       logTool('error', `FAIL ${toolName}`, {
         callId,
         duration: `${timing.duration}ms`,
-        error: timing.error,
+        errorType: error instanceof Error ? error.name : typeof error,
       });
 
       // Return error as JSON so agent can see it

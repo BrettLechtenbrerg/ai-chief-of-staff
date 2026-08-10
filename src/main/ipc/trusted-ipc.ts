@@ -16,6 +16,7 @@ type ChannelRule = string;
 const PAGE_CHANNEL_POLICY: Readonly<Record<TrustedPage, readonly ChannelRule[]>> = {
   'chat.html': [
     'agent:*',
+    'approval:*',
     'attachments:*',
     'attachment:*',
     'sessions:*',

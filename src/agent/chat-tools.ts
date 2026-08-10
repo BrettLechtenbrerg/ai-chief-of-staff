@@ -20,8 +20,10 @@ import { AGENT_MODES, type AgentMode } from './agent-modes.js';
 import {
   attachToolPolicy,
   filterToolsForMode,
+  guardToolWithApproval,
   isToolAllowedForMode,
   type PolicyAwareAgentTool,
+  type ToolExecutionContext,
 } from './tool-policy.js';
 import { validateBashCommand, validateWritePath } from './safety';
 
@@ -112,7 +114,8 @@ const WRITE_TOOL_NAMES = new Set(['write', 'edit', 'Write', 'Edit']);
 export function getChatAgentTools(
   config: ToolsConfig,
   cwd: string,
-  mode: AgentMode = AGENT_MODES.general
+  mode: AgentMode = AGENT_MODES.general,
+  execution?: ToolExecutionContext
 ): AgentTool[] {
   const customTools = getCustomTools(config);
   const customToolNames = new Set(customTools.map((tool) => tool.name));
@@ -175,7 +178,9 @@ export function getChatAgentTools(
   if (isToolAllowedForMode('subagent', mode)) {
     allowedTools.push(attachToolPolicy(createSubAgentTool(allowedTools, getStreamConfig), 'custom'));
   }
-  return allowedTools;
+  return execution
+    ? allowedTools.map((tool) => guardToolWithApproval(tool as PolicyAwareAgentTool, execution))
+    : allowedTools;
 }
 
 /**
@@ -185,7 +190,8 @@ export function getChatAgentTools(
 export function getCoderAgentTools(
   config: ToolsConfig,
   cwd: string,
-  mode: AgentMode = AGENT_MODES.coder
+  mode: AgentMode = AGENT_MODES.coder,
+  execution?: ToolExecutionContext
 ): AgentTool[] {
   const { tools: coderNativeTools } = createCoderTools(cwd);
   const customTools = getCustomTools(config);
@@ -220,10 +226,13 @@ export function getCoderAgentTools(
     WRITE_TOOL_NAMES.has(tool.name) ? wrapWithWritePathSafety(tool) : tool
   );
   const candidates = [...safeCoderTools, ...mcpTools, ...buildMCPAgentTools()];
-  return filterToolsForMode(candidates, mode).map((tool) => {
-    if ((tool as PolicyAwareAgentTool).policy) return tool;
+  const allowedTools = filterToolsForMode(candidates, mode).map((tool) => {
+    if ((tool as PolicyAwareAgentTool).policy) return tool as PolicyAwareAgentTool;
     return attachToolPolicy(tool, customToolNames.has(tool.name) ? 'custom' : 'native');
   });
+  return execution
+    ? allowedTools.map((tool) => guardToolWithApproval(tool, execution))
+    : allowedTools;
 }
 
 /**

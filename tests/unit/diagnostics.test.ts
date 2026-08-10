@@ -205,27 +205,28 @@ describe('wrapToolHandler', () => {
       expect(typeof parsed.duration).toBe('number');
     });
 
-    it('should truncate large inputs in logs', async () => {
+    it('logs structural input metadata without private values', async () => {
       const consoleSpy = vi.spyOn(console, 'log');
       const handler = vi.fn().mockResolvedValue('done');
       const wrappedHandler = wrapToolHandler('largeInputTool', handler);
 
-      const largeInput = { data: 'x'.repeat(500) };
-      const resultPromise = wrappedHandler(largeInput);
+      const privateValue = 'private-message-' + 'x'.repeat(500);
+      const resultPromise = wrappedHandler({ data: privateValue });
       await vi.runAllTimersAsync();
       await resultPromise;
 
-      // The START log should truncate input
       const startLog = consoleSpy.mock.calls.find((call) =>
         call[0].includes('START largeInputTool')
       );
       expect(startLog).toBeDefined();
-      expect(startLog![0]).toContain('...');
+      expect(startLog![0]).toContain('"key":"data"');
+      expect(startLog![0]).not.toContain(privateValue);
+      expect(startLog![0]).not.toContain('private-message');
     });
 
-    it('should truncate large results in logs', async () => {
+    it('logs result size without result content', async () => {
       const consoleSpy = vi.spyOn(console, 'log');
-      const largeResult = 'y'.repeat(500);
+      const largeResult = 'private-result-' + 'y'.repeat(500);
       const handler = vi.fn().mockResolvedValue(largeResult);
       const wrappedHandler = wrapToolHandler('largeResultTool', handler);
 
@@ -233,10 +234,10 @@ describe('wrapToolHandler', () => {
       await vi.runAllTimersAsync();
       await resultPromise;
 
-      // The END log should truncate result
       const endLog = consoleSpy.mock.calls.find((call) => call[0].includes('END largeResultTool'));
       expect(endLog).toBeDefined();
-      expect(endLog![0]).toContain('...');
+      expect(endLog![0]).toContain(`"characters":${largeResult.length}`);
+      expect(endLog![0]).not.toContain('private-result');
     });
   });
 
