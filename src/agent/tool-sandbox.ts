@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import type { ChildProcess } from 'child_process';
+import type { Buffer as NodeBuffer } from 'node:buffer';
 import { spawn } from 'child_process';
 import type { Dirent, ReadStream, Stats } from 'fs';
 import type { AgentTool } from '@kenkaiiii/gg-agent';
@@ -121,7 +122,7 @@ export interface RestrictedToolOperations {
   lstat(filePath: string): Promise<Stats>;
   readdir(directory: string, options: { withFileTypes: true }): Promise<Dirent[]>;
   mkdir(directory: string): Promise<void>;
-  createReadStream(filePath: string, encoding: BufferEncoding): ReadStream;
+  createReadStream(filePath: string, encoding: Parameters<NodeBuffer['toString']>[0]): ReadStream;
   spawn(command: string, args: string[], options: {
     cwd: string;
     env?: Record<string, string>;

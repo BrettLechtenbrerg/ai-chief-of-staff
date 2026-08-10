@@ -27,6 +27,8 @@
  * Node binary instead of relying on system Node being on PATH.
  */
 
+import fs from 'fs';
+import path from 'path';
 import { app } from 'electron';
 import { trustedHandle } from './trusted-ipc.js';
 import { loadMCPConfig, saveMCPConfig } from '../../mcp/config';
@@ -443,10 +445,6 @@ function readRawConfig(userDataDir: string): Record<string, Record<string, unkno
   // We use the same path resolution as the loader but read raw JSON.
   // Falling back to {} on any error matches the loader's silent recovery.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const fs = require('fs') as typeof import('fs');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const path = require('path') as typeof import('path');
     const file = path.join(userDataDir, 'mcp-servers.json');
     if (!fs.existsSync(file)) return {};
     const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as {

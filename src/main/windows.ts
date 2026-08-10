@@ -150,7 +150,7 @@ export function createWindow(options: CreateWindowOptions): BrowserWindow {
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (event, url) => {
-    let isExpectedLocalPage = false;
+    let isExpectedLocalPage: boolean;
     try {
       const parsedUrl = new URL(url);
       isExpectedLocalPage =

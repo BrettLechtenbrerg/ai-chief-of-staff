@@ -159,7 +159,7 @@ export async function fetchWithRetry(
       await response.body?.cancel();
       lastError = new Error(`Provider returned retryable HTTP ${response.status}`);
     } catch (error) {
-      if (signal?.aborted) throw new Error('AEO run cancelled');
+      if (signal?.aborted) throw new Error('AEO run cancelled', { cause: error });
       lastError = error;
       if (attempt === 2) throw error;
     }
@@ -437,7 +437,7 @@ export async function fetchAeoVisibility(
       row.cited = verdict.cited;
       row.sources = sources;
     } catch (error) {
-      if (context?.signal?.aborted) throw new Error('AEO run cancelled');
+      if (context?.signal?.aborted) throw new Error('AEO run cancelled', { cause: error });
       row.error = String(error instanceof Error ? error.message : error).slice(0, 200);
     } finally {
       completed += 1;

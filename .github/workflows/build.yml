@@ -5,128 +5,230 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish artifacts to the selected release tag after all gates pass'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-mac:
+    name: macOS signed build
     runs-on: macos-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
+      - name: Check out release source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'
+          cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: test "${GITHUB_REF_NAME}" = "v$(node -p "require('./package.json').version")"
 
-      - name: Import certificates
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run release gates
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test -- --maxWorkers=1
+          node scripts/check-native.cjs
+
+      - name: Import Apple signing certificate
         env:
           CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
           CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         run: |
-          echo "$CERTIFICATE_P12" | base64 --decode > certificate.p12
+          test -n "$CERTIFICATE_P12"
+          echo "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
-          security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security import "$RUNNER_TEMP/certificate.p12" -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
-      - name: Build and notarize
+      - name: Build, sign, notarize, and verify native modules
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npm run build && npx electron-builder --mac --arm64 --x64 -p never
+          BUILD_KIND: release
+        shell: bash
+        run: |
+          npm run build
+          npx electron-builder --mac --arm64 --x64 -p never 2>&1 | tee "$RUNNER_TEMP/package-mac.log"
+          grep -q '\[verify-native-modules\] OK' "$RUNNER_TEMP/package-mac.log"
+          for app in release/mac*/AI\ Chief\ of\ Staff.app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+          done
+          for dmg in release/AI-Chief-of-Staff-*.dmg; do
+            xcrun stapler validate "$dmg"
+          done
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+      - name: Create macOS checksums
+        shell: bash
+        run: |
+          cd release
+          shasum -a 256 AI-Chief-of-Staff-*.dmg AI-Chief-of-Staff-*.zip > SHA256SUMS-macos.txt
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: mac-build
+          name: ai-chief-of-staff-macos-${{ github.ref_name }}
+          if-no-files-found: error
           path: |
-            release/*.dmg
-            release/*.zip
+            release/AI-Chief-of-Staff-*.dmg
+            release/AI-Chief-of-Staff-*.zip
             release/latest-mac.yml
+            release/SHA256SUMS-macos.txt
 
-  build-win:
+  build-win-x64:
+    name: Windows x64 native build
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
+      - name: Check out release source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'
+          cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag/package mismatch" }
 
-      - name: Build and package
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run release gates and native SQLite load
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test -- --maxWorkers=1
+          node scripts/check-native.cjs
+          node -e "const Database=require('better-sqlite3'); const db=new Database(':memory:'); db.prepare('select 1').get(); db.close()"
+
+      - name: Build Windows x64 and verify PE architecture
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-        run: npm run build && npx electron-builder --win --x64 --arm64 -p never
+          BUILD_KIND: release
+        shell: pwsh
+        run: |
+          npm run build
+          npx electron-builder --win --x64 -p never 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/package-win.log"
+          if (-not (Select-String -Quiet -Path "$env:RUNNER_TEMP/package-win.log" -Pattern '\[verify-native-modules\] OK')) {
+            throw 'Native-module afterPack verification did not run.'
+          }
+          $installer = Get-ChildItem release/AI-Chief-of-Staff-*-x64-setup.exe | Select-Object -First 1
+          if (-not $installer) { throw 'x64 installer was not produced.' }
+          if ($env:WIN_CSC_LINK) {
+            $signature = Get-AuthenticodeSignature $installer.FullName
+            if ($signature.Status -ne 'Valid') { throw "Invalid Windows signature: $($signature.Status)" }
+            'valid' | Set-Content -Encoding ascii release/WINDOWS-SIGNING-STATUS.txt
+          } else {
+            'unsigned' | Set-Content -Encoding ascii release/WINDOWS-SIGNING-STATUS.txt
+            Write-Warning 'WIN_CSC_LINK is not configured; production publication remains blocked on code signing.'
+          }
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+      - name: Create Windows checksums
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem release/AI-Chief-of-Staff-*-x64-setup.exe, release/AI-Chief-of-Staff-*-x64-win.zip
+          $lines = $files | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          $lines | Set-Content -Encoding ascii release/SHA256SUMS-windows-x64.txt
+
+      - name: Upload Windows x64 artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: win-build
+          name: ai-chief-of-staff-windows-x64-${{ github.ref_name }}
+          if-no-files-found: error
           path: |
-            release/*-setup.exe
-            release/*.zip
+            release/AI-Chief-of-Staff-*-x64-setup.exe
+            release/AI-Chief-of-Staff-*-x64-win.zip
             release/latest.yml
+            release/SHA256SUMS-windows-x64.txt
+            release/WINDOWS-SIGNING-STATUS.txt
 
-  release:
-    needs: [build-mac, build-win]
+  publish-prerelease:
+    name: Manual prerelease publication
+    needs: [build-mac, build-win-x64]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.publish &&
+      startsWith(github.ref, 'refs/tags/')
+    environment: release
+    permissions:
+      contents: write
     steps:
       - name: Download macOS artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: mac-build
-          path: release/
+          name: ai-chief-of-staff-macos-${{ github.ref_name }}
+          path: release
 
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v7
+      - name: Download Windows x64 artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: win-build
-          path: release/
+          name: ai-chief-of-staff-windows-x64-${{ github.ref_name }}
+          path: release
 
-      - name: Release
-        uses: softprops/action-gh-release@v2
+      - name: Verify downloaded checksums and Windows signing gate
+        working-directory: release
+        run: |
+          sha256sum --check SHA256SUMS-macos.txt
+          sha256sum --check SHA256SUMS-windows-x64.txt
+          grep -qx 'valid' WINDOWS-SIGNING-STATUS.txt || {
+            echo 'Publication blocked: Windows installer lacks a valid production signature.' >&2
+            exit 1
+          }
+
+      - name: Publish verified prerelease
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
+          prerelease: true
+          fail_on_unmatched_files: true
           files: |
-            release/*.dmg
-            release/*.zip
-            release/*-setup.exe
+            release/AI-Chief-of-Staff-*.dmg
+            release/AI-Chief-of-Staff-*.zip
+            release/AI-Chief-of-Staff-*-x64-setup.exe
             release/latest-mac.yml
             release/latest.yml
+            release/SHA256SUMS-*.txt
           body: |
             ## AI Chief of Staff ${{ github.ref_name }}
 
-            A persistent personal AI assistant with memory and scheduling.
+            Trust-and-voice prerelease. Artifacts were built from this tag, passed the locked dependency, type, lint, test, native-module, signature, and checksum gates, and were manually promoted.
 
             ### Downloads
-
-            | Platform | Architecture | File |
-            |----------|--------------|------|
-            | macOS | Apple Silicon (M1/M2/M3/M4) | `Pocket-Agent-*-arm64-mac.dmg` |
-            | macOS | Intel | `Pocket-Agent-*-x64-mac.dmg` |
-            | Windows | x64 | `Pocket-Agent-*-x64-setup.exe` |
-            | Windows | ARM64 | `Pocket-Agent-*-arm64-setup.exe` |
-
-            ### Installation
-
-            **macOS:**
-            1. Download the DMG for your Mac
-            2. Open the DMG and drag AI Chief of Staff to Applications
-            3. Launch and enter your Anthropic API key
-
-            **Windows:**
-            1. Download the setup .exe for your architecture
-            2. Run the installer (you may need to click "More info" → "Run anyway" if unsigned)
-            3. Launch AI Chief of Staff and enter your Anthropic API key
+            - macOS Apple Silicon: `AI-Chief-of-Staff-*-arm64-mac.dmg`
+            - macOS Intel: `AI-Chief-of-Staff-*-x64-mac.dmg`
+            - Windows x64: `AI-Chief-of-Staff-*-x64-setup.exe`
