@@ -23,13 +23,13 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 >    gh auth status
 >    gh auth switch --user BrettLechtenbrerg   # if not already active
 >    ```
-> 5. For Windows builds: Docker Desktop must be open before running `dist:win`.
+> 5. For a local Windows recovery build, Docker Desktop must be open before `npm run dist:win`; the script copies source into an isolated temporary workspace and never mounts host `node_modules`. Native release evidence comes from `.github/workflows/build.yml` on `windows-latest`.
 >
 > **Build/ship reminders (learned the hard way):**
 > - **Versioning is tag-driven.** `scripts/sync-version.cjs` overwrites `package.json` version from the latest git tag. To cut beta.N: commit code → `git tag -a v1.0.0-beta.N` → THEN build (prebuild's sync-version stamps it). Editing the version by hand gets reverted by sync-version.
 > - **Never hot-copy files into the installed signed `.app`.** It invalidates the code signature, and macOS then silently denies entitlement-gated features (mic/voice → phantom "you", and others) and can throw Gatekeeper "damaged." Ship a real signed build or use the auto-updater instead.
-> - **The release pipeline (`dist:signed`, `dist:win`) is long (~16-20 min for Mac notarization). Run it as a managed/detached background process** — a build tied to a single foreground shell call gets reaped mid-notarization, leaving DMGs unstapled + `latest-mac.yml` unpatched.
-> - **`gh release create` with ~3.5GB of assets times out mid-upload** and leaves the release as a DRAFT with a partial asset set. Create with a few assets, then `gh release upload` the rest in small batches, then `gh release edit --draft=false`.
+> - **The release pipeline is tag-first and manually published.** GitHub Actions uses `npm ci`, full gates, native-module architecture checks, checksums, macOS signing/notarization, Windows Authenticode validation, and a protected `release` environment. Unsigned Windows artifacts cannot publish.
+> - **Do not use `gh release create` as an unverified bulk uploader.** Let the workflow download its own build artifacts, verify both SHA-256 manifests, then publish the prerelease from the exact tag.
 >
 > **Important rules:**
 > - NEVER work in any Google-Drive-synced path. Project home is `~/dev/ai-chief-of-staff`.
@@ -39,6 +39,24 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > - Brand identity: bundle ID `com.totalsuccessai.ai-chief-of-staff`, npm name `ai-chief-of-staff`, DB folder `AI Chief of Staff` (productName) on macOS, `ai-chief-of-staff` (slug) on Linux/Windows.
 > - Default mode is **General** (personal assistant), NOT Coder. Default theme is **tsai** (navy/silver).
 > - Hidden upstream UI elements (intentional, all use `.acos-hidden` class for easy restore): Global Chat, "Who made me?" button + modal, Docs button.
+> - Voice is explicit-toggle only (`Alt+Shift+V`), uses `gpt-realtime-2.1` for ears/mouth, and falls back to transcription → normal ACOS agent → local speech. Never add an always-on microphone to beta.23.
+> - Production and nested Flo runtime audits are zero. `@kenkaiiii/ggcoder` stays pinned to 4.3.151; do not mix its 5.x migration into beta.23.
+>
+> **beta.23 trust-and-voice candidate (August 10, 2026):**
+> - Steps 1–19 of `.gg/plans/daily-driver-security-voice-windows.md` are implemented on `main`.
+> - Local release gates: 1,315 tests, typecheck, lint, full audit, Electron-ABI rebuild, x64 packaged macOS startup (IPC/SQLite/chat initialization), and private backup permission checks pass.
+> - Native Windows run `31432214558` passes `npm ci`, all release gates, better-sqlite3 load, PE-x64 afterPack verification, installer/checksum creation, rescue collector, and artifact upload.
+> - macOS CI reaches and passes release gates but intentionally stops because `CERTIFICATE_P12` and `CERTIFICATE_PASSWORD` GitHub secrets are empty. Windows publication also requires a valid production `WIN_CSC_LINK`/password. Do not tag or publish until both signing identities are configured.
+> - Public release remains beta.22. Its Windows link intentionally points to the tested beta.20 x64 installer and digest; do not call it a beta.22 rebuild.
+> - Current data protection and restore procedure: [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md). Windows diagnostics: [`docs/WINDOWS-TESTER-RESCUE.md`](docs/WINDOWS-TESTER-RESCUE.md).
+
+## beta.23 rollback procedure
+
+1. **Stop publication:** keep the GitHub release as a draft/prerelease and do not change `latest*.yml` or the landing page until every artifact gate passes.
+2. **Code rollback:** revert the offending commit on `main`; never force-push or retag an existing release tag. Create a new beta tag only after the fix is reviewed.
+3. **Artifact rollback:** if beta.23 was published, restore updater manifests and the TSAI landing-page links to the last verified release. For Windows, the current safe fallback is beta.20 x64 SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`.
+4. **Data rollback:** quit ACOS and use `--restore-backup=<exact timestamped filename>` from [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md). Restore creates an emergency pre-restore snapshot; never hot-copy a lone DB while WAL mode is active.
+5. **Tester recovery:** collect `tester-rescue.ps1` output before uninstalling. Preserve logs/digests, withdraw the bad asset, then publish a new tag rather than replacing bytes behind an existing checksum.
 
 ---
 

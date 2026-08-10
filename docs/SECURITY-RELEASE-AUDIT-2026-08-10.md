@@ -2,7 +2,7 @@
 
 ## Release decision
 
-**Do not release commit `58e0425` or the current worktree as beta.23 until the release gates below pass.** Beta.23 is a trust-and-voice release. The gg-agent 4 → 5 migration is explicitly deferred to a separate compatibility branch.
+**Implementation gates are complete on `main`; publication is still blocked on production signing credentials and real tester acceptance.** The historical findings below describe the original `58e0425` baseline. Beta.23 remains a trust-and-voice release, and the gg-agent 4 → 5 migration remains deferred.
 
 ## Reproducible baseline
 
@@ -18,7 +18,7 @@ Recorded on 2026-08-10 before implementation:
 - Tester page: `https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app`
 - Repository URLs and release assets are served directly by GitHub Releases; the website does not proxy installer bytes
 
-## Confirmed security findings
+## Confirmed security findings (baseline; remediated on current `main`)
 
 | Severity | Boundary | Confirmed risk | Required release gate |
 | --- | --- | --- | --- |
@@ -62,27 +62,28 @@ npm audit fix
 
 ## AEO release assessment
 
-`fetch_aeo_visibility` is useful but blocked from release until it uses encrypted main-process credentials, schema validation, an explicit paid-query preview/approval, per-request aborts and bounded retry/backoff, progress heartbeats, exact normalized-host citation matching, atomic reports, and regression tests.
+`fetch_aeo_visibility` now uses encrypted main-process provider settings, strict 25-prompt schema validation, an explicit preview/approval for up to 75 paid requests, 30-second aborts with bounded retries, cancellation/progress heartbeats, normalized exact-host citation matching, atomic `0600` reports, and regression tests.
 
 ## Voice release assessment
 
-Preserve OpenAI Realtime as ears/mouth and the normal ACOS agent as the reasoning/tool brain. Use a centralized `gpt-realtime-2.1` primary model with diagnostics and a durable half-duplex transcription → normal agent → local speech fallback. Voice may resolve a pending approval only from recognized user speech; the model may never approve itself. No always-on microphone ships in beta.23.
+Voice now preserves OpenAI Realtime as ears/mouth and the normal ACOS agent as the reasoning/tool brain. The main process pins `gpt-realtime-2.1`, exposes bounded compatibility diagnostics, and falls back to transcription → normal agent → local speech. Only exact recognized user speech can resolve a pending approval; model tool arguments cannot. The microphone remains explicit-toggle only.
 
 ## Windows release assessment
 
 The prior website linked the 641,626,761-byte universal installer despite stating x64 requirements. The live hotfix now links the 324,192,956-byte beta.20 x64 installer mirrored under beta.22 and displays SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`.
 
-A fresh beta.23 Windows x64 installer remains blocked on isolated reproducible builds, PE machine validation for native modules, native Windows install/startup/chat smoke evidence, checksums/updater verification, and a PowerShell rescue collector. SmartScreen reputation warnings require a production Windows code-signing certificate; they cannot be solved by website changes.
+The isolated local Docker path, native Windows x64 CI package, PE machine validation, full tests/native SQLite probe, afterPack verification, checksums, updater metadata, and PowerShell rescue collector now pass (run `31432214558`). Publication remains blocked until a production Windows Authenticode certificate is configured and a tester completes the installed startup/chat/voice/AEO acceptance pass. SmartScreen reputation cannot be solved by website changes.
 
 ## beta.23 release gates
 
-- No remote renderer scripts; renderer IPC cannot read secret values.
-- Exact trusted sender policy on every IPC handler.
-- Tool snapshots prove per-mode allowlists; indirect prompt injection cannot cross approval boundaries.
-- Scheduled/Telegram runs fail closed for confirmation-required actions.
-- AEO paid requests, encrypted credentials, timeouts/retries/progress, and citation matching are tested.
-- Realtime and forced-failure fallback voice flows can run/cancel/approve/deny safely.
-- Production high/critical audit count is zero or has approved non-reachability evidence.
-- Typecheck, lint, full targeted tests, Node ABI sequence, Electron ABI restoration, and native-module verification pass.
-- Packaged Mac and native Windows x64 smoke tests pass with checksums and correct updater manifests.
-- Tag/manifests precede builds; verified assets precede publication; website copy exactly matches shipped versions.
+- [x] No remote renderer scripts; renderer IPC cannot read secret values.
+- [x] Exact trusted sender policy on every IPC handler.
+- [x] Tool snapshots prove per-mode allowlists; indirect content cannot cross approval boundaries.
+- [x] Scheduled/Telegram runs fail closed for confirmation-required actions.
+- [x] AEO paid requests, encrypted credentials, timeouts/retries/progress, and citation matching are tested.
+- [x] Realtime and forced-failure fallback voice flows can run/cancel/approve/deny safely.
+- [x] Production and nested Flo runtime audits report zero advisories.
+- [x] Typecheck, lint, 1,315 tests, Node ABI sequence, Electron ABI restoration, and native-module verification pass.
+- [x] Local packaged x64 Mac startup and native Windows x64 package/checksum/updater gates pass.
+- [ ] Configure GitHub macOS certificate/notary and Windows production Authenticode secrets.
+- [ ] Create the tag before builds, then complete real Mac + Windows tester acceptance before publication/website promotion.

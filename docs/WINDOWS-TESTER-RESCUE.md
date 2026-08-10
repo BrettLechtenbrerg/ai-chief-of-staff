@@ -1,6 +1,6 @@
 # Windows tester rescue bundle
 
-Use this collector when AI Chief of Staff will not install, start, open chat, load SQLite, or update correctly on Windows.
+Use this collector when AI Chief of Staff will not install, start, open chat, load SQLite, or update correctly on Windows. Until beta.23 is signed and published, the public beta.22 page intentionally links the tested beta.20 x64 installer (324,192,956 bytes; SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`), not the universal installer.
 
 ## Run it
 
@@ -12,7 +12,7 @@ Use this collector when AI Chief of Staff will not install, start, open chat, lo
    powershell -NoProfile -ExecutionPolicy Bypass -File .\tester-rescue.ps1
    ```
 
-4. Send support the `AI-Chief-of-Staff-rescue-YYYYMMDD-HHMMSS.zip` file created on the Desktop.
+4. Send support the `AI-Chief-of-Staff-rescue-YYYYMMDD-HHMMSS.zip` file created on the Desktop. Run it before uninstalling so install/updater/startup evidence is still present.
 
 If Windows marks the downloaded script as blocked, right-click it, choose **Properties**, select **Unblock**, then repeat step 3.
 
