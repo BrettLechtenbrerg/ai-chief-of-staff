@@ -1,0 +1,48 @@
+import { z } from 'zod';
+
+export const ProposalSchema = z.object({
+  id: z.string(),
+  client_action_id: z.string(),
+  type: z.enum([
+    'gmail.send',
+    'gmail.draft',
+    'gmail.delete',
+    'gmail.empty_trash',
+    'gmail.modify_labels',
+    'gmail.delete_label',
+    'calendar.create',
+    'calendar.update',
+    'calendar.delete',
+    'calendar.focus_time',
+    'calendar.recurring',
+    'docs.create',
+    'docs.append_text',
+    'docs.replace_text',
+    'docs.delete_content',
+    'docs.move_content',
+    'docs.insert_at_position',
+    'docs.apply_formatting',
+    'docs.read_content',
+    'docs.verify_change',
+    'drive.upload',
+    'drive.create_folder',
+    'drive.move_file',
+    'drive.delete',
+  ]),
+  payload: z.record(z.any()),
+  risk: z.enum(['low', 'medium', 'high']),
+  violations: z.array(z.string()),
+  created_at: z.string(),
+  executed: z.boolean(),
+  executed_at: z.string().optional(),
+  receipt: z.record(z.any()).optional(),
+});
+
+export const SafetyConfigSchema = z.object({
+  allowed_domains: z.array(z.string()).default([]),
+  allow_external_recipients: z.boolean().default(false),
+  allow_deletes: z.boolean().default(false),
+  time_guard_start_hour: z.number().min(0).max(23).default(7),
+  time_guard_end_hour: z.number().min(0).max(23).default(19),
+  require_human_approval: z.boolean().default(true),
+});
