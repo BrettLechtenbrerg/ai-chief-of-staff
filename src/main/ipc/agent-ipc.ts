@@ -4,6 +4,12 @@ import fs from 'fs';
 import { app } from 'electron';
 import { AgentManager, ImageContent } from '../../agent';
 import { SettingsManager } from '../../settings';
+import {
+  getValidatedBase64ByteLength,
+  MAX_ATTACHMENT_BYTES,
+  MAX_MEDIA_READ_BYTES,
+} from '../../utils/input-limits.js';
+import { resolveExistingPathWithin } from '../../utils/safe-path.js';
 import { getWindow } from '../windows';
 import type { IPCDependencies } from './types';
 
@@ -14,10 +20,28 @@ export function registerAgentIPC(deps: IPCDependencies): void {
   trustedHandle(
     'agent:send',
     async (event, message: string, sessionId?: string, images?: ImageContent[]) => {
+      if (typeof message !== 'string' || Buffer.byteLength(message, 'utf8') > 1024 * 1024) {
+        return { success: false, error: 'Message exceeds the 1 MB limit.' };
+      }
+      if (images !== undefined && (!Array.isArray(images) || images.length > 8)) {
+        return { success: false, error: 'Too many image attachments (max 8).' };
+      }
+      try {
+        let totalImageBytes = 0;
+        for (const image of images || []) {
+          if (image?.type !== 'base64' || !['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(image.mediaType)) {
+            throw new Error('Unsupported image payload');
+          }
+          totalImageBytes += getValidatedBase64ByteLength(image.data, MAX_ATTACHMENT_BYTES);
+        }
+        if (totalImageBytes > MAX_MEDIA_READ_BYTES) throw new Error('Images exceed the 20 MB total limit');
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Invalid image payload' };
+      }
+
       console.log(
         `[IPC] agent:send received sessionId: ${sessionId}, images: ${images?.length || 0}`
       );
-
       // Auto-initialize agent if not yet initialized (handles race conditions and late key setup)
       if (!AgentManager.isInitialized()) {
         if (SettingsManager.hasRequiredKeys()) {
@@ -192,18 +216,17 @@ export function registerAgentIPC(deps: IPCDependencies): void {
     }
   });
 
-  // Read media file as data URI (for displaying agent-generated images in chat)
+  // Read bounded image files from the canonical media directory for chat display.
   trustedHandle('agent:readMedia', async (_, filePath: string) => {
     try {
-      // Security: only allow reading from the AI Chief of Staff media directory
       const mediaDir = path.join(app.getPath('documents'), 'AI Chief of Staff', 'media');
-      const resolvedPath = path.resolve(filePath);
-      if (!resolvedPath.startsWith(mediaDir)) {
-        throw new Error('Access denied: path outside media directory');
+      const canonicalPath = resolveExistingPathWithin(mediaDir, filePath);
+      const stat = fs.statSync(canonicalPath);
+      if (!stat.isFile() || stat.size > MAX_MEDIA_READ_BYTES) {
+        throw new Error('Media is not a regular file within the 20 MB limit');
       }
 
-      const buffer = fs.readFileSync(resolvedPath);
-      const ext = path.extname(resolvedPath).toLowerCase();
+      const ext = path.extname(canonicalPath).toLowerCase();
       const mimeMap: Record<string, string> = {
         '.png': 'image/png',
         '.jpg': 'image/jpeg',
@@ -211,7 +234,9 @@ export function registerAgentIPC(deps: IPCDependencies): void {
         '.gif': 'image/gif',
         '.webp': 'image/webp',
       };
-      const mimeType = mimeMap[ext] || 'image/png';
+      const mimeType = mimeMap[ext];
+      if (!mimeType) throw new Error('Unsupported media type');
+      const buffer = fs.readFileSync(canonicalPath);
       return `data:${mimeType};base64,${buffer.toString('base64')}`;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';

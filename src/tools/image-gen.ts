@@ -20,6 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
 import { SettingsManager } from '../settings';
+import { isPathWithin, resolvePathForCreateWithin } from '../utils/safe-path.js';
 
 export type ImageStyle = 'photo-realistic' | 'editorial-illustration';
 
@@ -134,10 +135,8 @@ function validateOutputPath(outputPath: string): string {
     throw new Error('outputPath must end with .png');
   }
   const resolved = path.resolve(outputPath);
-  const allowed = ALLOWED_DIRS.some(
-    (dir) => resolved === dir || resolved.startsWith(dir + path.sep),
-  );
-  if (!allowed) {
+  const allowedDirectory = ALLOWED_DIRS.find((directory) => isPathWithin(directory, resolved));
+  if (!allowedDirectory) {
     throw new Error(
       `outputPath must be inside one of: ${ALLOWED_DIRS.join(', ')} (got: ${resolved})`,
     );
@@ -194,7 +193,10 @@ export async function generateBlogImage(
 
     const buffer = Buffer.from(b64, 'base64');
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
-    fs.writeFileSync(resolved, buffer);
+    const allowedDirectory = ALLOWED_DIRS.find((directory) => isPathWithin(directory, resolved));
+    if (!allowedDirectory) throw new Error('Output path escaped the allowed directories');
+    resolved = resolvePathForCreateWithin(allowedDirectory, resolved);
+    fs.writeFileSync(resolved, buffer, { mode: 0o600 });
 
     // Desktop preview copy (default ON). Best-effort — if the write fails
     // we still return success for the repo file. The preview is a

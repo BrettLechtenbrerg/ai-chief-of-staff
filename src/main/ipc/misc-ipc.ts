@@ -7,6 +7,8 @@ import { promisify } from 'util';
 import { loadWorkflowCommands, loadWorkflowCommandsFromDir } from '../../config/commands-loader';
 import { isMacOS, getPermissionsStatus, openPermissionSettings } from '../../permissions';
 import type { PermissionType } from '../../permissions';
+import { decodeBoundedAttachment, MAX_ATTACHMENT_BYTES } from '../../utils/input-limits.js';
+import { resolveExistingPathWithin, resolvePathForCreateWithin } from '../../utils/safe-path.js';
 import type { IPCDependencies } from './types';
 
 const IS_WINDOWS = process.platform === 'win32';
@@ -67,52 +69,36 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   trustedHandle('app:openPath', async (_, filePath: string) => {
-    // Security: only allow opening paths within the AI Chief of Staff documents directory
-    const allowedDir = path.join(app.getPath('documents'), 'AI Chief of Staff');
-    const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(allowedDir)) {
-      console.warn('[Main] Blocked openPath outside allowed directory:', filePath);
-      return;
+    try {
+      const allowedDir = path.join(app.getPath('documents'), 'AI Chief of Staff');
+      const canonicalPath = resolveExistingPathWithin(allowedDir, filePath);
+      await shell.openPath(canonicalPath);
+    } catch (error) {
+      console.warn('[Main] Blocked invalid openPath request:', error instanceof Error ? error.message : error);
     }
-    await shell.openPath(resolvedPath);
   });
 
-  // Open an image in the default viewer — handles both local paths and URLs
+  // Remote images open in the system browser; the privileged main process never downloads them.
   trustedHandle('app:openImage', async (_, src: string) => {
     try {
-      const mediaDir = path.join(app.getPath('documents'), 'AI Chief of Staff', 'media');
-      if (src.startsWith('http://') || src.startsWith('https://')) {
-        // Remote URL — download to media dir first
-        if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
-
-        const res = await fetch(src);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const buf = Buffer.from(await res.arrayBuffer());
-
-        const contentType = res.headers.get('content-type') || '';
-        const ext =
-          contentType.includes('jpeg') || contentType.includes('jpg')
-            ? '.jpg'
-            : contentType.includes('gif')
-              ? '.gif'
-              : contentType.includes('webp')
-                ? '.webp'
-                : '.png';
-
-        const filePath = path.join(mediaDir, `img-${Date.now()}${ext}`);
-        fs.writeFileSync(filePath, buf);
-        await shell.openPath(filePath);
-      } else {
-        // Local file path — only allow files within the media directory
-        const resolvedPath = path.resolve(src);
-        if (!resolvedPath.startsWith(mediaDir)) {
-          console.warn('[Main] Blocked openImage outside media directory:', src);
-          return;
+      if (/^https?:\/\//i.test(src)) {
+        const remoteUrl = new URL(src);
+        if (remoteUrl.protocol !== 'https:' && remoteUrl.protocol !== 'http:') {
+          throw new Error('Unsupported image URL protocol');
         }
-        await shell.openPath(resolvedPath);
+        await shell.openExternal(remoteUrl.href);
+        return;
       }
-    } catch (err) {
-      console.error('[Main] Failed to open image:', err);
+
+      const mediaDir = path.join(app.getPath('documents'), 'AI Chief of Staff', 'media');
+      const canonicalPath = resolveExistingPathWithin(mediaDir, src);
+      const extension = path.extname(canonicalPath).toLowerCase();
+      if (!new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']).has(extension)) {
+        throw new Error('Unsupported image type');
+      }
+      await shell.openPath(canonicalPath);
+    } catch (error) {
+      console.warn('[Main] Blocked invalid openImage request:', error instanceof Error ? error.message : error);
     }
   });
 
@@ -227,14 +213,9 @@ export function registerMiscIPC(deps: IPCDependencies): void {
     return /^[\w/.-]+$/.test(pathPart);
   }
 
-  trustedHandle('shell:runCommand', async (event, command: string) => {
-    // Security: only allow calls from local file origins (not remote/injected content)
-    const senderUrl = event.sender.getURL();
-    if (!senderUrl.startsWith('file://')) {
-      console.warn('[Shell] Blocked runCommand from non-local origin:', senderUrl);
-      throw new Error('Access denied: shell commands only allowed from local UI');
-    }
-    // Security: only allow known command patterns
+  trustedHandle('shell:runCommand', async (_, command: string) => {
+    // The trusted IPC wrapper already enforces the exact local top-level page.
+    // Only known command patterns may cross this narrower shell boundary.
     const isAllowed =
       ALLOWED_COMMAND_PREFIXES.some((prefix) => command.startsWith(prefix)) ||
       (!IS_WINDOWS && isAllowedStringsCmd(command));
@@ -281,24 +262,15 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   // File attachments
   trustedHandle('attachment:save', async (_, name: string, dataUrl: string) => {
     try {
+      const { bytes, safeName } = decodeBoundedAttachment(name, dataUrl);
       const attachmentsDir = path.join(app.getPath('userData'), 'attachments');
-      if (!fs.existsSync(attachmentsDir)) {
-        fs.mkdirSync(attachmentsDir, { recursive: true });
-      }
-
-      const timestamp = Date.now();
-      const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const filePath = path.join(attachmentsDir, `${timestamp}-${safeName}`);
-
-      const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-      if (!matches) {
-        throw new Error('Invalid data URL format');
-      }
-
-      const buffer = Buffer.from(matches[2], 'base64');
-      fs.writeFileSync(filePath, buffer);
-
-      console.log(`[Attachment] Saved: ${filePath}`);
+      fs.mkdirSync(attachmentsDir, { recursive: true, mode: 0o700 });
+      const filePath = resolvePathForCreateWithin(
+        attachmentsDir,
+        path.join(attachmentsDir, `${Date.now()}-${safeName}`),
+      );
+      fs.writeFileSync(filePath, bytes, { flag: 'wx', mode: 0o600 });
+      console.log('[Attachment] Saved attachment');
       return filePath;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -310,13 +282,22 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   // Extract text from Office documents
   trustedHandle('attachment:extract-text', async (_, filePath: string) => {
     const attachmentsDir = path.join(app.getPath('userData'), 'attachments');
-    const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(attachmentsDir)) {
-      throw new Error('Access denied: path outside attachments directory');
+    const canonicalPath = resolveExistingPathWithin(attachmentsDir, filePath);
+    const stat = fs.statSync(canonicalPath);
+    if (!stat.isFile() || stat.size > MAX_ATTACHMENT_BYTES) {
+      throw new Error('Attachment is not a regular file within the 10 MB limit');
+    }
+    const extractable = new Set(['.docx', '.pptx', '.xlsx', '.odt', '.odp', '.ods', '.rtf']);
+    if (!extractable.has(path.extname(canonicalPath).toLowerCase())) {
+      throw new Error('Unsupported extractable attachment type');
     }
     const { parseOffice } = await import('officeparser');
-    const ast = await parseOffice(resolvedPath);
-    return ast.toText();
+    const ast = await parseOffice(canonicalPath);
+    const text = ast.toText();
+    if (Buffer.byteLength(text, 'utf8') > MAX_ATTACHMENT_BYTES) {
+      throw new Error('Extracted attachment text exceeds the 10 MB limit');
+    }
+    return text;
   });
 
   // Permissions (macOS)

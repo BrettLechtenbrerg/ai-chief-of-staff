@@ -70,13 +70,13 @@ const PAGE_CHANNEL_POLICY: Readonly<Record<TrustedPage, readonly ChannelRule[]>>
   'soul.html': ['soul:list', 'soul:delete'],
 };
 
-const trustedUiDirectory = path.resolve(app.getAppPath(), 'ui');
-const TRUSTED_PAGE_PATHS = new Map<string, TrustedPage>(
-  (Object.keys(PAGE_CHANNEL_POLICY) as TrustedPage[]).map((page) => [
-    path.resolve(trustedUiDirectory, page),
-    page,
-  ])
-);
+function trustedPageForPath(rendererPath: string): TrustedPage | null {
+  const trustedUiDirectory = path.resolve(app.getAppPath(), 'ui');
+  for (const page of Object.keys(PAGE_CHANNEL_POLICY) as TrustedPage[]) {
+    if (rendererPath === path.resolve(trustedUiDirectory, page)) return page;
+  }
+  return null;
+}
 
 export function isChannelAllowedForPage(page: TrustedPage, channel: string): boolean {
   return PAGE_CHANNEL_POLICY[page].some((rule) => {
@@ -102,7 +102,7 @@ export function getTrustedPageForWebContents(
   try {
     const parsedUrl = new URL(rendererUrl || webContents.getURL());
     if (parsedUrl.protocol !== 'file:') return null;
-    return TRUSTED_PAGE_PATHS.get(path.resolve(fileURLToPath(parsedUrl))) || null;
+    return trustedPageForPath(path.resolve(fileURLToPath(parsedUrl)));
   } catch {
     return null;
   }

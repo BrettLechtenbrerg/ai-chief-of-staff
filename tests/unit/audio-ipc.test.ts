@@ -9,14 +9,12 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Capture the handlers registered on ipcMain so we can invoke them directly.
+// Capture trusted registrations so these tests can invoke the validated handler body directly.
 const registeredHandlers = new Map<string, (...args: unknown[]) => unknown>();
 
-vi.mock('electron', () => ({
-  ipcMain: {
-    handle: (channel: string, handler: (...args: unknown[]) => unknown) => {
-      registeredHandlers.set(channel, handler);
-    },
+vi.mock('../../src/main/ipc/trusted-ipc.js', () => ({
+  trustedHandle: (channel: string, handler: (...args: unknown[]) => unknown) => {
+    registeredHandlers.set(channel, handler);
   },
 }));
 

@@ -144,25 +144,30 @@ export function createWindow(options: CreateWindowOptions): BrowserWindow {
   // file:// pages. Any attempt to navigate elsewhere (e.g. a crafted link
   // that survives sanitization) is blocked; http(s) targets open in the
   // system browser instead of inside the app shell.
+  const htmlPath = path.resolve(__dirname, '../../ui', htmlFile);
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) {
-      void shell.openExternal(url);
-    }
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) {
+    let isExpectedLocalPage = false;
+    try {
+      const parsedUrl = new URL(url);
+      isExpectedLocalPage =
+        parsedUrl.protocol === 'file:' && path.resolve(fileURLToPath(parsedUrl)) === htmlPath;
+    } catch {
+      isExpectedLocalPage = false;
+    }
+    if (!isExpectedLocalPage) {
       event.preventDefault();
-      if (/^https?:\/\//i.test(url)) {
-        void shell.openExternal(url);
-      }
+      if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     }
   });
 
   // 4. Load HTML file
   const loadOptions: Electron.LoadFileOptions = {};
   if (hash) loadOptions.hash = hash;
-  win.loadFile(path.join(__dirname, '../../ui', htmlFile), loadOptions);
+  win.loadFile(htmlPath, loadOptions);
 
   // 5. Show when ready
   win.once('ready-to-show', () => {
