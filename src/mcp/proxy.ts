@@ -9,6 +9,7 @@
 
 import { z } from 'zod';
 import type { AgentTool, ToolContext } from '@kenkaiiii/gg-agent';
+import { attachToolPolicy } from '../agent/tool-policy.js';
 import { getMCPManager } from './manager';
 
 /**
@@ -23,7 +24,7 @@ export function buildMCPAgentTools(): AgentTool[] {
 
   const tools: AgentTool[] = [];
   for (const d of descriptors) {
-    tools.push({
+    tools.push(attachToolPolicy({
       name: d.agentToolName,
       description: d.description,
       // gg-agent requires a parameters Zod schema, but when rawInputSchema
@@ -43,7 +44,7 @@ export function buildMCPAgentTools(): AgentTool[] {
           return `MCP tool error (${d.agentToolName}): ${(err as Error).message}`;
         }
       },
-    });
+    } as AgentTool, 'mcp', d.annotations));
   }
   return tools;
 }

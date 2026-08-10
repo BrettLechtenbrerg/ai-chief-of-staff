@@ -53,7 +53,7 @@ describe('Agent Modes', () => {
 
     it('every mode should have the switch_agent tool', () => {
       for (const mode of Object.values(AGENT_MODES)) {
-        expect(mode.allowedTools).toContain('mcp__pocket-agent__switch_agent');
+        expect(mode.allowedTools).toContain('switch_agent');
       }
     });
 
@@ -118,13 +118,13 @@ describe('Agent Modes', () => {
     });
 
     it('should have memory and soul tools', () => {
-      expect(general.allowedTools).toContain('mcp__pocket-agent__remember');
-      expect(general.allowedTools).toContain('mcp__pocket-agent__soul_set');
+      expect(general.allowedTools).toContain('remember');
+      expect(general.allowedTools).toContain('soul_set');
     });
 
     it('should have scheduler tools', () => {
-      expect(general.allowedTools).toContain('mcp__pocket-agent__schedule_task');
-      expect(general.allowedTools).toContain('mcp__pocket-agent__create_reminder');
+      expect(general.allowedTools).toContain('create_routine');
+      expect(general.allowedTools).toContain('create_reminder');
     });
 
     it('should be able to hand off to all other modes', () => {
@@ -136,18 +136,18 @@ describe('Agent Modes', () => {
 
   describe('writer mode', () => {
     it('should not have browser tools (no web distractions)', () => {
-      expect(AGENT_MODES.writer.allowedTools).not.toContain('mcp__pocket-agent__browser');
+      expect(AGENT_MODES.writer.allowedTools).not.toContain('browser');
     });
 
     it('should have memory and soul tools for voice matching', () => {
-      expect(AGENT_MODES.writer.allowedTools).toContain('mcp__pocket-agent__soul_get');
-      expect(AGENT_MODES.writer.allowedTools).toContain('mcp__pocket-agent__list_facts');
+      expect(AGENT_MODES.writer.allowedTools).toContain('soul_get');
+      expect(AGENT_MODES.writer.allowedTools).toContain('list_facts');
     });
   });
 
   describe('therapist mode', () => {
     it('should not have browser tools', () => {
-      expect(AGENT_MODES.therapist.allowedTools).not.toContain('mcp__pocket-agent__browser');
+      expect(AGENT_MODES.therapist.allowedTools).not.toContain('browser');
     });
 
     it('should only hand off to general', () => {

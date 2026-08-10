@@ -386,10 +386,11 @@ export class ChatEngine {
 
       // Get provider config
       const streamConfig = await getStreamConfig(model);
+      const modeConfig = getModeConfig(sessionMode);
       const agentTools =
         sessionMode === 'coder'
-          ? getCoderAgentTools(this.toolsConfig, this.getCoderCwd(sessionId))
-          : getChatAgentTools(this.toolsConfig, this.workspace);
+          ? getCoderAgentTools(this.toolsConfig, this.getCoderCwd(sessionId), modeConfig)
+          : getChatAgentTools(this.toolsConfig, this.workspace, modeConfig);
 
       // Sanity log: how many tools did this turn ship to the model, and how
       // many of them are external MCP tools? Helps diagnose 'agent says it
@@ -417,7 +418,7 @@ export class ChatEngine {
         provider: streamConfig.provider,
         model,
         tools: agentTools,
-        webSearch: true,
+        webSearch: modeConfig.allowedTools.includes('web_fetch'),
         maxTurns: MAX_TOOL_ITERATIONS,
         maxTokens: 16384,
         thinking,

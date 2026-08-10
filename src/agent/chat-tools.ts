@@ -16,6 +16,13 @@ import { wrapToolHandler, getToolTimeout } from '../tools/diagnostics';
 import { createSubAgentTool } from '../tools/subagent';
 import { buildMCPAgentTools } from '../mcp/proxy';
 import { getStreamConfig } from './chat-providers';
+import { AGENT_MODES, type AgentMode } from './agent-modes.js';
+import {
+  attachToolPolicy,
+  filterToolsForMode,
+  isToolAllowedForMode,
+  type PolicyAwareAgentTool,
+} from './tool-policy.js';
 import { validateBashCommand, validateWritePath } from './safety';
 
 const execAsync = promisify(exec);
@@ -102,8 +109,13 @@ const WRITE_TOOL_NAMES = new Set(['write', 'edit', 'Write', 'Edit']);
  * Build the AgentTool array for Chat mode.
  * Wraps each handler with diagnostics and returns AgentTool[] compatible with @kenkaiiii/gg-agent.
  */
-export function getChatAgentTools(config: ToolsConfig, cwd: string): AgentTool[] {
+export function getChatAgentTools(
+  config: ToolsConfig,
+  cwd: string,
+  mode: AgentMode = AGENT_MODES.general
+): AgentTool[] {
   const customTools = getCustomTools(config);
+  const customToolNames = new Set(customTools.map((tool) => tool.name));
   const tools: AgentTool[] = [];
 
   for (const tool of customTools) {
@@ -154,23 +166,30 @@ export function getChatAgentTools(config: ToolsConfig, cwd: string): AgentTool[]
     tools.push(mcpTool);
   }
 
-  // Add sub-agent tool (receives parent tools so it can select a subset).
-  // Must be last so the sub-agent sees every tool above it, including MCP.
-  tools.push(createSubAgentTool(tools, getStreamConfig));
+  const allowedTools = filterToolsForMode(tools, mode).map((tool) => {
+    if ((tool as PolicyAwareAgentTool).policy) return tool;
+    return attachToolPolicy(tool, customToolNames.has(tool.name) ? 'custom' : 'native');
+  });
 
-  return tools;
+  // Subagents receive only the already-filtered parent tool snapshot.
+  if (isToolAllowedForMode('subagent', mode)) {
+    allowedTools.push(attachToolPolicy(createSubAgentTool(allowedTools, getStreamConfig), 'custom'));
+  }
+  return allowedTools;
 }
 
 /**
  * Build the AgentTool array for Coder mode.
  * Uses gg-coder native tools (read, write, edit, bash, etc.) merged with MCP tools.
  */
-export function getCoderAgentTools(config: ToolsConfig, cwd: string): AgentTool[] {
-  // Create gg-coder native tools
+export function getCoderAgentTools(
+  config: ToolsConfig,
+  cwd: string,
+  mode: AgentMode = AGENT_MODES.coder
+): AgentTool[] {
   const { tools: coderNativeTools } = createCoderTools(cwd);
-
-  // Get MCP-wrapped tools (browser, notify, project, grep-github, switch_agent)
   const customTools = getCustomTools(config);
+  const customToolNames = new Set(customTools.map((tool) => tool.name));
   const mcpTools: AgentTool[] = [];
 
   for (const tool of customTools) {
@@ -197,14 +216,14 @@ export function getCoderAgentTools(config: ToolsConfig, cwd: string): AgentTool[
     });
   }
 
-  // Merge: coder native tools (with write-path safety) + in-process custom
-  // tools (browser, notify, project, etc.) + external MCP server tools
-  // (Gmail / Calendar / GHL / etc., see src/mcp/). buildMCPAgentTools()
-  // returns [] when no servers are connected.
-  const safeCoderTools = coderNativeTools.map((t) =>
-    WRITE_TOOL_NAMES.has(t.name) ? wrapWithWritePathSafety(t) : t
+  const safeCoderTools = coderNativeTools.map((tool) =>
+    WRITE_TOOL_NAMES.has(tool.name) ? wrapWithWritePathSafety(tool) : tool
   );
-  return [...safeCoderTools, ...mcpTools, ...buildMCPAgentTools()];
+  const candidates = [...safeCoderTools, ...mcpTools, ...buildMCPAgentTools()];
+  return filterToolsForMode(candidates, mode).map((tool) => {
+    if ((tool as PolicyAwareAgentTool).policy) return tool;
+    return attachToolPolicy(tool, customToolNames.has(tool.name) ? 'custom' : 'native');
+  });
 }
 
 /**

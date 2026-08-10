@@ -15,7 +15,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import type { ExternalMCPServerConfig, MCPToolDescriptor } from './types';
+import type { ExternalMCPServerConfig, MCPToolAnnotations, MCPToolDescriptor } from './types';
 
 /** Status for diagnostics + UI. */
 export type MCPClientStatus = 'idle' | 'starting' | 'ready' | 'failed' | 'stopped';
@@ -24,6 +24,7 @@ interface RawMCPToolListItem {
   name: string;
   description?: string;
   inputSchema?: Record<string, unknown>;
+  annotations?: MCPToolAnnotations;
 }
 
 export class MCPClient {
@@ -151,6 +152,7 @@ export class MCPClient {
         type: 'object',
         properties: {},
       },
+      ...(t.annotations ? { annotations: { ...t.annotations } } : {}),
     }));
   }
 

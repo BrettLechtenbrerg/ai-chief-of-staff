@@ -61,33 +61,31 @@ const CODER_NATIVE_TOOLS = [
   'exit_plan',
 ];
 
-const BROWSER_TOOLS = ['mcp__pocket-agent__browser'];
-const NOTIFY_TOOLS = ['mcp__pocket-agent__notify'];
-const PROJECT_TOOLS = [
-  'mcp__pocket-agent__set_project',
-  'mcp__pocket-agent__get_project',
-  'mcp__pocket-agent__clear_project',
+const BROWSER_TOOLS = ['browser'];
+const NOTIFY_TOOLS = ['notify'];
+const PROJECT_TOOLS = ['set_project', 'get_project', 'clear_project'];
+const MEMORY_TOOLS = ['remember', 'forget', 'list_facts', 'daily_log'];
+const SOUL_TOOLS = ['soul_set', 'soul_get', 'soul_list', 'soul_delete'];
+const SCHEDULER_TOOLS = ['create_reminder', 'create_routine', 'list_routines', 'delete_routine'];
+const BUSINESS_TOOLS = [
+  'generate_blog_image',
+  'send_telegram_message',
+  'write_daily_posting_packet',
+  'fetch_seo_data',
+  'fetch_aeo_visibility',
+  'campaign_smoke_test',
+  'campaign_setup_contact',
+  'campaign_enroll',
+  'campaign_status',
+  'campaign_send_message',
+  'campaign_verify',
+  'scaffold_video_project',
+  'render_video',
+  'trim_video_silence',
 ];
-const MEMORY_TOOLS = [
-  'mcp__pocket-agent__remember',
-  'mcp__pocket-agent__forget',
-  'mcp__pocket-agent__list_facts',
-  'mcp__pocket-agent__daily_log',
-];
-const SOUL_TOOLS = [
-  'mcp__pocket-agent__soul_set',
-  'mcp__pocket-agent__soul_get',
-  'mcp__pocket-agent__soul_list',
-  'mcp__pocket-agent__soul_delete',
-];
-const SCHEDULER_TOOLS = [
-  'mcp__pocket-agent__schedule_task',
-  'mcp__pocket-agent__create_reminder',
-  'mcp__pocket-agent__list_scheduled_tasks',
-  'mcp__pocket-agent__delete_scheduled_task',
-];
+const EXTERNAL_MCP_TOOLS = ['mcp__external__*'];
 const GREP_TOOLS = ['mcp__grep__searchGitHub'];
-const SWITCH_TOOL = ['mcp__pocket-agent__switch_agent'];
+const SWITCH_TOOL = ['switch_agent'];
 
 // ── System prompts ──
 
@@ -158,6 +156,8 @@ export const AGENT_MODES: Record<AgentModeId, AgentMode> = {
       ...MEMORY_TOOLS,
       ...SOUL_TOOLS,
       ...SCHEDULER_TOOLS,
+      ...BUSINESS_TOOLS,
+      ...EXTERNAL_MCP_TOOLS,
       ...SWITCH_TOOL,
     ],
     mcpServers: ['pocket-agent'],
@@ -186,10 +186,15 @@ export const AGENT_MODES: Record<AgentModeId, AgentMode> = {
     engine: 'chat',
     systemPrompt: RESEARCHER_PROMPT,
     allowedTools: [
+      'web_fetch',
+      'subagent',
       ...BROWSER_TOOLS,
       ...NOTIFY_TOOLS,
       ...PROJECT_TOOLS,
       ...MEMORY_TOOLS,
+      'fetch_seo_data',
+      'fetch_aeo_visibility',
+      ...EXTERNAL_MCP_TOOLS,
       ...SWITCH_TOOL,
     ],
     mcpServers: ['pocket-agent'],
@@ -204,7 +209,14 @@ export const AGENT_MODES: Record<AgentModeId, AgentMode> = {
     icon: '✍️',
     engine: 'chat',
     systemPrompt: WRITER_PROMPT,
-    allowedTools: [...MEMORY_TOOLS, ...SOUL_TOOLS, ...NOTIFY_TOOLS, ...SWITCH_TOOL],
+    allowedTools: [
+      ...MEMORY_TOOLS,
+      ...SOUL_TOOLS,
+      ...NOTIFY_TOOLS,
+      'write_daily_posting_packet',
+      'generate_blog_image',
+      ...SWITCH_TOOL,
+    ],
     mcpServers: ['pocket-agent'],
     description: 'Focused writing — no web search, no browser distractions',
     handoffDescription: 'Drafting, editing, content creation — no web distractions',

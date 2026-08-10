@@ -26,6 +26,14 @@ export interface ExternalMCPServersFile {
   mcpServers: Record<string, ExternalMCPServerConfig>;
 }
 
+export interface MCPToolAnnotations {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 /**
  * Description of a tool exposed by a connected MCP server.
  * Captured at server startup via the MCP `list_tools` call.
@@ -41,4 +49,6 @@ export interface MCPToolDescriptor {
   description: string;
   /** Raw JSON schema for the tool's input. Passed through to the agent verbatim. */
   inputSchema: Record<string, unknown>;
+  /** Server-provided hints retained for policy classification, never trusted as grants. */
+  annotations?: MCPToolAnnotations;
 }
