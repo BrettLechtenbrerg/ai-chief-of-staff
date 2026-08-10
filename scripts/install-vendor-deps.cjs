@@ -6,12 +6,16 @@ const { spawnSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
 const vendorDirectory = path.join(root, 'vendor', 'flo-mcp-servers');
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmCli = process.env.npm_execpath;
+if (!npmCli || !fs.existsSync(npmCli)) {
+  throw new Error('npm_execpath is unavailable; cannot install locked vendor dependencies.');
+}
 const result = spawnSync(
-  npmCommand,
-  ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'],
+  process.execPath,
+  [npmCli, 'ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'],
   { cwd: vendorDirectory, stdio: 'inherit' }
 );
+if (result.error) throw result.error;
 if (result.status !== 0) process.exit(result.status || 1);
 
 const oauthPath = path.join(
