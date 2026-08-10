@@ -81,8 +81,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   brands: {
     list: () => ipcRenderer.invoke('brands:list'),
     create: (input: BrandInput) => ipcRenderer.invoke('brands:create', input),
-    update: (id: string, update: BrandUpdate) =>
-      ipcRenderer.invoke('brands:update', id, update),
+    update: (id: string, update: BrandUpdate) => ipcRenderer.invoke('brands:update', id, update),
     delete: (id: string) => ipcRenderer.invoke('brands:delete', id),
     setDefault: (id: string) => ipcRenderer.invoke('brands:setDefault', id),
     listPublishProfiles: () => ipcRenderer.invoke('brands:listPublishProfiles'),
@@ -223,9 +222,8 @@ contextBridge.exposeInMainWorld('pocketAgent', {
       schedule: string,
       prompt: string,
       channel: string,
-      sessionId: string,
-    ) =>
-      ipcRenderer.invoke('cron:update', oldName, newName, schedule, prompt, channel, sessionId),
+      sessionId: string
+    ) => ipcRenderer.invoke('cron:update', oldName, newName, schedule, prompt, channel, sessionId),
     delete: (name: string) => ipcRenderer.invoke('cron:delete', name),
     toggle: (name: string, enabled: boolean) => ipcRenderer.invoke('cron:toggle', name, enabled),
     run: (name: string) => ipcRenderer.invoke('cron:run', name),
@@ -238,6 +236,11 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     get: (key: string) => ipcRenderer.invoke('settings:get', key),
     set: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
     delete: (key: string) => ipcRenderer.invoke('settings:delete', key),
+    getSecretPresence: () => ipcRenderer.invoke('settings:getSecretPresence'),
+    setSecret: (key: string, value: string) => ipcRenderer.invoke('settings:setSecret', key, value),
+    deleteSecret: (key: string) => ipcRenderer.invoke('settings:deleteSecret', key),
+    registerChatUsername: (username: string) =>
+      ipcRenderer.invoke('settings:registerChatUsername', username),
     getSchema: (category?: string) => ipcRenderer.invoke('settings:schema', category),
     isFirstRun: () => ipcRenderer.invoke('settings:isFirstRun'),
     resetOnboarding: () => ipcRenderer.invoke('settings:resetOnboarding'),
@@ -612,7 +615,7 @@ declare global {
         askChief: (
           transcript: string,
           sessionId?: string,
-          callId?: string,
+          callId?: string
         ) => Promise<{ success: boolean; response?: string; error?: string; streaming?: boolean }>;
         onChiefDelta: (
           callback: (payload: {
@@ -644,9 +647,7 @@ declare global {
 
       brands: {
         list: () => Promise<Brand[]>;
-        create: (
-          input: BrandInput
-        ) => Promise<{ success: boolean; brand?: Brand; error?: string }>;
+        create: (input: BrandInput) => Promise<{ success: boolean; brand?: Brand; error?: string }>;
         update: (
           id: string,
           update: BrandUpdate
@@ -770,7 +771,7 @@ declare global {
           schedule: string,
           prompt: string,
           channel: string,
-          sessionId: string,
+          sessionId: string
         ) => Promise<{ success: boolean }>;
         delete: (name: string) => Promise<{ success: boolean }>;
         toggle: (name: string, enabled: boolean) => Promise<{ success: boolean }>;
@@ -790,8 +791,16 @@ declare global {
       settings: {
         getAll: () => Promise<Record<string, string>>;
         get: (key: string) => Promise<string>;
-        set: (key: string, value: string) => Promise<{ success: boolean }>;
+        set: (key: string, value: string) => Promise<{ success: boolean; error?: string }>;
         delete: (key: string) => Promise<{ success: boolean }>;
+        getSecretPresence: () => Promise<Record<string, boolean>>;
+        setSecret: (key: string, value: string) => Promise<{ success: boolean }>;
+        deleteSecret: (key: string) => Promise<{ success: boolean }>;
+        registerChatUsername: (username: string) => Promise<{
+          success: boolean;
+          username?: string;
+          error?: string;
+        }>;
         getSchema: (category?: string) => Promise<
           Array<{
             key: string;
@@ -823,9 +832,7 @@ declare global {
           login: string,
           password: string
         ) => Promise<{ valid: boolean; error?: string; balance?: number }>;
-        firecrawlKey: (
-          apiKey: string
-        ) => Promise<{
+        firecrawlKey: (apiKey: string) => Promise<{
           valid: boolean;
           error?: string;
           remainingCredits?: number;
@@ -938,11 +945,15 @@ declare global {
           }>;
         }>;
         add: (name: string, config: unknown) => Promise<{ success: boolean }>;
-        update: (oldName: string, newName: string, config: unknown) => Promise<{ success: boolean }>;
+        update: (
+          oldName: string,
+          newName: string,
+          config: unknown
+        ) => Promise<{ success: boolean }>;
         delete: (name: string) => Promise<{ success: boolean }>;
         toggle: (name: string, enabled: boolean) => Promise<{ success: boolean }>;
         testConnection: (
-          config: unknown,
+          config: unknown
         ) => Promise<{ ok: boolean; toolCount?: number; tools?: string[]; error?: string }>;
         openConfigFile: () => Promise<{ success: boolean; path: string }>;
       };
@@ -962,33 +973,42 @@ declare global {
       };
 
       connectTools: {
-        listSupported: () => Promise<Array<{
-          id: string;
-          name: string;
-          category: 'google' | 'crm' | 'research' | 'browser';
-          description: string;
-          authType: 'google-oauth' | 'api-key' | 'two-field' | 'auto';
-          fields?: Array<{ key: string; label: string; secret: boolean; placeholder?: string }>;
-          mcpServerName: string;
-          unavailableOnWindows?: boolean;
-        }>>;
-        getStatus: () => Promise<Array<{
-          id: string;
-          status: 'not-connected' | 'connecting' | 'connected' | 'failed' | 'reconnect-needed';
-          email?: string;
-          toolCount: number;
-          lastError: string | null;
-          managedByAcos: boolean;
-          externallyManaged: boolean;
-        }>>;
-        connect: (toolId: string, payload?: unknown) => Promise<{ success: boolean; error?: string }>;
+        listSupported: () => Promise<
+          Array<{
+            id: string;
+            name: string;
+            category: 'google' | 'crm' | 'research' | 'browser';
+            description: string;
+            authType: 'google-oauth' | 'api-key' | 'two-field' | 'auto';
+            fields?: Array<{ key: string; label: string; secret: boolean; placeholder?: string }>;
+            mcpServerName: string;
+            unavailableOnWindows?: boolean;
+          }>
+        >;
+        getStatus: () => Promise<
+          Array<{
+            id: string;
+            status: 'not-connected' | 'connecting' | 'connected' | 'failed' | 'reconnect-needed';
+            email?: string;
+            toolCount: number;
+            lastError: string | null;
+            managedByAcos: boolean;
+            externallyManaged: boolean;
+          }>
+        >;
+        connect: (
+          toolId: string,
+          payload?: unknown
+        ) => Promise<{ success: boolean; error?: string }>;
         disconnect: (toolId: string) => Promise<{ success: boolean; error?: string }>;
         diagnostics: () => Promise<Record<string, unknown>>;
-        detectMigratable: () => Promise<Array<{
-          toolId: string;
-          mcpServerName: string;
-          currentCommand: string;
-        }>>;
+        detectMigratable: () => Promise<
+          Array<{
+            toolId: string;
+            mcpServerName: string;
+            currentCommand: string;
+          }>
+        >;
         adoptManagedFlag: (toolId: string) => Promise<{ success: boolean; error?: string }>;
       };
 

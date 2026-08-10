@@ -83,6 +83,15 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     type: 'password',
   },
   {
+    key: 'perplexity.apiKey',
+    defaultValue: '',
+    encrypted: true,
+    category: 'api_keys',
+    label: 'Perplexity API Key',
+    description: 'Your Perplexity API key for AEO visibility checks',
+    type: 'password',
+  },
+  {
     key: 'openai.auth.method',
     defaultValue: '',
     encrypted: false,
@@ -232,7 +241,8 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     encrypted: false,
     category: 'agent',
     label: 'Agent Mode',
-    description: 'General (personal assistant — default for AI Chief of Staff) or Coder (full coding tools)',
+    description:
+      'General (personal assistant — default for AI Chief of Staff) or Coder (full coding tools)',
     type: 'string',
   },
   {
@@ -425,7 +435,7 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
   {
     key: 'personalize.description',
     defaultValue:
-      'You are AI Chief of Staff — a private desktop AI agent built by Total Success AI to be the user\'s personal chief of staff. You handle their daily routines, remember everything they share, draft and triage their work, and keep their day running. Professional but warm. Concise. Always in support.',
+      "You are AI Chief of Staff — a private desktop AI agent built by Total Success AI to be the user's personal chief of staff. You handle their daily routines, remember everything they share, draft and triage their work, and keep their day running. Professional but warm. Concise. Always in support.",
     encrypted: false,
     category: 'personalize',
     label: 'Agent Description',
@@ -496,7 +506,7 @@ Talk like texting a close friend. Chill, casual, real.
     encrypted: false,
     category: 'personalize',
     label: 'Brand & Style',
-    description: 'Brand voice, tone, do/don\'t guidelines, target audience',
+    description: "Brand voice, tone, do/don't guidelines, target audience",
     type: 'textarea',
   },
   {

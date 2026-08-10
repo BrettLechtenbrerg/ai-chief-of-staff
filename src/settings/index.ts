@@ -7,6 +7,9 @@
 
 import Database from 'better-sqlite3';
 import { safeStorage } from 'electron';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 import { SETTINGS_SCHEMA } from './schema';
 import type { SettingDefinition } from './schema';
@@ -48,12 +51,14 @@ class SettingsManagerClass {
    */
   initialize(dbPath: string): void {
     this.db = new Database(dbPath);
+    this.cache.clear();
     this.createTable();
     this.loadDefaults();
     this.migrateSkinToTsai();
     this.loadToCache();
     this.migrateTokensToSafeStorage();
     this.initialized = true;
+    this.migrateLegacyAeoCredentials(dbPath);
     console.log('[Settings] Initialized');
   }
 
@@ -73,9 +78,9 @@ class SettingsManagerClass {
   private migrateSkinToTsai(): void {
     if (!this.db) return;
 
-    const row = this.db
-      .prepare('SELECT value FROM settings WHERE key = ?')
-      .get('ui.skin') as { value: string } | undefined;
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get('ui.skin') as
+      | { value: string }
+      | undefined;
 
     if (!row) return; // loadDefaults() will have inserted it, but be defensive
 
@@ -86,9 +91,7 @@ class SettingsManagerClass {
     }
 
     this.db
-      .prepare(
-        `UPDATE settings SET value = ?, updated_at = datetime('now') WHERE key = ?`
-      )
+      .prepare(`UPDATE settings SET value = ?, updated_at = datetime('now') WHERE key = ?`)
       .run('tsai', 'ui.skin');
     console.log(`[Settings] Migrated ui.skin from "${current}" to "tsai"`);
   }
@@ -154,26 +157,18 @@ class SettingsManagerClass {
     }
   }
 
-  /**
-   * Migrate plaintext OAuth tokens to safeStorage encryption.
-   *
-   * Earlier versions of the app may have stored auth.oauthToken and
-   * auth.refreshToken with encrypted=0 (plaintext). On startup we detect
-   * those rows and re-encrypt them so tokens are never stored in cleartext.
-   *
-   * Only runs if safeStorage encryption is available; otherwise tokens remain
-   * plaintext with a warning (better than silently breaking auth on systems
-   * without a keychain).
-   */
+  /** Migrate legacy plaintext OAuth rows into safeStorage. */
   private migrateTokensToSafeStorage(): void {
     if (!this.db) return;
+    if (!safeStorage.isEncryptionAvailable()) {
+      console.warn('[Settings] Secure storage unavailable; plaintext token migration deferred');
+      return;
+    }
 
-    const TOKEN_KEYS = ['auth.oauthToken', 'auth.refreshToken'];
-
+    const tokenKeys = ['auth.oauthToken', 'auth.refreshToken'];
     const select = this.db.prepare(
       'SELECT key, value, encrypted FROM settings WHERE key = ? AND encrypted = 0'
     );
-
     const update = this.db.prepare(`
       INSERT INTO settings (key, value, encrypted, category, updated_at)
       VALUES (?, ?, 1, 'auth', datetime('now'))
@@ -183,25 +178,52 @@ class SettingsManagerClass {
         updated_at = excluded.updated_at
     `);
 
-    for (const key of TOKEN_KEYS) {
+    for (const key of tokenKeys) {
       const row = select.get(key) as { key: string; value: string; encrypted: number } | undefined;
-      if (!row || !row.value) continue;
-
+      if (!row?.value) continue;
       try {
-        const encryptedValue = this.encrypt(row.value);
-        if (encryptedValue === row.value) {
-          // encrypt() returned plaintext because safeStorage is unavailable — warn and skip
-          console.warn(
-            `[Settings] safeStorage unavailable; token ${key} stays plaintext. ` +
-              'Enable a system keychain to enable at-rest encryption.'
-          );
-          continue;
-        }
-        update.run(key, encryptedValue);
-        // Cache already holds the plaintext value — no change needed there
+        update.run(key, this.encrypt(row.value));
         console.log(`[Settings] Migrated ${key} to safeStorage encryption`);
-      } catch (err) {
-        console.error(`[Settings] Failed to migrate ${key} to safeStorage:`, err);
+      } catch (error) {
+        console.error(`[Settings] Failed to migrate ${key} to safeStorage:`, error);
+      }
+    }
+  }
+
+  /** Import the former AEO JSON key file once, then remove the plaintext source. */
+  private migrateLegacyAeoCredentials(dbPath: string): void {
+    if (!safeStorage.isEncryptionAvailable()) return;
+
+    const candidates = [
+      path.join(os.homedir(), 'dev', '_brand-profiles', '_aeo-keys.json'),
+      path.join(path.dirname(dbPath), 'aeo-credentials.json'),
+    ];
+    const keyMap: Record<string, string> = {
+      openai: 'openai.apiKey',
+      perplexity: 'perplexity.apiKey',
+      anthropic: 'anthropic.apiKey',
+    };
+
+    for (const legacyPath of candidates) {
+      if (!fs.existsSync(legacyPath)) continue;
+      try {
+        const parsed = JSON.parse(fs.readFileSync(legacyPath, 'utf8')) as Record<string, unknown>;
+        let complete = true;
+        for (const [legacyKey, settingKey] of Object.entries(keyMap)) {
+          const value = parsed[legacyKey];
+          if (typeof value !== 'string' || !value.trim()) continue;
+          if (!this.cache.get(settingKey)) this.setSecret(settingKey, value.trim());
+          complete &&= Boolean(this.cache.get(settingKey));
+        }
+        if (complete) {
+          fs.unlinkSync(legacyPath);
+          console.log(`[Settings] Migrated and removed legacy AEO credentials at ${legacyPath}`);
+        }
+      } catch (error) {
+        console.error(
+          `[Settings] Could not migrate legacy AEO credentials at ${legacyPath}:`,
+          error
+        );
       }
     }
   }
@@ -211,8 +233,7 @@ class SettingsManagerClass {
    */
   private encrypt(value: string): string {
     if (!safeStorage.isEncryptionAvailable()) {
-      console.warn('[Settings] Encryption not available, storing as plain text');
-      return value;
+      throw new Error('Secure credential storage is unavailable on this device');
     }
     const encrypted = safeStorage.encryptString(value);
     return encrypted.toString('base64');
@@ -335,21 +356,44 @@ class SettingsManagerClass {
   }
 
   /**
-   * Get all settings with encrypted values redacted.
-   * Safe to send to renderer processes.
+   * Return only non-sensitive settings. Encrypted entries are omitted entirely;
+   * renderers can request boolean presence metadata through getSecretPresence().
    */
   getAllSafe(): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [key, value] of this.cache) {
-      const def = SETTINGS_SCHEMA.find((s) => s.key === key);
-      if (def?.encrypted && value) {
-        // Send a masked placeholder so the UI knows a value is set
-        result[key] = '••••••••';
-      } else {
-        result[key] = value;
-      }
+      if (!this.isSecretKey(key)) result[key] = value;
     }
     return result;
+  }
+
+  isSecretKey(key: string): boolean {
+    return SETTINGS_SCHEMA.some((setting) => setting.key === key && setting.encrypted);
+  }
+
+  getSecretPresence(): Record<string, boolean> {
+    const result: Record<string, boolean> = {};
+    for (const setting of SETTINGS_SCHEMA) {
+      if (setting.encrypted) result[setting.key] = Boolean(this.cache.get(setting.key));
+    }
+    return result;
+  }
+
+  setSecret(key: string, value: string): void {
+    if (!this.isSecretKey(key)) throw new Error('Setting is not an approved secret');
+    if (typeof value !== 'string') throw new Error('Secret must be a string');
+    if (Buffer.byteLength(value, 'utf8') > 16 * 1024) {
+      throw new Error('Secret exceeds the 16 KiB limit');
+    }
+    if (!value) throw new Error('Use deleteSecret to remove a credential');
+    this.set(key, value, true);
+  }
+
+  deleteSecret(key: string): boolean {
+    if (!this.isSecretKey(key)) throw new Error('Setting is not an approved secret');
+    const existed = Boolean(this.cache.get(key));
+    this.set(key, '', true);
+    return existed;
   }
 
   /**
@@ -584,8 +628,7 @@ class SettingsManagerClass {
 
     // Context bundle — long-form, user-supplied context that mirrors what
     // people paste into a GPT Project or Claude system prompt.
-    const hasContext =
-      brandStyle || writingRules || business || references || customInstructions;
+    const hasContext = brandStyle || writingRules || business || references || customInstructions;
     if (hasContext) {
       const ctxLines: string[] = ['## Your Context'];
       if (brandStyle) {

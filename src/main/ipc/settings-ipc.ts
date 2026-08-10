@@ -98,7 +98,11 @@ function sortModelsForDisplay<T extends { name: string; provider: string }>(mode
   };
   // Family = the name with its version number stripped, e.g. 'GPT-5.5 Pro' → 'gpt- pro'.
   const familyOf = (name: string): string =>
-    String(name).replace(/\d+(?:\.\d+)*/, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    String(name)
+      .replace(/\d+(?:\.\d+)*/, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
   // Compare two version arrays, newest first.
   const cmpVerDesc = (a: number[], b: number[]): number => {
     const len = Math.max(a.length, b.length);
@@ -128,7 +132,10 @@ function sortModelsForDisplay<T extends { name: string; provider: string }>(mode
     const fa = familyOf(a.name);
     const fb = familyOf(b.name);
     if (fa !== fb) {
-      const d = cmpVerDesc(familyMax.get(`${a.provider}|${fa}`) ?? [], familyMax.get(`${b.provider}|${fb}`) ?? []);
+      const d = cmpVerDesc(
+        familyMax.get(`${a.provider}|${fa}`) ?? [],
+        familyMax.get(`${b.provider}|${fb}`) ?? []
+      );
       if (d) return d;
       return fa < fb ? -1 : 1;
     }
@@ -150,7 +157,11 @@ export function getDiscoveredModels(): Array<{ id: string; name: string; provide
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
-      (m) => m && typeof m.id === 'string' && typeof m.name === 'string' && typeof m.provider === 'string'
+      (m) =>
+        m &&
+        typeof m.id === 'string' &&
+        typeof m.name === 'string' &&
+        typeof m.provider === 'string'
     );
   } catch {
     return [];
@@ -178,39 +189,55 @@ const PROVIDER_CREDENTIAL_KEYS = new Set([
   'openai.auth.method',
 ]);
 
+const MAX_PUBLIC_SETTING_BYTES = 1024 * 1024;
+const CHAT_API_URL = 'https://pocket-agent-chat-production.up.railway.app';
+const CHAT_USERNAME_PATTERN = /^[a-z0-9-]{1,15}$/;
+
 export function registerSettingsIPC(deps: IPCDependencies): void {
   const { getScheduler, setTelegramBot, getTelegramBot, WIN } = deps;
 
-  // Keys that are encrypted but must be accessible from the renderer
-  const RENDERER_ALLOWED_ENCRYPTED_KEYS = new Set(['chat.adminKey']);
+  const handleCredentialChange = async (key: string): Promise<void> => {
+    if (!PROVIDER_CREDENTIAL_KEYS.has(key)) return;
+    const previousModel = SettingsManager.get('agent.model');
+    const resolvedModel = resolveAndPersistModel();
+    const modelChanged = resolvedModel !== previousModel;
+    try {
+      await deps.restartAgent();
+      console.log(`[Settings] Provider credential changed (${key}); agent restarted`);
+    } catch (error) {
+      console.error('[Settings] Failed to restart agent after credential change:', error);
+    }
+    if (modelChanged) {
+      getWindow(WIN.CHAT)?.webContents.send('model:changed', resolvedModel);
+      getWindow(WIN.SETTINGS)?.webContents.send('model:changed', resolvedModel);
+    }
+  };
 
-  ipcMain.handle('settings:getAll', async () => {
-    return SettingsManager.getAllSafe();
-  });
+  ipcMain.handle('settings:getAll', async () => SettingsManager.getAllSafe());
+  ipcMain.handle('settings:getSecretPresence', async () => SettingsManager.getSecretPresence());
 
-  ipcMain.handle('settings:getThemes', async () => {
-    return THEMES;
-  });
-
-  ipcMain.handle('settings:getSkin', async () => {
-    // Fallback to 'tsai' (the TSAI brand theme) — there is no theme named
-    // 'default' in THEMES, so returning that would leave the renderer with
-    // an unknown skin id and no palette applied. See themes.ts.
-    return SettingsManager.get('ui.skin') || 'tsai';
-  });
+  ipcMain.handle('settings:getThemes', async () => THEMES);
+  ipcMain.handle('settings:getSkin', async () => SettingsManager.get('ui.skin') || 'tsai');
 
   ipcMain.handle('settings:get', async (_, key: string) => {
-    // Block encrypted settings from being sent to renderer (except explicitly allowed ones)
-    const def = SETTINGS_SCHEMA.find((s) => s.key === key);
-    if (def?.encrypted && !RENDERER_ALLOWED_ENCRYPTED_KEYS.has(key)) {
-      const value = SettingsManager.get(key);
-      return value ? '••••••••' : '';
-    }
+    if (SettingsManager.isSecretKey(key))
+      throw new Error('Secret settings cannot be read by a renderer');
+    const definition = SETTINGS_SCHEMA.find((setting) => setting.key === key);
+    if (!definition) throw new Error('Unknown setting');
     return SettingsManager.get(key);
   });
 
   ipcMain.handle('settings:set', async (_, key: string, value: string) => {
     try {
+      const definition = SETTINGS_SCHEMA.find((setting) => setting.key === key);
+      if (!definition) throw new Error('Unknown setting');
+      if (definition.encrypted) throw new Error('Use the secret settings API for credentials');
+      if (typeof value !== 'string') throw new Error('Setting value must be a string');
+      if (Buffer.byteLength(value, 'utf8') > MAX_PUBLIC_SETTING_BYTES) {
+        throw new Error('Setting exceeds the 1 MiB limit');
+      }
+      if (definition.validation && !definition.validation(value))
+        throw new Error('Invalid setting value');
       SettingsManager.set(key, value);
 
       // Auto-setup birthday cron jobs when birthday is set
@@ -230,32 +257,7 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
         getWindow(WIN.CHAT)?.webContents.send('chat:usernameChanged', value);
       }
 
-      // Provider credential changed — re-resolve the active model and
-      // restart the agent so the new key/model takes effect immediately.
-      // Covers both "added a key" (agent may not be initialized yet) and
-      // "removed a key" (model needs to swap to a still-available provider).
-      if (PROVIDER_CREDENTIAL_KEYS.has(key)) {
-        const previousModel = SettingsManager.get('agent.model');
-        const resolvedModel = resolveAndPersistModel();
-        const modelChanged = resolvedModel !== previousModel;
-        // Restart even when the model didn't change — the underlying credential
-        // (the API key value, OAuth token) may have rotated.
-        try {
-          await deps.restartAgent();
-          console.log(
-            `[Settings] Provider key changed (${key}) — agent restarted (model: ${resolvedModel}${modelChanged ? `, was: ${previousModel || 'unset'}` : ''})`
-          );
-        } catch (err) {
-          console.error('[Settings] Failed to restart agent after key change:', err);
-        }
-        // Notify any open chat/settings windows so the model picker updates.
-        if (modelChanged && getWindow(WIN.CHAT)) {
-          getWindow(WIN.CHAT)?.webContents.send('model:changed', resolvedModel);
-        }
-        if (modelChanged && getWindow(WIN.SETTINGS)) {
-          getWindow(WIN.SETTINGS)?.webContents.send('model:changed', resolvedModel);
-        }
-      }
+      await handleCredentialChange(key);
 
       // Instant Telegram toggle — no restart required
       if (key === 'telegram.enabled') {
@@ -310,8 +312,58 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
   });
 
   ipcMain.handle('settings:delete', async (_, key: string) => {
-    const success = SettingsManager.delete(key);
+    const definition = SETTINGS_SCHEMA.find((setting) => setting.key === key);
+    if (!definition) throw new Error('Unknown setting');
+    if (definition.encrypted) throw new Error('Use the secret settings API for credentials');
+    return { success: SettingsManager.delete(key) };
+  });
+
+  ipcMain.handle('settings:setSecret', async (_, key: string, value: string) => {
+    SettingsManager.setSecret(key, value);
+    await handleCredentialChange(key);
+    return { success: true };
+  });
+
+  ipcMain.handle('settings:deleteSecret', async (_, key: string) => {
+    const success = SettingsManager.deleteSecret(key);
+    await handleCredentialChange(key);
     return { success };
+  });
+
+  ipcMain.handle('settings:registerChatUsername', async (_, username: string) => {
+    const normalized = typeof username === 'string' ? username.trim().toLowerCase() : '';
+    if (!CHAT_USERNAME_PATTERN.test(normalized)) {
+      return { success: false, error: 'Letters, numbers, and dashes only (max 15)' };
+    }
+
+    try {
+      const oldUsername = SettingsManager.get('chat.username');
+      const adminKey = SettingsManager.get('chat.adminKey');
+      const response = await fetch(`${CHAT_API_URL}/api/register-username`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: normalized,
+          oldUsername,
+          ...(adminKey ? { adminKey } : {}),
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) return { success: false, error: 'Chat server error, try again later' };
+      const data = (await response.json()) as { error?: string };
+      if (data.error) {
+        return {
+          success: false,
+          error: data.error === 'taken' ? 'Username taken, try another' : data.error,
+        };
+      }
+      SettingsManager.set('chat.username', normalized);
+      getWindow(WIN.CHAT)?.webContents.send('chat:usernameChanged', normalized);
+      return { success: true, username: normalized };
+    } catch (error) {
+      console.error('[Settings] Chat username registration failed:', error);
+      return { success: false, error: 'Could not reach chat server' };
+    }
   });
 
   ipcMain.handle('settings:schema', async (_, category?: string) => {
@@ -340,12 +392,9 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     return SettingsManager.validateOpenAIKey(key);
   });
 
-  ipcMain.handle(
-    'settings:validateDataForSEO',
-    async (_, login: string, password: string) => {
-      return SettingsManager.validateDataForSEOKey(login, password);
-    }
-  );
+  ipcMain.handle('settings:validateDataForSEO', async (_, login: string, password: string) => {
+    return SettingsManager.validateDataForSEOKey(login, password);
+  });
 
   ipcMain.handle('settings:validateFirecrawl', async (_, apiKey: string) => {
     return SettingsManager.validateFirecrawlKey(apiKey);

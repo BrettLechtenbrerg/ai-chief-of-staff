@@ -36,6 +36,7 @@ function _dismissOtherPanels(keepId) {
 
 let _stgInitialized = false;
 let _stgSettings = {};
+let _stgSecretPresence = {};
 let _stgNotyf = null;
 let _stgUpdateStatusCleanup = null;
 let _stgPocketCliInstalledVersion = null;
@@ -154,7 +155,10 @@ async function _stgLoadAppVersion() {
 
 async function _stgLoadSettings() {
   try {
-    _stgSettings = await window.pocketAgent.settings.getAll();
+    [_stgSettings, _stgSecretPresence] = await Promise.all([
+      window.pocketAgent.settings.getAll(),
+      window.pocketAgent.settings.getSecretPresence(),
+    ]);
     _stgPopulateFields();
     _stgUpdateToggles();
     _stgUpdateAuthStatus();
@@ -218,16 +222,17 @@ function _stgPopulateFields() {
   const inputs = root.querySelectorAll('input, select');
   for (const input of inputs) {
     const key = input.id;
+    if (input.type === 'password' && _stgSecretPresence[key]) {
+      input.value = '';
+      input.placeholder = '••••••••  (key saved)';
+      continue;
+    }
     if (_stgSettings[key] !== undefined) {
       if (input.type === 'checkbox') {
         input.checked = _stgSettings[key] === 'true';
       } else {
         let value = _stgSettings[key];
         if (value === '[]') value = '';
-        if (input.type === 'password' && value === '••••••••') {
-          input.placeholder = '••••••••  (key saved)';
-          continue;
-        }
         input.value = value;
       }
     }
@@ -303,7 +308,8 @@ function _stgSetupAutoSave() {
   const root = _stgRoot();
   if (!root) return;
   const excludedIds = [
-    'anthropic.apiKey', 'openai.apiKey', 'moonshot.apiKey', 'glm.apiKey',
+    'anthropic.apiKey', 'openai.apiKey', 'perplexity.apiKey', 'moonshot.apiKey',
+    'glm.apiKey', 'xiaomi.apiKey', 'minimax.apiKey', 'deepseek.apiKey',
     'auth-api-key', 'oauth-code',
     'telegram.botToken', 'telegram.allowedUserIds', 'telegram.defaultChatId',
     'chat.adminKey',
@@ -339,6 +345,7 @@ function _stgSetupAutoSave() {
 const _stgKeyValidators = {
   'anthropic.apiKey': { pattern: /^sk-ant-[A-Za-z0-9_-]{90,}$/, hint: 'Anthropic keys start with "sk-ant-"' },
   'openai.apiKey': { pattern: /^sk-[A-Za-z0-9_-]{40,}$/, hint: 'OpenAI keys start with "sk-"' },
+  'perplexity.apiKey': { pattern: /^pplx-[A-Za-z0-9_-]{20,}$/, hint: 'Perplexity keys start with "pplx-"' },
   'moonshot.apiKey': { pattern: /^sk-[A-Za-z0-9_-]{40,}$/, hint: 'Moonshot keys start with "sk-"' },
   'glm.apiKey': { pattern: /^.{10,}$/, hint: 'Enter your Z.AI API key' },
   'xiaomi.apiKey': { pattern: /^.{10,}$/, hint: 'Enter your Xiaomi API key' },
@@ -364,16 +371,15 @@ async function stgSaveKey(inputId) {
   const validation = _stgValidateKeyFormat(inputId, key);
   if (!validation.valid) { _stgShowToast(validation.error, 'error'); return; }
   try {
-    await window.pocketAgent.settings.set(inputId, key);
-    _stgSettings[inputId] = key;
+    const result = await window.pocketAgent.settings.setSecret(inputId, key);
+    if (!result.success) throw new Error(result.error || 'Secret save failed');
+    _stgSecretPresence[inputId] = true;
+    input.value = '';
+    input.placeholder = '••••••••  (key saved)';
     _stgShowToast('Got it!', 'success');
     const deleteBtn = document.getElementById(`${inputId}-delete`);
     if (deleteBtn) deleteBtn.classList.add('visible');
-    // Provider API keys auto-restart the agent in the main process (see
-    // PROVIDER_CREDENTIAL_KEYS in src/main/ipc/settings-ipc.ts), so the
-    // user doesn't need a reboot prompt for those. Telegram still does.
-    const rebootKeys = ['telegram.botToken'];
-    if (rebootKeys.includes(inputId)) _stgActivateReboot();
+    if (inputId === 'telegram.botToken') _stgActivateReboot();
   } catch (err) {
     console.error('[Settings] Failed to save key:', err);
     _stgShowToast('Save hiccup, try again?', 'error');
@@ -381,32 +387,26 @@ async function stgSaveKey(inputId) {
 }
 
 function _stgUpdateDeleteButtons() {
-  const keyIds = ['anthropic.apiKey', 'openai.apiKey', 'moonshot.apiKey', 'glm.apiKey', 'xiaomi.apiKey', 'minimax.apiKey', 'deepseek.apiKey', 'telegram.botToken'];
+  const keyIds = ['anthropic.apiKey', 'openai.apiKey', 'perplexity.apiKey', 'moonshot.apiKey', 'glm.apiKey', 'xiaomi.apiKey', 'minimax.apiKey', 'deepseek.apiKey', 'telegram.botToken', 'chat.adminKey'];
   for (const keyId of keyIds) {
     const deleteBtn = document.getElementById(`${keyId}-delete`);
-    if (deleteBtn) {
-      const hasKey = _stgSettings[keyId] && _stgSettings[keyId].trim() !== '';
-      deleteBtn.classList.toggle('visible', hasKey);
-    }
+    if (deleteBtn) deleteBtn.classList.toggle('visible', Boolean(_stgSecretPresence[keyId]));
   }
   const authDeleteBtn = document.getElementById('auth-api-key-delete');
-  if (authDeleteBtn) {
-    const hasKey = _stgSettings['anthropic.apiKey'] && _stgSettings['anthropic.apiKey'].trim() !== '';
-    authDeleteBtn.classList.toggle('visible', hasKey);
-  }
+  if (authDeleteBtn) authDeleteBtn.classList.toggle('visible', Boolean(_stgSecretPresence['anthropic.apiKey']));
 }
 
 async function stgDeleteKey(keyId, inputId) {
   const actualInputId = inputId || keyId;
   try {
-    await window.pocketAgent.settings.set(keyId, '');
-    _stgSettings[keyId] = '';
+    await window.pocketAgent.settings.deleteSecret(keyId);
+    _stgSecretPresence[keyId] = false;
     const input = document.getElementById(actualInputId);
-    if (input) input.value = '';
+    if (input) { input.value = ''; input.placeholder = ''; }
     const deleteBtn = document.getElementById(`${actualInputId}-delete`);
     if (deleteBtn) deleteBtn.classList.remove('visible');
     _stgShowToast('Key removed!', 'success');
-    _stgActivateReboot();
+    if (keyId === 'telegram.botToken') _stgActivateReboot();
     if (keyId === 'anthropic.apiKey') _stgUpdateAuthStatus();
   } catch (err) {
     console.error('[Settings] Failed to delete key:', err);
@@ -435,7 +435,7 @@ async function stgValidateKey(provider) {
   const key = input.value.trim();
 
   // If input is empty but a key is already saved, validate via backend
-  if (!key && _stgSettings[inputId] === '••••••••') {
+  if (!key && _stgSecretPresence[inputId]) {
     button.classList.add('validating');
     button.textContent = 'Testing...';
     try {
@@ -472,12 +472,14 @@ async function stgValidateKey(provider) {
     else if (provider === 'telegram') result = await window.pocketAgent.validate.telegramToken(key);
 
     if (result.valid) {
-      await window.pocketAgent.settings.set(inputId, key);
-      _stgSettings[inputId] = key;
+      await window.pocketAgent.settings.setSecret(inputId, key);
+      _stgSecretPresence[inputId] = true;
+      input.value = '';
+      input.placeholder = '••••••••  (key saved)';
       _stgShowToast(result.botInfo ? `Valid! Bot: @${result.botInfo.username}` : 'All good!', 'success');
       const deleteBtn = document.getElementById(`${inputId}-delete`);
       if (deleteBtn) deleteBtn.classList.add('visible');
-      if (['anthropic', 'telegram'].includes(provider)) _stgActivateReboot();
+      if (provider === 'telegram') _stgActivateReboot();
     } else {
       _stgShowToast(result.error || 'That key didn\'t work', 'error');
     }
@@ -532,7 +534,6 @@ async function stgSaveTelegramSetting(inputId) {
 
 // ---- Chat Settings ----
 
-const _STG_CHAT_API_URL = 'https://pocket-agent-chat-production.up.railway.app';
 const _STG_CHAT_USERNAME_REGEX = /^[a-z0-9-]{1,15}$/;
 
 async function stgSaveChatUsername() {
@@ -540,32 +541,13 @@ async function stgSaveChatUsername() {
   const raw = input.value.trim().toLowerCase();
   if (!raw) { _stgShowToast('Enter a username', 'error'); return; }
   if (!_STG_CHAT_USERNAME_REGEX.test(raw)) { _stgShowToast('Letters, numbers, dashes only (max 15)', 'error'); return; }
-
-  const oldUsername = _stgSettings['chat.username'] || '';
-  const adminKey = document.getElementById('chat.adminKey').value.trim() || _stgSettings['chat.adminKey'] || '';
-
-  if (raw === oldUsername.toLowerCase()) { _stgShowToast('Username unchanged', 'success'); return; }
+  if (raw === (_stgSettings['chat.username'] || '').toLowerCase()) { _stgShowToast('Username unchanged', 'success'); return; }
 
   try {
-    const checkParams = new URLSearchParams({ name: raw });
-    if (adminKey) checkParams.set('adminKey', adminKey);
-    const checkRes = await fetch(`${_STG_CHAT_API_URL}/api/check-username?${checkParams}`);
-    if (!checkRes.ok) { _stgShowToast('Chat server error, try again later', 'error'); return; }
-    const checkData = await checkRes.json();
-    if (!checkData.available) { _stgShowToast('Username taken, try another', 'error'); return; }
-
-    const regRes = await fetch(`${_STG_CHAT_API_URL}/api/register-username`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: raw, oldUsername, adminKey }),
-    });
-    if (!regRes.ok) { _stgShowToast('Chat server error, try again later', 'error'); return; }
-    const regData = await regRes.json();
-    if (regData.error) { _stgShowToast(regData.error === 'taken' ? 'Username taken, try another' : regData.error, 'error'); return; }
-
-    input.value = raw;
-    await window.pocketAgent.settings.set('chat.username', raw);
-    _stgSettings['chat.username'] = raw;
+    const result = await window.pocketAgent.settings.registerChatUsername(raw);
+    if (!result.success) { _stgShowToast(result.error || 'Could not save username', 'error'); return; }
+    input.value = result.username;
+    _stgSettings['chat.username'] = result.username;
     _stgShowToast('Username saved!', 'success');
   } catch (err) {
     console.error('[Settings] Failed to save username:', err);
@@ -575,11 +557,14 @@ async function stgSaveChatUsername() {
 
 async function stgSaveChatAdminKey() {
   try {
-    const adminKey = document.getElementById('chat.adminKey').value.trim();
-    await window.pocketAgent.settings.set('chat.adminKey', adminKey);
-    _stgSettings['chat.adminKey'] = adminKey;
+    const input = document.getElementById('chat.adminKey');
+    const adminKey = input.value.trim();
+    if (!adminKey) { _stgShowToast('Enter an admin key', 'error'); return; }
+    await window.pocketAgent.settings.setSecret('chat.adminKey', adminKey);
+    _stgSecretPresence['chat.adminKey'] = true;
+    input.value = '';
+    input.placeholder = '••••••••  (key saved)';
     _stgShowToast('Admin key saved!', 'success');
-    _stgActivateReboot();
   } catch (err) {
     console.error('[Settings] Failed to save admin key:', err);
     _stgShowToast('Save failed, try again?', 'error');
@@ -593,10 +578,10 @@ async function _stgUpdateAuthStatus() {
   const authBtn = document.getElementById('oauth-btn');
   const oauthCodeSection = document.getElementById('oauth-code-section');
   const authMethod = _stgSettings['auth.method'];
-  const hasOAuth = _stgSettings['auth.oauthToken'];
-  const hasApiKey = _stgSettings['anthropic.apiKey'];
-  const hasMoonshotKey = _stgSettings['moonshot.apiKey'];
-  const hasGlmKey = _stgSettings['glm.apiKey'];
+  const hasOAuth = _stgSecretPresence['auth.oauthToken'];
+  const hasApiKey = _stgSecretPresence['anthropic.apiKey'];
+  const hasMoonshotKey = _stgSecretPresence['moonshot.apiKey'];
+  const hasGlmKey = _stgSecretPresence['glm.apiKey'];
   const anthropicKeyRow = document.getElementById('anthropic-key-row');
   const authApiKeySection = document.getElementById('auth-api-key-section');
 
@@ -686,10 +671,12 @@ async function stgSaveApiKey() {
   try {
     const result = await window.pocketAgent.validate.anthropicKey(key);
     if (result.valid) {
-      await window.pocketAgent.settings.set('anthropic.apiKey', key);
+      await window.pocketAgent.settings.setSecret('anthropic.apiKey', key);
       await window.pocketAgent.settings.set('auth.method', 'api_key');
+      _stgSecretPresence['anthropic.apiKey'] = true;
+      input.value = '';
+      input.placeholder = '••••••••  (key saved)';
       _stgShowToast('Key saved!', 'success');
-      _stgActivateReboot();
       const deleteBtn = document.getElementById('auth-api-key-delete');
       if (deleteBtn) deleteBtn.classList.add('visible');
       await _stgLoadSettings();
@@ -705,10 +692,12 @@ async function stgLogout() {
   if (!confirm('Are you sure you want to sign out? You will need to re-authenticate.')) return;
   try {
     await window.pocketAgent.settings.set('auth.method', '');
-    await window.pocketAgent.settings.set('auth.oauthToken', '');
-    await window.pocketAgent.settings.set('auth.refreshToken', '');
-    await window.pocketAgent.settings.set('auth.tokenExpiresAt', '');
-    await window.pocketAgent.settings.set('anthropic.apiKey', '');
+    await Promise.all([
+      window.pocketAgent.settings.deleteSecret('auth.oauthToken'),
+      window.pocketAgent.settings.deleteSecret('auth.refreshToken'),
+      window.pocketAgent.settings.deleteSecret('auth.tokenExpiresAt'),
+      window.pocketAgent.settings.deleteSecret('anthropic.apiKey'),
+    ]);
     _stgShowToast('See ya!', 'success');
     await _stgLoadSettings();
     _stgUpdateAuthStatus();

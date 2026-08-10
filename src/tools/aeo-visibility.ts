@@ -14,9 +14,9 @@
  *   - THE AGENT does the judgment part: read that JSON and write the
  *     plain-English summary + prioritized to-do list.
  *
- * Keys: read from ~/dev/_brand-profiles/_aeo-keys.json (same three keys the
- * Visibility Edge web app uses). Missing file/keys → ok:false with a friendly
- * message; engines without a key are skipped, never fatal.
+ * Credentials are read from encrypted main-process settings. Legacy JSON keys
+ * are imported and removed by SettingsManager during startup. Missing keys are
+ * skipped and never exposed to a renderer.
  *
  * Guardrail baked in: the prompt set is FROZEN (append-only). This tool never
  * modifies aeo.json — measurement stays comparable month over month.
@@ -25,9 +25,9 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { SettingsManager } from '../settings/index.js';
 
 const BRAND_PROFILES_ROOT = path.join(os.homedir(), 'dev', '_brand-profiles');
-const KEYS_PATH = path.join(BRAND_PROFILES_ROOT, '_aeo-keys.json');
 const AEO_OS_ROOT = path.join(os.homedir(), 'Desktop', 'AEO Operating System');
 
 const BRAND_SLUG_TO_FOLDER: Record<string, string> = {
@@ -62,12 +62,6 @@ interface AeoConfig {
   brandNames: string[];
   localSplit: number;
   prompts: string[];
-}
-
-interface AeoKeys {
-  openai?: string;
-  perplexity?: string;
-  anthropic?: string;
 }
 
 interface Row {
@@ -141,7 +135,10 @@ function judge(
   return { mentioned, cited };
 }
 
-async function askOpenAI(key: string, prompt: string): Promise<{ text: string; sources: string[] }> {
+async function askOpenAI(
+  key: string,
+  prompt: string
+): Promise<{ text: string; sources: string[] }> {
   const r = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
@@ -235,7 +232,10 @@ async function askAnthropic(
   return { text, sources: dedupeUrls(urls) };
 }
 
-const ASK: Record<Engine, (key: string, prompt: string) => Promise<{ text: string; sources: string[] }>> = {
+const ASK: Record<
+  Engine,
+  (key: string, prompt: string) => Promise<{ text: string; sources: string[] }>
+> = {
   openai: askOpenAI,
   perplexity: askPerplexity,
   anthropic: askAnthropic,
@@ -303,7 +303,11 @@ export async function fetchAeoVisibility(
   const slug = input.brandSlug;
   const folder = BRAND_SLUG_TO_FOLDER[slug];
   if (!folder) {
-    return { ok: false, status: 'no_config', message: `Unknown brand '${slug}'. Use pmma, tsai, or brett.` };
+    return {
+      ok: false,
+      status: 'no_config',
+      message: `Unknown brand '${slug}'. Use pmma, tsai, or brett.`,
+    };
   }
 
   const conf = readJson<AeoConfig>(path.join(BRAND_PROFILES_ROOT, folder, 'aeo.json'));
@@ -315,15 +319,18 @@ export async function fetchAeoVisibility(
     };
   }
 
-  const keys = readJson<AeoKeys>(KEYS_PATH) || {};
-  const engines = ENGINES.filter((e) => (keys[e] || '').trim());
+  const keys: Record<Engine, string> = {
+    openai: SettingsManager.get('openai.apiKey'),
+    perplexity: SettingsManager.get('perplexity.apiKey'),
+    anthropic: SettingsManager.get('anthropic.apiKey'),
+  };
+  const engines = ENGINES.filter((engine) => keys[engine].trim());
   if (!engines.length) {
     return {
       ok: false,
       status: 'no_keys',
       message:
-        `No AI engine keys found. Tell Brett: create ${KEYS_PATH} with ` +
-        `{"openai":"sk-...","perplexity":"pplx-...","anthropic":"sk-ant-..."} — the same three keys used in the Visibility Edge web app.`,
+        'No AEO provider credentials are configured. Add an OpenAI, Perplexity, or Anthropic key in Settings.',
     };
   }
 
@@ -385,7 +392,9 @@ export async function fetchAeoVisibility(
         : ['- (none recorded)']),
       ``,
       `## Prompts where ${conf.shortName} WAS cited`,
-      ...(citedPrompts.length ? citedPrompts.map((p) => `- ${p}`) : ['- (none yet — normal at baseline)']),
+      ...(citedPrompts.length
+        ? citedPrompts.map((p) => `- ${p}`)
+        : ['- (none yet — normal at baseline)']),
       ``,
       `_Import aeo-snapshot.json into the Visibility Edge scorecard (Scorecard → Import) to keep the canonical record._`,
     ].join('\n');
