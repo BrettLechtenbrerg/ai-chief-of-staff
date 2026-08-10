@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self'; img-src 'self' data:; connect-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self';">
   <title>My Approach</title>
 
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+  <link rel="stylesheet" href="../node_modules/notyf/notyf.min.css">
+  <script src="../node_modules/notyf/notyf.min.js"></script>
   <link rel="stylesheet" href="shared/variables.css">
   <link rel="stylesheet" href="shared/notyf-theme.css">
   <link rel="stylesheet" href="shared/base.css">
@@ -166,7 +166,7 @@
   </style>
   <script src="shared/theme-loader.js"></script>
   <script type="module">
-    import autoAnimate from 'https://cdn.jsdelivr.net/npm/@formkit/auto-animate@0.9/+esm';
+    import autoAnimate from '../node_modules/@formkit/auto-animate/index.min.js';
     window._autoAnimate = autoAnimate;
     window.dispatchEvent(new Event('autoAnimateReady'));
   </script>
