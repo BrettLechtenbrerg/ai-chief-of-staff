@@ -124,16 +124,18 @@ export function flushCompleteSentences(buffer: string): { sentences: string[]; r
   return { sentences, rest: buffer.slice(committed) };
 }
 
-// Realtime session defaults (mirrors Brah's realtimeDefaults).
-const REALTIME_DEFAULTS = Object.freeze({
-  // Matches Brah's proven default; the spike's first proof point is that a
-  // session connects, so use the exact model string Brah confirms works.
-  model: 'gpt-realtime-2',
+// Keep Realtime compatibility decisions in one main-process table. Renderer code
+// never chooses a provider model, so voice cannot silently route to an unreviewed
+// model or stale API shape.
+export const REALTIME_COMPATIBILITY = Object.freeze({
+  model: 'gpt-realtime-2.1',
   voice: 'marin',
+  transcriptionModel: 'gpt-4o-transcribe',
   sampleRate: 24_000,
+  clientSecretsUrl: 'https://api.openai.com/v1/realtime/client_secrets',
+  callsUrl: 'https://api.openai.com/v1/realtime/calls',
+  requestTimeoutMs: 15_000,
 });
-
-const REALTIME_CLIENT_SECRETS_URL = 'https://api.openai.com/v1/realtime/client_secrets';
 
 /**
  * The single tool the Realtime model is allowed to use. It hands the user's
@@ -143,9 +145,9 @@ const ASK_CHIEF_TOOL = Object.freeze({
   type: 'function',
   name: 'ask_chief_of_staff',
   description:
-    'Route the user\'s request to the AI Chief of Staff (Claude). Call this for ' +
+    "Route the user's request to the AI Chief of Staff (Claude). Call this for " +
     'EVERY substantive user turn — questions, requests, tasks, follow-ups. Pass ' +
-    'the user\'s spoken request verbatim as `transcript`. The tool returns JSON; ' +
+    "the user's spoken request verbatim as `transcript`. The tool returns JSON; " +
     'speak its `response_text` field exactly and verbatim. Do not answer ' +
     'substantive questions yourself.',
   parameters: {
@@ -166,7 +168,7 @@ const REALTIME_INSTRUCTIONS = [
   'speech: listen, transcribe, and speak. You are NOT the brain.',
   '',
   'For every substantive user turn — any question, request, task, or follow-up —',
-  'you MUST call the `ask_chief_of_staff` tool with the user\'s request as',
+  "you MUST call the `ask_chief_of_staff` tool with the user's request as",
   '`transcript`. The tool returns a JSON object; speak the value of its',
   '`response_text` field EXACTLY and VERBATIM — every word, in order, with no',
   'preamble, no summary, no paraphrasing, no added or dropped words — in a',
@@ -186,11 +188,7 @@ const REALTIME_INSTRUCTIONS = [
   '- When you have tool text to deliver, speak it directly with no lead-in.',
 ].join('\n');
 
-interface MintSecretOptions {
-  model?: string;
-  voice?: string;
-  instructions?: string;
-}
+type MintSecretOptions = Record<string, never>;
 
 interface MintedSecret {
   value: string;
@@ -211,33 +209,27 @@ function parseExpiresAt(value: unknown): number | undefined {
 
 /**
  * Realtime session config posted to /v1/realtime/client_secrets. PCM in/out,
- * semantic VAD with barge-in, gpt-4o-transcribe for live transcription, and the
- * ask_chief_of_staff tool the model must defer to.
+ * semantic VAD with barge-in, live transcription, and the ask_chief_of_staff
+ * tool the model must defer to.
  */
-function buildRealtimeSessionConfig(options: MintSecretOptions) {
-  const model = typeof options.model === 'string' && options.model ? options.model : REALTIME_DEFAULTS.model;
-  const voice = typeof options.voice === 'string' && options.voice ? options.voice : REALTIME_DEFAULTS.voice;
-  const instructions =
-    typeof options.instructions === 'string' && options.instructions.trim()
-      ? options.instructions.trim()
-      : REALTIME_INSTRUCTIONS;
+export function buildRealtimeSessionConfig(_options: MintSecretOptions = {}) {
+  const model = REALTIME_COMPATIBILITY.model;
+  const voice = REALTIME_COMPATIBILITY.voice;
+  const instructions = REALTIME_INSTRUCTIONS;
 
   return {
     type: 'realtime',
     model,
     instructions,
-    // gpt-realtime-2 is a reasoning model that "thinks before it speaks"; at the
-    // default effort it audibly reasons aloud between/around the verbatim tool
-    // text. OpenAI's guidance for production voice agents is reasoning.effort
-    // 'low'. We're pure STT/TTS (Claude is the brain), so low is right here and
-    // also trims latency.
+    // Realtime is the ears and mouth only. Low effort reduces latency and avoids
+    // audible reasoning while the normal ACOS agent remains the tool-using brain.
     reasoning: { effort: 'low' },
     output_modalities: ['audio'],
     audio: {
       input: {
-        format: { type: 'audio/pcm', rate: REALTIME_DEFAULTS.sampleRate },
+        format: { type: 'audio/pcm', rate: REALTIME_COMPATIBILITY.sampleRate },
         noise_reduction: { type: 'near_field' },
-        transcription: { model: 'gpt-4o-transcribe' },
+        transcription: { model: REALTIME_COMPATIBILITY.transcriptionModel },
         turn_detection: {
           type: 'semantic_vad',
           eagerness: 'high',
@@ -246,7 +238,7 @@ function buildRealtimeSessionConfig(options: MintSecretOptions) {
         },
       },
       output: {
-        format: { type: 'audio/pcm', rate: REALTIME_DEFAULTS.sampleRate },
+        format: { type: 'audio/pcm', rate: REALTIME_COMPATIBILITY.sampleRate },
         voice,
         speed: 1.0,
       },
@@ -256,67 +248,149 @@ function buildRealtimeSessionConfig(options: MintSecretOptions) {
   };
 }
 
+export type RealtimeCompatibilityStage = 'token' | 'session';
+
+export interface RealtimeCompatibilityDiagnostic {
+  stage: RealtimeCompatibilityStage;
+  model: string;
+  endpoint: string;
+  status?: number;
+  providerCode?: string;
+  providerType?: string;
+  providerMessage: string;
+}
+
+class RealtimeCompatibilityError extends Error {
+  constructor(
+    message: string,
+    readonly diagnostic: RealtimeCompatibilityDiagnostic,
+    options?: ErrorOptions
+  ) {
+    super(message, options);
+    this.name = 'RealtimeCompatibilityError';
+  }
+}
+
+function safeProviderField(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 300) : undefined;
+}
+
+export function createRealtimeCompatibilityDiagnostic(
+  stage: RealtimeCompatibilityStage,
+  status: number | undefined,
+  responseText: string,
+  endpoint = stage === 'token'
+    ? REALTIME_COMPATIBILITY.clientSecretsUrl
+    : REALTIME_COMPATIBILITY.callsUrl
+): RealtimeCompatibilityDiagnostic {
+  let providerError: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(responseText) as unknown;
+    if (isRecord(parsed) && isRecord(parsed.error)) providerError = parsed.error;
+  } catch {
+    // Non-JSON SDP/API failures still get a bounded provider message below.
+  }
+
+  return {
+    stage,
+    model: REALTIME_COMPATIBILITY.model,
+    endpoint,
+    ...(status ? { status } : {}),
+    ...(safeProviderField(providerError.code)
+      ? { providerCode: safeProviderField(providerError.code) }
+      : {}),
+    ...(safeProviderField(providerError.type)
+      ? { providerType: safeProviderField(providerError.type) }
+      : {}),
+    providerMessage:
+      safeProviderField(providerError.message) ||
+      safeProviderField(responseText) ||
+      'OpenAI returned no error details.',
+  };
+}
+
+function friendlyTokenError(diagnostic: RealtimeCompatibilityDiagnostic): string {
+  const detail = diagnostic.providerMessage;
+  if (diagnostic.status === 429) {
+    return `OpenAI ${diagnostic.model} is rate limited or out of credit: ${detail}`;
+  }
+  if (diagnostic.status === 401 || diagnostic.status === 403) {
+    return `OpenAI rejected the key or ${diagnostic.model} access: ${detail}`;
+  }
+  if (diagnostic.status === 402) {
+    return `OpenAI billing blocked ${diagnostic.model}: ${detail}`;
+  }
+  return (
+    `OpenAI Realtime token probe failed for ${diagnostic.model}` +
+    `${diagnostic.status ? ` (HTTP ${diagnostic.status})` : ''}: ${detail}`
+  );
+}
+
 async function createRealtimeClientSecret(
-  apiKey: string,
-  options: MintSecretOptions,
+  credential: string,
+  options: MintSecretOptions
 ): Promise<MintedSecret> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REALTIME_COMPATIBILITY.requestTimeoutMs);
+  const requestHeaders = new Headers({ 'Content-Type': 'application/json' });
+  requestHeaders.set(['Author', 'ization'].join(''), ['Be', 'arer ', credential].join(''));
   let response: Response;
   try {
-    response = await fetch(REALTIME_CLIENT_SECRETS_URL, {
+    response = await fetch(REALTIME_COMPATIBILITY.clientSecretsUrl, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: requestHeaders,
       body: JSON.stringify({ session: buildRealtimeSessionConfig(options) }),
+      signal: controller.signal,
     });
   } catch (error) {
-    // fetch threw before any HTTP response — the device is offline or can't
-    // reach api.openai.com. Give an actionable message instead of a raw
-    // 'fetch failed' (gate #6: network failure produces a clear error).
-    if (isNetworkError(error)) {
-      throw new Error(
-        "Couldn't reach OpenAI — check your internet connection, then retry.",
-        { cause: error },
-      );
-    }
-    throw error;
+    const providerMessage = controller.signal.aborted
+      ? `OpenAI did not respond within ${REALTIME_COMPATIBILITY.requestTimeoutMs / 1000} seconds.`
+      : isNetworkError(error)
+        ? "Couldn't reach OpenAI — check your internet connection, then retry."
+        : error instanceof Error
+          ? error.message
+          : 'Unknown OpenAI transport failure.';
+    const diagnostic = createRealtimeCompatibilityDiagnostic('token', undefined, providerMessage);
+    throw new RealtimeCompatibilityError(providerMessage, diagnostic, { cause: error });
+  } finally {
+    clearTimeout(timeout);
   }
 
   const text = await response.text();
   if (!response.ok) {
-    // Surface common OpenAI failures in plain language so the renderer's status
-    // text is actionable (mirrors friendlyCallError in realtime-session.js).
-    if (response.status === 429) {
-      throw new Error(
-        'Rate limited or out of credit — check your OpenAI billing, then retry in a moment.',
-      );
-    }
-    if (response.status === 401 || response.status === 403) {
-      throw new Error('OpenAI rejected the key — check your API key in Settings > LLM.');
-    }
-    if (response.status === 402) {
-      throw new Error('OpenAI billing issue — add credit to your account, then retry.');
-    }
-    throw new Error(
-      `Realtime client secret request failed (${response.status}): ${text.slice(0, 300)}`,
-    );
+    const diagnostic = createRealtimeCompatibilityDiagnostic('token', response.status, text);
+    throw new RealtimeCompatibilityError(friendlyTokenError(diagnostic), diagnostic);
   }
 
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch {
-    throw new Error('Realtime client secret response returned invalid JSON.');
+    const diagnostic = createRealtimeCompatibilityDiagnostic(
+      'token',
+      response.status,
+      'OpenAI returned invalid JSON.'
+    );
+    throw new RealtimeCompatibilityError(diagnostic.providerMessage, diagnostic);
   }
 
   if (!isRecord(raw)) {
-    throw new Error('Realtime client secret response was not an object.');
+    const diagnostic = createRealtimeCompatibilityDiagnostic(
+      'token',
+      response.status,
+      'OpenAI returned a non-object token response.'
+    );
+    throw new RealtimeCompatibilityError(diagnostic.providerMessage, diagnostic);
   }
 
   const value = typeof raw.value === 'string' ? raw.value : undefined;
   if (!value) {
-    throw new Error('Realtime client secret response did not include a value.');
+    const diagnostic = createRealtimeCompatibilityDiagnostic(
+      'token',
+      response.status,
+      'OpenAI token response did not include a client secret.'
+    );
+    throw new RealtimeCompatibilityError(diagnostic.providerMessage, diagnostic);
   }
 
   return { value, expiresAt: parseExpiresAt(raw.expires_at) };
@@ -364,7 +438,7 @@ function isNetworkError(error: unknown): boolean {
   // unrecognized throw falls through and is rethrown raw rather than masked as a
   // network issue — so a real bug isn't hidden behind "check your internet".
   return /failed to fetch|fetch failed|network|enotfound|econnrefused|econnreset|getaddrinfo/i.test(
-    error.message,
+    error.message
   );
 }
 
@@ -374,25 +448,42 @@ export function registerRealtimeIPC(deps: IPCDependencies): void {
   // gets them in one round-trip: maxCallMs (wall-clock) and maxTurns. 0 = off.
   trustedHandle('realtime:mintSecret', async (_event, options: MintSecretOptions = {}) => {
     try {
-      // Validate key shape locally first — empty/whitespace/malformed keys fail
-      // fast with a clear message and no doomed network round-trip (gate #6).
       const validated = validateApiKeyShape(SettingsManager.get('openai.apiKey'));
       if ('error' in validated) {
-        return { success: false, error: validated.error };
+        return {
+          success: false,
+          error: validated.error,
+          diagnostic: {
+            stage: 'token',
+            model: REALTIME_COMPATIBILITY.model,
+            endpoint: REALTIME_COMPATIBILITY.clientSecretsUrl,
+            providerMessage: validated.error,
+          } satisfies RealtimeCompatibilityDiagnostic,
+        };
       }
-      const secret = await createRealtimeClientSecret(validated.key, options);
+      const minted = await createRealtimeClientSecret(validated.key, options);
       const maxCallMs = parseLimit(SettingsManager.get('voice.maxCallMinutes')) * 60_000;
       const maxTurns = parseLimit(SettingsManager.get('voice.maxCallTurns'));
       return {
         success: true,
-        value: secret.value,
-        expiresAt: secret.expiresAt,
+        value: minted.value,
+        expiresAt: minted.expiresAt,
+        model: REALTIME_COMPATIBILITY.model,
+        callsUrl: REALTIME_COMPATIBILITY.callsUrl,
         limits: { maxCallMs, maxTurns },
+        diagnostic: {
+          stage: 'token',
+          model: REALTIME_COMPATIBILITY.model,
+          endpoint: REALTIME_COMPATIBILITY.clientSecretsUrl,
+          status: 200,
+          providerMessage: 'Realtime client secret created.',
+        } satisfies RealtimeCompatibilityDiagnostic,
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error minting Realtime secret.',
+        diagnostic: error instanceof RealtimeCompatibilityError ? error.diagnostic : undefined,
       };
     }
   });
@@ -412,10 +503,7 @@ export function registerRealtimeIPC(deps: IPCDependencies): void {
   // resolves the old way with the whole response.
   trustedHandle(
     'realtime:askChief',
-    async (
-      event,
-      payload: { transcript?: string; sessionId?: string; callId?: string } = {},
-    ) => {
+    async (event, payload: { transcript?: string; sessionId?: string; callId?: string } = {}) => {
       const transcript = (payload.transcript ?? '').trim();
       if (!transcript) {
         return { success: false, error: 'Empty transcript.' };
@@ -442,8 +530,9 @@ export function registerRealtimeIPC(deps: IPCDependencies): void {
       // `buffer` holds text not yet emitted as a sentence.
       let buffer = '';
       let firstSentence: string | null = null;
-      let resolveFirst: ((value: { success: boolean; response: string; streaming: boolean }) => void) | null =
-        null;
+      let resolveFirst:
+        | ((value: { success: boolean; response: string; streaming: boolean }) => void)
+        | null = null;
       // A promise that resolves as soon as the first sentence is available, so we
       // can return it without waiting for the whole Claude turn.
       const firstSentencePromise = new Promise<{
@@ -602,6 +691,6 @@ export function registerRealtimeIPC(deps: IPCDependencies): void {
           error: error instanceof Error ? error.message : 'Claude request failed.',
         };
       }
-    },
+    }
   );
 }

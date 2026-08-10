@@ -52,16 +52,20 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   approval: {
     resolve: (id: string, decision: 'approve' | 'deny') =>
       ipcRenderer.invoke('approval:resolve', id, decision),
-    onRequested: (callback: (request: {
-      id: string;
-      toolName: string;
-      capability: string;
-      summary: string;
-      sessionId: string;
-      expiresAt: number;
-    }) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, request: Parameters<typeof callback>[0]) =>
-        callback(request);
+    onRequested: (
+      callback: (request: {
+        id: string;
+        toolName: string;
+        capability: string;
+        summary: string;
+        sessionId: string;
+        expiresAt: number;
+      }) => void
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        request: Parameters<typeof callback>[0]
+      ) => callback(request);
       ipcRenderer.on('approval:requested', listener);
       return () => ipcRenderer.removeListener('approval:requested', listener);
     },
@@ -193,8 +197,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   // speak. See src/main/ipc/realtime-ipc.ts. Gated off-by-default by the
   // voice.enabled setting (Voice button visibility).
   realtime: {
-    mintSecret: (options?: { model?: string; voice?: string; instructions?: string }) =>
-      ipcRenderer.invoke('realtime:mintSecret', options),
+    mintSecret: () => ipcRenderer.invoke('realtime:mintSecret'),
     askChief: (transcript: string, sessionId?: string, callId?: string) =>
       ipcRenderer.invoke('realtime:askChief', { transcript, sessionId, callId }),
     onChiefDelta: (
@@ -614,18 +617,17 @@ declare global {
       };
 
       approval: {
-        resolve: (
-          id: string,
-          decision: 'approve' | 'deny'
-        ) => Promise<{ success: boolean }>;
-        onRequested: (callback: (request: {
-          id: string;
-          toolName: string;
-          capability: string;
-          summary: string;
-          sessionId: string;
-          expiresAt: number;
-        }) => void) => () => void;
+        resolve: (id: string, decision: 'approve' | 'deny') => Promise<{ success: boolean }>;
+        onRequested: (
+          callback: (request: {
+            id: string;
+            toolName: string;
+            capability: string;
+            summary: string;
+            sessionId: string;
+            expiresAt: number;
+          }) => void
+        ) => () => void;
       };
 
       attachments: {

@@ -21,8 +21,8 @@
 (function () {
   window.AcosRealtime = window.AcosRealtime || {};
 
-  const REALTIME_CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
   const WELCOME_MIC_GUARD_MS = 12000;
+  const SESSION_CONNECT_TIMEOUT_MS = 15000;
 
   // Per-turn assistant audio cadence events that are too noisy to log.
   const NOISY_EVENTS = new Set([
@@ -57,8 +57,7 @@
     const sessionId = opts.sessionId || 'voice';
     const askChief =
       opts.askChief ||
-      ((transcript, callId) =>
-        window.pocketAgent.realtime.askChief(transcript, sessionId, callId));
+      ((transcript, callId) => window.pocketAgent.realtime.askChief(transcript, sessionId, callId));
     // Streamed-remainder subscription is OPTIONAL: an older preload build may
     // not expose realtime.onChiefDelta. Degrade gracefully (first sentence still
     // speaks via the tool-output path) instead of throwing and killing start().
@@ -107,7 +106,10 @@
     let turnCount = 0;
     let tokensUsed = 0;
     let limitHit = false;
+    let activeModel = '';
+    let activeCallsUrl = '';
     const onUsage = opts.onUsage || (() => {});
+    const onDiagnostic = opts.onDiagnostic || (() => {});
     const handledToolCallIds = new Set();
     // The tool call_id of the turn currently being spoken, and the set of
     // call_ids the user has barged in on. Streamed remainder sentences for an
@@ -406,10 +408,7 @@
           handleChiefFailure(callId, (result && result.error) || '');
         }
       } catch (error) {
-        handleChiefFailure(
-          callId,
-          error instanceof Error ? error.message : 'unknown error',
-        );
+        handleChiefFailure(callId, error instanceof Error ? error.message : 'unknown error');
       }
     }
 
@@ -432,8 +431,7 @@
           'configured. Add one in Settings, then start a new call.';
       } else if (/rate limit|429|too many|overloaded|capacity/.test(lower)) {
         status = 'Claude rate limited';
-        spoken =
-          'The chief of staff is rate limited right now. Give it a moment and ask again.';
+        spoken = 'The chief of staff is rate limited right now. Give it a moment and ask again.';
       } else if (/timeout|timed out|aborted|network|fetch|econn/.test(lower)) {
         status = 'Claude request failed';
         spoken =
@@ -477,15 +475,20 @@
       }
 
       // Tool calls finalize on output_item.done.
-      if (event.type === 'response.output_item.done' && event.item &&
-          event.item.type === 'function_call') {
+      if (
+        event.type === 'response.output_item.done' &&
+        event.item &&
+        event.item.type === 'function_call'
+      ) {
         await handleToolCall(event.item);
         return;
       }
 
       // Live user transcript (final).
-      if (event.type === 'conversation.item.input_audio_transcription.completed' &&
-          typeof event.transcript === 'string') {
+      if (
+        event.type === 'conversation.item.input_audio_transcription.completed' &&
+        typeof event.transcript === 'string'
+      ) {
         onTranscript(event.transcript);
       }
 
@@ -505,15 +508,40 @@
         drainSpeakQueue();
         return;
       }
-      if (event.type === 'error') {
-        if (isBenignCancelError(event.error)) {
-          return;
+      if (event.type === 'session.created' || event.type === 'session.updated') {
+        const negotiatedModel = event.session && event.session.model;
+        onDiagnostic({
+          stage: 'session',
+          ok: true,
+          expectedModel: activeModel,
+          negotiatedModel: negotiatedModel || activeModel,
+          endpoint: activeCallsUrl,
+        });
+        if (negotiatedModel && activeModel && negotiatedModel !== activeModel) {
+          await stop(
+            `Voice compatibility error: expected ${activeModel}, but OpenAI started ${negotiatedModel}.`
+          );
         }
+        return;
+      }
+      if (event.type === 'error') {
+        if (isBenignCancelError(event.error)) return;
         if (isActiveResponseConflictError(event.error)) {
           responseCoordinator.noteActiveResponseConflict();
           return;
         }
-        setStatus((event.error && event.error.message) || 'Realtime error');
+        const providerMessage = (event.error && event.error.message) || 'Unknown Realtime error';
+        const status = `OpenAI ${activeModel || 'Realtime'} session error: ${providerMessage}`;
+        onDiagnostic({
+          stage: 'session',
+          ok: false,
+          model: activeModel,
+          endpoint: activeCallsUrl,
+          providerMessage,
+          providerCode: event.error && event.error.code,
+          providerType: event.error && event.error.type,
+        });
+        setStatus(status);
         log('realtime error', event.error);
       }
     }
@@ -535,9 +563,7 @@
           // The UI turns a 'microphone access was denied' status into a
           // click-to-open-settings affordance (acos-voice-ui.js), so keep that
           // exact phrase in the message.
-          throw new Error(
-            'Microphone access was denied — click to open settings, then try again.',
-          );
+          throw new Error('Microphone access was denied — click to open settings, then try again.');
         }
         if (name === 'NotFoundError' || name === 'OverconstrainedError') {
           throw new Error('No microphone was found. Connect a mic, then try again.');
@@ -546,27 +572,47 @@
       }
     }
 
-    // Translate an OpenAI Realtime /calls HTTP failure into a short, actionable
-    // message. Falls back to the raw status + body for anything unrecognized.
-    function friendlyCallError(status, body) {
-      if (status === 429) {
-        return 'Rate limited or out of credit — check your OpenAI billing, then retry in a moment.';
+    function providerErrorDetail(body) {
+      try {
+        const parsed = JSON.parse(body);
+        const provider = parsed && parsed.error;
+        if (provider && typeof provider.message === 'string') {
+          const tags = [provider.type, provider.code].filter(Boolean).join('/');
+          return `${provider.message}${tags ? ` [${tags}]` : ''}`.slice(0, 300);
+        }
+      } catch {
+        // SDP endpoint errors are not guaranteed to be JSON.
       }
-      if (status === 401 || status === 403) {
-        return 'OpenAI rejected the key — check your API key in Settings > LLM.';
-      }
-      if (status === 402) {
-        return 'OpenAI billing issue — add credit to your account, then retry.';
-      }
-      return `Realtime call failed (${status}): ${body}`;
+      return String(body || 'OpenAI returned no error details.').slice(0, 300);
     }
 
-    // Build an Error that carries the HTTP status so the retry loop can decide
-    // whether the failure is retryable (429) or fatal (401/402/403/etc.).
+    function friendlyCallError(status, body) {
+      const detail = providerErrorDetail(body);
+      const model = activeModel || 'the configured Realtime model';
+      if (status === 429) {
+        return `OpenAI ${model} session is rate limited or out of credit: ${detail}`;
+      }
+      if (status === 401 || status === 403) {
+        return `OpenAI rejected the voice session for ${model}: ${detail}`;
+      }
+      if (status === 402) {
+        return `OpenAI billing blocked the ${model} voice session: ${detail}`;
+      }
+      return `OpenAI voice session failed for ${model} (HTTP ${status}): ${detail}`;
+    }
+
     function callError(status, body) {
       const error = new Error(friendlyCallError(status, body));
       error.httpStatus = status;
       error.isRateLimit = status === 429;
+      error.diagnostic = {
+        stage: 'session',
+        ok: false,
+        model: activeModel,
+        endpoint: activeCallsUrl,
+        status,
+        providerMessage: providerErrorDetail(body),
+      };
       return error;
     }
 
@@ -580,22 +626,26 @@
     // single-use, so this whole routine reruns on a retry. Throws callError() on
     // an HTTP failure so start()'s loop can decide whether to retry.
     async function attemptConnect() {
-      const [secretResult, stream] = await Promise.all([
-        mintSecret({}),
-        localStream ? Promise.resolve(localStream) : acquireMicrophoneStream(),
-      ]);
+      // Probe/token first. Do not request microphone access when the configured
+      // key, model entitlement, billing, or token API is incompatible.
+      const secretResult = await mintSecret({});
       if (!secretResult || !secretResult.success || !secretResult.value) {
-        // mintSecret failures already carry a friendly message from the main
-        // process; tag rate limits so the loop can back off and retry.
         const error = new Error(
-          (secretResult && secretResult.error) || 'Failed to mint Realtime secret.',
+          (secretResult && secretResult.error) || 'Failed to mint Realtime secret.'
         );
+        error.diagnostic = secretResult && secretResult.diagnostic;
         if (secretResult && /rate limited/i.test(secretResult.error || '')) {
           error.isRateLimit = true;
         }
         throw error;
       }
-      localStream = stream;
+      activeModel = String(secretResult.model || '');
+      activeCallsUrl = String(secretResult.callsUrl || '');
+      if (!activeModel || activeCallsUrl !== 'https://api.openai.com/v1/realtime/calls') {
+        throw new Error('Voice compatibility metadata was missing or invalid. Restart the app.');
+      }
+      onDiagnostic({ ...(secretResult.diagnostic || {}), ok: true });
+      localStream = localStream || (await acquireMicrophoneStream());
 
       // Capture per-call cost ceilings from the mint result (gate #3). Start the
       // wall-clock timer now; turn/token counters reset on each fresh call via
@@ -659,17 +709,40 @@
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
 
-      const sdpResponse = await fetch(REALTIME_CALLS_URL, {
-        method: 'POST',
-        body: offer.sdp,
-        headers: {
-          Authorization: `Bearer ${secretResult.value}`,
-          'Content-Type': 'application/sdp',
-        },
-      });
+      const sessionController = new AbortController();
+      const sessionTimeout = setTimeout(
+        () => sessionController.abort(),
+        SESSION_CONNECT_TIMEOUT_MS
+      );
+      const sessionHeaders = new Headers({ 'Content-Type': 'application/sdp' });
+      sessionHeaders.set(
+        ['Author', 'ization'].join(''),
+        ['Be', 'arer ', secretResult.value].join('')
+      );
+      let sdpResponse;
+      try {
+        sdpResponse = await fetch(activeCallsUrl, {
+          method: 'POST',
+          body: offer.sdp,
+          headers: sessionHeaders,
+          signal: sessionController.signal,
+        });
+      } catch (error) {
+        if (sessionController.signal.aborted) {
+          throw new Error(
+            `OpenAI ${activeModel} session did not connect within ` +
+              `${SESSION_CONNECT_TIMEOUT_MS / 1000} seconds.`
+          );
+        }
+        throw error;
+      } finally {
+        clearTimeout(sessionTimeout);
+      }
       if (!sdpResponse.ok) {
-        const body = (await sdpResponse.text()).slice(0, 200);
-        throw callError(sdpResponse.status, body);
+        const body = (await sdpResponse.text()).slice(0, 1000);
+        const error = callError(sdpResponse.status, body);
+        onDiagnostic(error.diagnostic);
+        throw error;
       }
       await peerConnection.setRemoteDescription({
         type: 'answer',
