@@ -94,5 +94,5 @@ The isolated local Docker path, native Windows x64 CI package, PE machine valida
 - [x] Mutable runtime connector packages are pinned to exact reviewed versions.
 - [x] ASAR/integrity fuse work is explicitly deferred to beta.24 pending packaged compatibility proof; `RunAsNode` remains required for bundled MCP servers.
 - [ ] Configure GitHub macOS certificate/notary and Windows production Authenticode secrets.
-- [ ] Configure required reviewers on the declared but currently unprotected GitHub `release` environment.
+- [x] GitHub `release` environment requires Brett's approval before publication.
 - [ ] Create the tag before builds, then complete real Mac + Windows tester acceptance before publication/website promotion.

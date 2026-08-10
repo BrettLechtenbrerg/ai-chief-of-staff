@@ -36,7 +36,7 @@ describe('beta.23 release documentation', () => {
     expect(recovery).toContain('CERTIFICATE_P12');
     expect(recovery).toContain('WIN_CSC_LINK');
     expect(recovery).toContain('Do not tag or publish');
-    expect(recovery).toContain('it is not protected yet');
+    expect(recovery).toContain("protected `release` environment requiring Brett's approval");
   });
 
   it('documents deferred ASAR/fuse work and immutable runtime connectors', () => {
