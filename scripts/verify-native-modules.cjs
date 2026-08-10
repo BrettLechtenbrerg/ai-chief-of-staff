@@ -13,7 +13,7 @@
  * Checks magic bytes directly (no `file` binary needed, works in Docker):
  *   Mach-O 64 LE:  CF FA ED FE  (+cputype: x86_64=0x01000007, arm64=0x0100000C)
  *   Mach-O fat:    CA FE BA BE / BE BA FE CA (universal — any arch OK)
- *   PE (Windows):  4D 5A ("MZ")
+ *   PE (Windows):  4D 5A + PE signature + COFF machine (x64=0x8664, arm64=0xAA64)
  *   ELF (Linux):   7F 45 4C 46
  */
 'use strict';
@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 
 const MACHO_CPUTYPE = { x64: 0x01000007, arm64: 0x0100000c };
+const PE_MACHINE = { ia32: 0x014c, x64: 0x8664, armv7l: 0x01c4, arm64: 0xaa64 };
 
 // Non-runtime artifacts that upstream packages leave in their build dirs.
 // better-sqlite3's test_extension.node is only dlopen'd by its own test
@@ -51,7 +52,20 @@ function describe(buf) {
   if (magicBE === 0xcafebabe || magicBE === 0xbebafeca) {
     return { kind: 'macho-fat' };
   }
-  if (buf[0] === 0x4d && buf[1] === 0x5a) return { kind: 'pe' };
+  if (buf[0] === 0x4d && buf[1] === 0x5a) {
+    if (buf.length < 0x40) return { kind: 'pe-invalid' };
+    const peOffset = buf.readUInt32LE(0x3c);
+    if (
+      peOffset > buf.length - 6 ||
+      buf[peOffset] !== 0x50 ||
+      buf[peOffset + 1] !== 0x45 ||
+      buf[peOffset + 2] !== 0 ||
+      buf[peOffset + 3] !== 0
+    ) {
+      return { kind: 'pe-invalid' };
+    }
+    return { kind: 'pe', machine: buf.readUInt16LE(peOffset + 4) };
+  }
   if (magicBE === 0x7f454c46) return { kind: 'elf' };
   return { kind: 'unknown' };
 }
@@ -98,7 +112,18 @@ function checkAgainst(info, platform, archName) {
     return null;
   }
   if (platform === 'win32') {
-    return info.kind === 'pe' ? null : `expected Windows PE, found ${info.kind.toUpperCase()}`;
+    if (info.kind !== 'pe') {
+      return `expected Windows PE, found ${info.kind.toUpperCase()}`;
+    }
+    if (!archName || archName === 'universal') return null;
+    const expected = PE_MACHINE[archName];
+    if (expected !== undefined && info.machine !== expected) {
+      const found =
+        Object.keys(PE_MACHINE).find((name) => PE_MACHINE[name] === info.machine) ||
+        `machine 0x${info.machine.toString(16)}`;
+      return `expected Windows PE ${archName}, found Windows PE ${found}`;
+    }
+    return null;
   }
   if (platform === 'linux') {
     return info.kind === 'elf' ? null : `expected ELF, found ${info.kind.toUpperCase()}`;
@@ -107,14 +132,7 @@ function checkAgainst(info, platform, archName) {
 }
 
 function verifyFile(file, relPath, platform, archName) {
-  const buf = Buffer.alloc(8);
-  const fd = fs.openSync(file, 'r');
-  try {
-    fs.readSync(fd, buf, 0, 8, 0);
-  } finally {
-    fs.closeSync(fd);
-  }
-  const info = describe(buf);
+  const info = describe(fs.readFileSync(file));
 
   // Label from the path INSIDE the app only — the absolute output dir
   // (e.g. release/win-arm64-unpacked/) would leak wrong platform/arch tokens.
@@ -127,6 +145,10 @@ function verifyFile(file, relPath, platform, archName) {
   // Unlabeled — must match the build target strictly.
   return checkAgainst(info, platform, archName);
 }
+
+exports.describe = describe;
+exports.checkAgainst = checkAgainst;
+exports.verifyFile = verifyFile;
 
 exports.default = async function verifyNativeModules(context) {
   const platform = context.electronPlatformName; // 'darwin' | 'win32' | 'linux'
