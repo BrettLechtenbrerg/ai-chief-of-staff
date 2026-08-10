@@ -273,6 +273,7 @@ function buildEntry(
           ELECTRON_RUN_AS_NODE: '1',
           FLO_TOKEN_PATH: GoogleOAuth.getTokensPath(),
           FLO_CREDENTIALS_PATH: GoogleOAuth.getCredentialsPath(),
+          FLO_PROPOSALS_PATH: path.join(app.getPath('userData'), 'flo-proposals.db'),
         },
         ...acosMeta,
       };

@@ -16,7 +16,7 @@
     "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
     "rebuild": "npm run clean && npm run build",
     "rebuild:native": "npx electron-rebuild -f -w better-sqlite3",
-    "postinstall": "npx electron-rebuild -f -w better-sqlite3",
+    "postinstall": "node scripts/install-vendor-deps.cjs && npx electron-rebuild -f -w better-sqlite3",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
