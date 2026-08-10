@@ -87,7 +87,12 @@ describe('approval tool guard', () => {
       { name: 'shell_command', description: 'shell', parameters: z.object({}), execute } as AgentTool,
       'native'
     );
-    guardToolWithApproval(tool, { sessionId: 'cron-session', channel: 'cron:daily' });
+    guardToolWithApproval(tool, {
+      sessionId: 'cron-session',
+      channel: 'cron:daily',
+      cwd: '/workspace',
+      approvedRoots: ['/workspace'],
+    });
 
     await expect(tool.execute({}, context)).resolves.toMatch(/requires user approval/i);
     expect(execute).not.toHaveBeenCalled();
@@ -104,7 +109,12 @@ describe('approval tool guard', () => {
       request = next;
       return true;
     });
-    guardToolWithApproval(tool, { sessionId: 'desktop-session', channel: 'desktop' });
+    guardToolWithApproval(tool, {
+      sessionId: 'desktop-session',
+      channel: 'desktop',
+      cwd: '/workspace',
+      approvedRoots: ['/workspace'],
+    });
 
     const result = tool.execute({}, context);
     ApprovalManager.resolve(request!.id, 'approve', 'ui');

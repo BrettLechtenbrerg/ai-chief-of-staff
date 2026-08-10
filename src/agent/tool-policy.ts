@@ -29,6 +29,8 @@ export type PolicyAwareAgentTool = AgentTool & { policy: ToolPolicy };
 export interface ToolExecutionContext {
   sessionId: string;
   channel: string;
+  cwd: string;
+  approvedRoots: string[];
 }
 
 const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {

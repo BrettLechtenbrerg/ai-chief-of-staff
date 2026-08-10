@@ -98,6 +98,7 @@ export interface MCPServerConfig {
 
 export interface ToolsConfig {
   mcpServers: Record<string, MCPServerConfig>;
+  approvedRoots?: string[];
   computerUse: {
     enabled: boolean;
     dockerized: boolean;

@@ -26,10 +26,15 @@ import {
   type ToolExecutionContext,
 } from './tool-policy.js';
 import { validateBashCommand, validateWritePath } from './safety';
+import {
+  createRestrictedToolOperations,
+  guardNativeToolScope,
+  guardToolResult,
+  restrictedShellEnvironment,
+} from './tool-sandbox.js';
 
 const execAsync = promisify(exec);
 const IS_WINDOWS = process.platform === 'win32';
-const HOME_DIR = process.env.HOME || process.env.USERPROFILE || '';
 
 /**
  * Convert a JSON Schema properties map to a Zod object schema.
@@ -148,7 +153,9 @@ export function getChatAgentTools(
   }
 
   // Add file tools (read, write, edit) from gg-coder
-  const { tools: coderNativeTools } = createCoderTools(cwd);
+  const { tools: coderNativeTools } = createCoderTools(cwd, {
+    operations: createRestrictedToolOperations(cwd),
+  });
   const fileToolNames = new Set(['read', 'write', 'edit']);
   for (const t of coderNativeTools) {
     if (fileToolNames.has(t.name)) {
@@ -160,7 +167,7 @@ export function getChatAgentTools(
   tools.push(buildWebFetchTool());
 
   // Add shell_command tool
-  tools.push(buildShellCommandTool());
+  tools.push(buildShellCommandTool(cwd));
 
   // External MCP server tools (Gmail/Calendar/GHL/etc.) — see src/mcp/.
   // Empty array when no servers are connected, so this is a no-op for users
@@ -179,7 +186,12 @@ export function getChatAgentTools(
     allowedTools.push(attachToolPolicy(createSubAgentTool(allowedTools, getStreamConfig), 'custom'));
   }
   return execution
-    ? allowedTools.map((tool) => guardToolWithApproval(tool as PolicyAwareAgentTool, execution))
+    ? allowedTools.map((tool) => {
+        const policyTool = tool as PolicyAwareAgentTool;
+        if (policyTool.policy.source === 'native') guardNativeToolScope(policyTool, execution);
+        guardToolWithApproval(policyTool, execution);
+        return guardToolResult(policyTool);
+      })
     : allowedTools;
 }
 
@@ -193,7 +205,9 @@ export function getCoderAgentTools(
   mode: AgentMode = AGENT_MODES.coder,
   execution?: ToolExecutionContext
 ): AgentTool[] {
-  const { tools: coderNativeTools } = createCoderTools(cwd);
+  const { tools: coderNativeTools } = createCoderTools(cwd, {
+    operations: createRestrictedToolOperations(cwd),
+  });
   const customTools = getCustomTools(config);
   const customToolNames = new Set(customTools.map((tool) => tool.name));
   const mcpTools: AgentTool[] = [];
@@ -231,7 +245,11 @@ export function getCoderAgentTools(
     return attachToolPolicy(tool, customToolNames.has(tool.name) ? 'custom' : 'native');
   });
   return execution
-    ? allowedTools.map((tool) => guardToolWithApproval(tool, execution))
+    ? allowedTools.map((tool) => {
+        if (tool.policy.source === 'native') guardNativeToolScope(tool, execution);
+        guardToolWithApproval(tool, execution);
+        return guardToolResult(tool);
+      })
     : allowedTools;
 }
 
@@ -298,7 +316,7 @@ function buildWebFetchTool(): AgentTool {
 /**
  * Shell command AgentTool — runs a command in the system shell and returns output.
  */
-function buildShellCommandTool(): AgentTool {
+function buildShellCommandTool(cwd: string): AgentTool {
   const parameters = z.object({
     command: z.string().describe('The shell command to execute'),
     timeout_ms: z
@@ -316,16 +334,12 @@ function buildShellCommandTool(): AgentTool {
       const { command, timeout_ms } = input as z.infer<typeof parameters>;
       const timeoutMs = Math.min(timeout_ms || 30000, 120000);
 
-      const shellOpts = IS_WINDOWS
-        ? { shell: 'powershell.exe' as string, env: process.env, timeout: timeoutMs }
-        : {
-            shell: '/bin/bash' as string,
-            env: {
-              ...process.env,
-              PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin:${HOME_DIR}/.local/bin`,
-            },
-            timeout: timeoutMs,
-          };
+      const shellOpts = {
+        shell: (IS_WINDOWS ? 'powershell.exe' : '/bin/bash') as string,
+        env: restrictedShellEnvironment(cwd),
+        timeout: timeoutMs,
+        cwd,
+      };
 
       const safety = validateBashCommand(command);
       if (!safety.allowed) {

@@ -33,7 +33,6 @@ export function validateBashCommand(command: string): ValidationResult {
   for (const { pattern, reason } of DANGEROUS_BASH_PATTERNS) {
     if (pattern.test(normalizedCommand)) {
       console.warn(`[Safety] BLOCKED bash command: ${reason}`);
-      console.warn(`[Safety] Command was: ${normalizedCommand.slice(0, 100)}...`);
       return { allowed: false, reason };
     }
   }
@@ -58,7 +57,6 @@ export function validateWritePath(filePath: string): ValidationResult {
   for (const { pattern, reason } of DANGEROUS_WRITE_PATHS) {
     if (pattern.test(filePath) || pattern.test(expandedPath) || pattern.test(normalizedPath)) {
       console.warn(`[Safety] BLOCKED write path: ${reason}`);
-      console.warn(`[Safety] Path was: ${filePath}`);
       return { allowed: false, reason };
     }
   }
@@ -73,7 +71,6 @@ export function validateBrowserUrl(url: string): ValidationResult {
   for (const { pattern, reason } of DANGEROUS_BROWSER_PATTERNS) {
     if (pattern.test(url)) {
       console.warn(`[Safety] BLOCKED browser URL: ${reason}`);
-      console.warn(`[Safety] URL was: ${url}`);
       return { allowed: false, reason };
     }
   }

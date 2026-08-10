@@ -387,13 +387,17 @@ export class ChatEngine {
       // Get provider config
       const streamConfig = await getStreamConfig(model);
       const modeConfig = getModeConfig(sessionMode);
+      const toolCwd = sessionMode === 'coder' ? this.getCoderCwd(sessionId) : this.workspace;
+      const toolExecution = {
+        sessionId,
+        channel,
+        cwd: toolCwd,
+        approvedRoots: [...new Set([toolCwd, this.workspace, ...(this.toolsConfig.approvedRoots || [])])],
+      };
       const agentTools =
         sessionMode === 'coder'
-          ? getCoderAgentTools(this.toolsConfig, this.getCoderCwd(sessionId), modeConfig, {
-              sessionId,
-              channel,
-            })
-          : getChatAgentTools(this.toolsConfig, this.workspace, modeConfig, { sessionId, channel });
+          ? getCoderAgentTools(this.toolsConfig, toolCwd, modeConfig, toolExecution)
+          : getChatAgentTools(this.toolsConfig, toolCwd, modeConfig, toolExecution);
 
       // Sanity log: how many tools did this turn ship to the model, and how
       // many of them are external MCP tools? Helps diagnose 'agent says it

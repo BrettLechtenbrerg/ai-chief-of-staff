@@ -521,6 +521,7 @@ async function initializeAgent(): Promise<void> {
   // Build tools config from settings
   const toolsConfig = {
     mcpServers: {},
+    approvedRoots: [workspace, path.join(app.getPath('userData'), 'attachments')],
     computerUse: {
       enabled: false,
       dockerized: true,
