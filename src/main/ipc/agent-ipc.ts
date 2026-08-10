@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
@@ -11,7 +11,7 @@ export function registerAgentIPC(deps: IPCDependencies): void {
   const { getMemory, getTelegramBot, updateTrayMenu, WIN } = deps;
 
   // Chat messages with status streaming
-  ipcMain.handle(
+  trustedHandle(
     'agent:send',
     async (event, message: string, sessionId?: string, images?: ImageContent[]) => {
       console.log(
@@ -106,15 +106,15 @@ export function registerAgentIPC(deps: IPCDependencies): void {
     }
   );
 
-  ipcMain.handle('agent:history', async (_, limit: number = 50, sessionId?: string) => {
+  trustedHandle('agent:history', async (_, limit: number = 50, sessionId?: string) => {
     return AgentManager.getRecentMessages(limit, sessionId || 'default');
   });
 
-  ipcMain.handle('agent:stats', async (_, sessionId?: string) => {
+  trustedHandle('agent:stats', async (_, sessionId?: string) => {
     return AgentManager.getStats(sessionId);
   });
 
-  ipcMain.handle('agent:clear', async (_, sessionId?: string) => {
+  trustedHandle('agent:clear', async (_, sessionId?: string) => {
     if (sessionId) {
       AgentManager.clearQueue(sessionId);
     }
@@ -123,13 +123,13 @@ export function registerAgentIPC(deps: IPCDependencies): void {
     return { success: true };
   });
 
-  ipcMain.handle('agent:stop', async (_, sessionId?: string) => {
+  trustedHandle('agent:stop', async (_, sessionId?: string) => {
     const stopped = AgentManager.stopQuery(sessionId);
     return { success: stopped };
   });
 
   // Agent mode (General / Coder / Researcher / Writer / Therapist)
-  ipcMain.handle('agent:setMode', async (_, mode: string) => {
+  trustedHandle('agent:setMode', async (_, mode: string) => {
     const { isValidModeId } = await import('../../agent/agent-modes');
     if (!isValidModeId(mode)) {
       return { success: false, error: 'Invalid mode' };
@@ -143,16 +143,16 @@ export function registerAgentIPC(deps: IPCDependencies): void {
     return { success: true };
   });
 
-  ipcMain.handle('agent:getMode', async () => {
+  trustedHandle('agent:getMode', async () => {
     return AgentManager.getMode();
   });
 
   // Per-session mode (locked after first message)
-  ipcMain.handle('agent:getSessionMode', async (_, sessionId: string) => {
+  trustedHandle('agent:getSessionMode', async (_, sessionId: string) => {
     return getMemory()?.getSessionMode(sessionId) || 'coder';
   });
 
-  ipcMain.handle('agent:setSessionMode', async (_, sessionId: string, mode: string) => {
+  trustedHandle('agent:setSessionMode', async (_, sessionId: string, mode: string) => {
     const { isValidModeId, getModeConfig } = await import('../../agent/agent-modes');
     if (!isValidModeId(mode)) {
       return { success: false, error: 'Invalid mode' };
@@ -183,7 +183,7 @@ export function registerAgentIPC(deps: IPCDependencies): void {
     return { success };
   });
 
-  ipcMain.handle('agent:restart', async () => {
+  trustedHandle('agent:restart', async () => {
     try {
       await deps.restartAgent();
       return { success: true };
@@ -193,7 +193,7 @@ export function registerAgentIPC(deps: IPCDependencies): void {
   });
 
   // Read media file as data URI (for displaying agent-generated images in chat)
-  ipcMain.handle('agent:readMedia', async (_, filePath: string) => {
+  trustedHandle('agent:readMedia', async (_, filePath: string) => {
     try {
       // Security: only allow reading from the AI Chief of Staff media directory
       const mediaDir = path.join(app.getPath('documents'), 'AI Chief of Staff', 'media');

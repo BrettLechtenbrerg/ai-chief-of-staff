@@ -2,7 +2,8 @@ import electronUpdater from 'electron-updater';
 const { autoUpdater } = electronUpdater;
 type UpdateInfo = electronUpdater.UpdateInfo;
 type ProgressInfo = electronUpdater.ProgressInfo;
-import { BrowserWindow, ipcMain, app } from 'electron';
+import { BrowserWindow, app } from 'electron';
+import { trustedHandle } from './ipc/trusted-ipc.js';
 import { SettingsManager } from '../settings';
 
 export interface UpdateStatus {
@@ -219,11 +220,11 @@ export function setChatWindow(window: BrowserWindow | null): void {
  * Set up IPC handlers for updater
  */
 export function setupUpdaterIPC(): void {
-  ipcMain.handle('updater:checkForUpdates', async () => {
+  trustedHandle('updater:checkForUpdates', async () => {
     return checkForUpdates();
   });
 
-  ipcMain.handle('updater:downloadUpdate', async () => {
+  trustedHandle('updater:downloadUpdate', async () => {
     try {
       await downloadUpdate();
       return { success: true };
@@ -232,7 +233,7 @@ export function setupUpdaterIPC(): void {
     }
   });
 
-  ipcMain.handle('updater:installUpdate', () => {
+  trustedHandle('updater:installUpdate', () => {
     try {
       installUpdate();
       return { success: true };
@@ -241,7 +242,7 @@ export function setupUpdaterIPC(): void {
     }
   });
 
-  ipcMain.handle('updater:getStatus', () => {
+  trustedHandle('updater:getStatus', () => {
     return currentStatus;
   });
 }

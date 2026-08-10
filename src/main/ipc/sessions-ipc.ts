@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
@@ -81,11 +81,11 @@ function renameSessionDirectory(oldPath: string, newName: string): string | null
 export function registerSessionsIPC(deps: IPCDependencies): void {
   const { getMemory } = deps;
 
-  ipcMain.handle('sessions:list', async () => {
+  trustedHandle('sessions:list', async () => {
     return getMemory()?.getSessions() || [];
   });
 
-  ipcMain.handle('sessions:create', async (_, name: string, kind?: 'chat' | 'automation') => {
+  trustedHandle('sessions:create', async (_, name: string, kind?: 'chat' | 'automation') => {
     try {
       const safeName = sanitizeSessionName(name);
       const memory = getMemory();
@@ -101,7 +101,7 @@ export function registerSessionsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('sessions:rename', async (_, id: string, name: string) => {
+  trustedHandle('sessions:rename', async (_, id: string, name: string) => {
     try {
       const safeName = sanitizeSessionName(name);
       const memory = getMemory();
@@ -131,7 +131,7 @@ export function registerSessionsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('sessions:delete', async (_, id: string) => {
+  trustedHandle('sessions:delete', async (_, id: string) => {
     AgentManager.clearQueue(id);
     AgentManager.cleanupSession(id);
     const memory = getMemory();

@@ -21,7 +21,7 @@
  * access token to AICOS's stored API key, per spike proof point 1.
  */
 
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import { AgentManager } from '../../agent';
 import type { AgentStatus } from '../../agent';
 import { SettingsManager } from '../../settings';
@@ -372,7 +372,7 @@ export function registerRealtimeIPC(deps: IPCDependencies): void {
   // Mint an ephemeral Realtime secret from the stored OpenAI API key. Returns
   // the per-call cost guardrails (gate #3) alongside the secret so the renderer
   // gets them in one round-trip: maxCallMs (wall-clock) and maxTurns. 0 = off.
-  ipcMain.handle('realtime:mintSecret', async (_event, options: MintSecretOptions = {}) => {
+  trustedHandle('realtime:mintSecret', async (_event, options: MintSecretOptions = {}) => {
     try {
       // Validate key shape locally first — empty/whitespace/malformed keys fail
       // fast with a clear message and no doomed network round-trip (gate #6).
@@ -410,7 +410,7 @@ export function registerRealtimeIPC(deps: IPCDependencies): void {
   //     callId for clean barge-in.
   // If no sentence ever fires (very short / unpunctuated reply), the invoke
   // resolves the old way with the whole response.
-  ipcMain.handle(
+  trustedHandle(
     'realtime:askChief',
     async (
       event,

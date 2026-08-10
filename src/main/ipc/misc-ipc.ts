@@ -1,4 +1,5 @@
-import { ipcMain, shell, app } from 'electron';
+import { shell, app } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
@@ -24,39 +25,39 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   } = deps;
 
   // App window openers
-  ipcMain.handle('app:openFacts', async () => {
+  trustedHandle('app:openFacts', async () => {
     openFactsWindow();
   });
 
-  ipcMain.handle('app:openDailyLogs', async () => {
+  trustedHandle('app:openDailyLogs', async () => {
     openDailyLogsWindow();
   });
 
-  ipcMain.handle('app:openSoul', async () => {
+  trustedHandle('app:openSoul', async () => {
     openSoulWindow();
   });
 
-  ipcMain.handle('app:openCustomize', async () => {
+  trustedHandle('app:openCustomize', async () => {
     openCustomizeWindow();
   });
 
-  ipcMain.handle('app:openRoutines', async () => {
+  trustedHandle('app:openRoutines', async () => {
     openCronWindow();
   });
 
-  ipcMain.handle('app:openSettings', async (_, tab?: string) => {
+  trustedHandle('app:openSettings', async (_, tab?: string) => {
     openSettingsWindow(tab);
   });
 
-  ipcMain.handle('app:openChat', async () => {
+  trustedHandle('app:openChat', async () => {
     openChatWindow();
   });
 
-  ipcMain.handle('app:getVersion', () => {
+  trustedHandle('app:getVersion', () => {
     return app.getVersion();
   });
 
-  ipcMain.handle('app:openExternal', async (_, url: string) => {
+  trustedHandle('app:openExternal', async (_, url: string) => {
     // Only allow http, https, and mailto schemes to prevent arbitrary protocol handler abuse
     if (!/^https?:\/\//i.test(url) && !/^mailto:/i.test(url)) {
       console.warn('[Main] Blocked openExternal with disallowed scheme:', url);
@@ -65,7 +66,7 @@ export function registerMiscIPC(deps: IPCDependencies): void {
     await shell.openExternal(url);
   });
 
-  ipcMain.handle('app:openPath', async (_, filePath: string) => {
+  trustedHandle('app:openPath', async (_, filePath: string) => {
     // Security: only allow opening paths within the AI Chief of Staff documents directory
     const allowedDir = path.join(app.getPath('documents'), 'AI Chief of Staff');
     const resolvedPath = path.resolve(filePath);
@@ -77,7 +78,7 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   // Open an image in the default viewer — handles both local paths and URLs
-  ipcMain.handle('app:openImage', async (_, src: string) => {
+  trustedHandle('app:openImage', async (_, src: string) => {
     try {
       const mediaDir = path.join(app.getPath('documents'), 'AI Chief of Staff', 'media');
       if (src.startsWith('http://') || src.startsWith('https://')) {
@@ -116,28 +117,28 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   // OAuth flow for Claude subscription
-  ipcMain.handle('auth:startOAuth', async () => {
+  trustedHandle('auth:startOAuth', async () => {
     const { ClaudeOAuth } = await import('../../auth/oauth');
     return ClaudeOAuth.startFlow();
   });
 
-  ipcMain.handle('auth:completeOAuth', async (_, code: string) => {
+  trustedHandle('auth:completeOAuth', async (_, code: string) => {
     const { ClaudeOAuth } = await import('../../auth/oauth');
     return ClaudeOAuth.completeWithCode(code);
   });
 
-  ipcMain.handle('auth:cancelOAuth', async () => {
+  trustedHandle('auth:cancelOAuth', async () => {
     const { ClaudeOAuth } = await import('../../auth/oauth');
     ClaudeOAuth.cancelFlow();
     return { success: true };
   });
 
-  ipcMain.handle('auth:isOAuthPending', async () => {
+  trustedHandle('auth:isOAuthPending', async () => {
     const { ClaudeOAuth } = await import('../../auth/oauth');
     return ClaudeOAuth.isPending();
   });
 
-  ipcMain.handle('auth:validateOAuth', async () => {
+  trustedHandle('auth:validateOAuth', async () => {
     try {
       const { ClaudeOAuth } = await import('../../auth/oauth');
       // Timeout after 5 seconds to avoid hanging the UI
@@ -156,17 +157,17 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   // OpenAI OAuth flow
-  ipcMain.handle('openai:startOAuth', async () => {
+  trustedHandle('openai:startOAuth', async () => {
     const { OpenAIOAuth } = await import('../../auth/openai-oauth');
     return OpenAIOAuth.startFlow();
   });
 
-  ipcMain.handle('openai:completeOAuth', async () => {
+  trustedHandle('openai:completeOAuth', async () => {
     // Code-based flow is not used — browser-based PKCE flow auto-handles callback
     return { success: false, error: 'Not supported — use Sign in button' };
   });
 
-  ipcMain.handle('openai:validateOAuth', async () => {
+  trustedHandle('openai:validateOAuth', async () => {
     try {
       const { OpenAIOAuth } = await import('../../auth/openai-oauth');
       const result = await Promise.race([
@@ -183,24 +184,24 @@ export function registerMiscIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('openai:logoutOAuth', async () => {
+  trustedHandle('openai:logoutOAuth', async () => {
     const { OpenAIOAuth } = await import('../../auth/openai-oauth');
     OpenAIOAuth.logout();
     return { success: true };
   });
 
   // Browser control
-  ipcMain.handle('browser:detectInstalled', async () => {
+  trustedHandle('browser:detectInstalled', async () => {
     const { detectInstalledBrowsers } = await import('../../browser/launcher');
     return detectInstalledBrowsers();
   });
 
-  ipcMain.handle('browser:launch', async (_, browserId: string, port?: number) => {
+  trustedHandle('browser:launch', async (_, browserId: string, port?: number) => {
     const { launchBrowser } = await import('../../browser/launcher');
     return launchBrowser(browserId, port || 9222);
   });
 
-  ipcMain.handle('browser:testConnection', async (_, cdpUrl?: string) => {
+  trustedHandle('browser:testConnection', async (_, cdpUrl?: string) => {
     const { testCdpConnection } = await import('../../browser/launcher');
     return testCdpConnection(cdpUrl || 'http://localhost:9222');
   });
@@ -226,7 +227,7 @@ export function registerMiscIPC(deps: IPCDependencies): void {
     return /^[\w/.-]+$/.test(pathPart);
   }
 
-  ipcMain.handle('shell:runCommand', async (event, command: string) => {
+  trustedHandle('shell:runCommand', async (event, command: string) => {
     // Security: only allow calls from local file origins (not remote/injected content)
     const senderUrl = event.sender.getURL();
     if (!senderUrl.startsWith('file://')) {
@@ -262,7 +263,7 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   // Commands (Workflows)
-  ipcMain.handle('commands:list', async (_, sessionId?: string) => {
+  trustedHandle('commands:list', async (_, sessionId?: string) => {
     const memory = getMemory();
     if (sessionId && memory) {
       const sessionMode = memory.getSessionMode(sessionId);
@@ -278,7 +279,7 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   // File attachments
-  ipcMain.handle('attachment:save', async (_, name: string, dataUrl: string) => {
+  trustedHandle('attachment:save', async (_, name: string, dataUrl: string) => {
     try {
       const attachmentsDir = path.join(app.getPath('userData'), 'attachments');
       if (!fs.existsSync(attachmentsDir)) {
@@ -307,7 +308,7 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   // Extract text from Office documents
-  ipcMain.handle('attachment:extract-text', async (_, filePath: string) => {
+  trustedHandle('attachment:extract-text', async (_, filePath: string) => {
     const attachmentsDir = path.join(app.getPath('userData'), 'attachments');
     const resolvedPath = path.resolve(filePath);
     if (!resolvedPath.startsWith(attachmentsDir)) {
@@ -319,15 +320,15 @@ export function registerMiscIPC(deps: IPCDependencies): void {
   });
 
   // Permissions (macOS)
-  ipcMain.handle('permissions:isMacOS', () => {
+  trustedHandle('permissions:isMacOS', () => {
     return isMacOS();
   });
 
-  ipcMain.handle('permissions:checkStatus', (_, types: PermissionType[]) => {
+  trustedHandle('permissions:checkStatus', (_, types: PermissionType[]) => {
     return getPermissionsStatus(types);
   });
 
-  ipcMain.handle('permissions:openSettings', async (_, type: PermissionType) => {
+  trustedHandle('permissions:openSettings', async (_, type: PermissionType) => {
     await openPermissionSettings(type);
   });
 }

@@ -22,7 +22,7 @@
  *    getUserMedia({ audio: true }) and the renderer surfaces the OS prompt
  *    pointing the user at System Settings.
  */
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import { transcribeAudio, isTranscriptionAvailable } from '../../utils/transcribe';
 
 export interface TranscribeAudioResult {
@@ -52,11 +52,11 @@ const SUPPORTED_FORMATS = new Set([
 ]);
 
 export function registerAudioIPC(): void {
-  ipcMain.handle('audio:isAvailable', async (): Promise<{ available: boolean }> => {
+  trustedHandle('audio:isAvailable', async (): Promise<{ available: boolean }> => {
     return { available: isTranscriptionAvailable() };
   });
 
-  ipcMain.handle(
+  trustedHandle(
     'audio:transcribe',
     async (
       _,

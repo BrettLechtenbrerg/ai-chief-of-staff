@@ -116,6 +116,7 @@ export function createWindow(options: CreateWindowOptions): BrowserWindow {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
     show: false,
     ...extraOptions,

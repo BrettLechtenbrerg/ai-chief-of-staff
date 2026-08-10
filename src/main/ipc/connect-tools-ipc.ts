@@ -27,7 +27,8 @@
  * Node binary instead of relying on system Node being on PATH.
  */
 
-import { app, ipcMain } from 'electron';
+import { app } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import { loadMCPConfig, saveMCPConfig } from '../../mcp/config';
 import { getMCPManager } from '../../mcp/manager';
 import type { ExternalMCPServerConfig } from '../../mcp/types';
@@ -461,7 +462,7 @@ export function registerConnectToolsIPC(
   getUserDataDir: () => string,
   getBundledPaths: () => BundledPathDeps,
 ): void {
-  ipcMain.handle('connectTools:listSupported', async (): Promise<SupportedTool[]> => {
+  trustedHandle('connectTools:listSupported', async (): Promise<SupportedTool[]> => {
     const tools = getSupportedTools();
     if (process.platform === 'win32') {
       return tools.filter((t) => !t.unavailableOnWindows);
@@ -469,7 +470,7 @@ export function registerConnectToolsIPC(
     return tools;
   });
 
-  ipcMain.handle('connectTools:getStatus', async (): Promise<ToolStatus[]> => {
+  trustedHandle('connectTools:getStatus', async (): Promise<ToolStatus[]> => {
     const tools = getSupportedTools();
     const dir = getUserDataDir();
     const file = loadMCPConfig(dir);
@@ -498,7 +499,7 @@ export function registerConnectToolsIPC(
     });
   });
 
-  ipcMain.handle(
+  trustedHandle(
     'connectTools:connect',
     async (
       _,
@@ -540,7 +541,7 @@ export function registerConnectToolsIPC(
     },
   );
 
-  ipcMain.handle(
+  trustedHandle(
     'connectTools:disconnect',
     async (_, toolId: SupportedToolId): Promise<{ success: boolean; error?: string }> => {
       const tool = getSupportedTools().find((t) => t.id === toolId);
@@ -572,7 +573,7 @@ export function registerConnectToolsIPC(
     },
   );
 
-  ipcMain.handle(
+  trustedHandle(
     'connectTools:detectMigratable',
     async (): Promise<
       Array<{ toolId: SupportedToolId; mcpServerName: string; currentCommand: string }>
@@ -612,7 +613,7 @@ export function registerConnectToolsIPC(
     },
   );
 
-  ipcMain.handle(
+  trustedHandle(
     'connectTools:adoptManagedFlag',
     async (
       _,
@@ -650,7 +651,7 @@ export function registerConnectToolsIPC(
     },
   );
 
-  ipcMain.handle('connectTools:diagnostics', async (): Promise<Record<string, unknown>> => {
+  trustedHandle('connectTools:diagnostics', async (): Promise<Record<string, unknown>> => {
     const dir = getUserDataDir();
     const tools = getSupportedTools();
     const file = loadMCPConfig(dir);

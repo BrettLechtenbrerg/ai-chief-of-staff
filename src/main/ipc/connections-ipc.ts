@@ -19,7 +19,8 @@
  * so the renderer can't accidentally write garbage.
  */
 
-import { ipcMain, shell } from 'electron';
+import { shell } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import { loadMCPConfig, saveMCPConfig, resolveMCPConfigPath } from '../../mcp/config';
 import { getMCPManager, type MCPServerStatus } from '../../mcp/manager';
 import { MCPClient } from '../../mcp/client';
@@ -110,7 +111,7 @@ function makeSummary(
 }
 
 export function registerConnectionsIPC(getUserDataDir: () => string): void {
-  ipcMain.handle('connections:list', async (): Promise<{ servers: ConnectionSummary[] }> => {
+  trustedHandle('connections:list', async (): Promise<{ servers: ConnectionSummary[] }> => {
     const file = loadMCPConfig(getUserDataDir());
     const statuses = new Map<string, MCPServerStatus>();
     for (const s of getMCPManager().getServerStatuses()) statuses.set(s.serverName, s);
@@ -122,7 +123,7 @@ export function registerConnectionsIPC(getUserDataDir: () => string): void {
     return { servers };
   });
 
-  ipcMain.handle(
+  trustedHandle(
     'connections:add',
     async (_, name: string, input: ConnectionInput): Promise<{ success: boolean }> => {
       const cfg = validateInput(name, input);
@@ -138,7 +139,7 @@ export function registerConnectionsIPC(getUserDataDir: () => string): void {
     },
   );
 
-  ipcMain.handle(
+  trustedHandle(
     'connections:update',
     async (
       _,
@@ -171,7 +172,7 @@ export function registerConnectionsIPC(getUserDataDir: () => string): void {
     },
   );
 
-  ipcMain.handle(
+  trustedHandle(
     'connections:delete',
     async (_, name: string): Promise<{ success: boolean }> => {
       const dir = getUserDataDir();
@@ -187,7 +188,7 @@ export function registerConnectionsIPC(getUserDataDir: () => string): void {
     },
   );
 
-  ipcMain.handle(
+  trustedHandle(
     'connections:toggle',
     async (_, name: string, enabled: boolean): Promise<{ success: boolean }> => {
       const dir = getUserDataDir();
@@ -216,7 +217,7 @@ export function registerConnectionsIPC(getUserDataDir: () => string): void {
     },
   );
 
-  ipcMain.handle(
+  trustedHandle(
     'connections:testConnection',
     async (
       _,
@@ -256,7 +257,7 @@ export function registerConnectionsIPC(getUserDataDir: () => string): void {
     },
   );
 
-  ipcMain.handle('connections:openConfigFile', async (): Promise<{ success: boolean; path: string }> => {
+  trustedHandle('connections:openConfigFile', async (): Promise<{ success: boolean; path: string }> => {
     const dir = getUserDataDir();
     const file = resolveMCPConfigPath(dir);
     // shell.openPath opens with the OS default app (text editor for .json).

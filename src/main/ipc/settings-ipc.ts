@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import { AgentManager } from '../../agent';
 import { resolveAndPersistModel } from '../../agent/resolve-model';
 import { SettingsManager, SETTINGS_SCHEMA } from '../../settings';
@@ -213,13 +213,13 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     }
   };
 
-  ipcMain.handle('settings:getAll', async () => SettingsManager.getAllSafe());
-  ipcMain.handle('settings:getSecretPresence', async () => SettingsManager.getSecretPresence());
+  trustedHandle('settings:getAll', async () => SettingsManager.getAllSafe());
+  trustedHandle('settings:getSecretPresence', async () => SettingsManager.getSecretPresence());
 
-  ipcMain.handle('settings:getThemes', async () => THEMES);
-  ipcMain.handle('settings:getSkin', async () => SettingsManager.get('ui.skin') || 'tsai');
+  trustedHandle('settings:getThemes', async () => THEMES);
+  trustedHandle('settings:getSkin', async () => SettingsManager.get('ui.skin') || 'tsai');
 
-  ipcMain.handle('settings:get', async (_, key: string) => {
+  trustedHandle('settings:get', async (_, key: string) => {
     if (SettingsManager.isSecretKey(key))
       throw new Error('Secret settings cannot be read by a renderer');
     const definition = SETTINGS_SCHEMA.find((setting) => setting.key === key);
@@ -227,7 +227,7 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     return SettingsManager.get(key);
   });
 
-  ipcMain.handle('settings:set', async (_, key: string, value: string) => {
+  trustedHandle('settings:set', async (_, key: string, value: string) => {
     try {
       const definition = SETTINGS_SCHEMA.find((setting) => setting.key === key);
       if (!definition) throw new Error('Unknown setting');
@@ -311,26 +311,26 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('settings:delete', async (_, key: string) => {
+  trustedHandle('settings:delete', async (_, key: string) => {
     const definition = SETTINGS_SCHEMA.find((setting) => setting.key === key);
     if (!definition) throw new Error('Unknown setting');
     if (definition.encrypted) throw new Error('Use the secret settings API for credentials');
     return { success: SettingsManager.delete(key) };
   });
 
-  ipcMain.handle('settings:setSecret', async (_, key: string, value: string) => {
+  trustedHandle('settings:setSecret', async (_, key: string, value: string) => {
     SettingsManager.setSecret(key, value);
     await handleCredentialChange(key);
     return { success: true };
   });
 
-  ipcMain.handle('settings:deleteSecret', async (_, key: string) => {
+  trustedHandle('settings:deleteSecret', async (_, key: string) => {
     const success = SettingsManager.deleteSecret(key);
     await handleCredentialChange(key);
     return { success };
   });
 
-  ipcMain.handle('settings:registerChatUsername', async (_, username: string) => {
+  trustedHandle('settings:registerChatUsername', async (_, username: string) => {
     const normalized = typeof username === 'string' ? username.trim().toLowerCase() : '';
     if (!CHAT_USERNAME_PATTERN.test(normalized)) {
       return { success: false, error: 'Letters, numbers, and dashes only (max 15)' };
@@ -366,66 +366,66 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('settings:schema', async (_, category?: string) => {
+  trustedHandle('settings:schema', async (_, category?: string) => {
     return SettingsManager.getSchema(category);
   });
 
-  ipcMain.handle('settings:isFirstRun', async () => {
+  trustedHandle('settings:isFirstRun', async () => {
     return SettingsManager.isFirstRun();
   });
 
-  ipcMain.handle('settings:resetOnboarding', async () => {
+  trustedHandle('settings:resetOnboarding', async () => {
     SettingsManager.resetOnboarding();
     return { success: true };
   });
 
-  ipcMain.handle('settings:initializeKeychain', async () => {
+  trustedHandle('settings:initializeKeychain', async () => {
     return SettingsManager.initializeKeychain();
   });
 
   // Validation handlers
-  ipcMain.handle('settings:validateAnthropic', async (_, key: string) => {
+  trustedHandle('settings:validateAnthropic', async (_, key: string) => {
     return SettingsManager.validateAnthropicKey(key);
   });
 
-  ipcMain.handle('settings:validateOpenAI', async (_, key: string) => {
+  trustedHandle('settings:validateOpenAI', async (_, key: string) => {
     return SettingsManager.validateOpenAIKey(key);
   });
 
-  ipcMain.handle('settings:validateDataForSEO', async (_, login: string, password: string) => {
+  trustedHandle('settings:validateDataForSEO', async (_, login: string, password: string) => {
     return SettingsManager.validateDataForSEOKey(login, password);
   });
 
-  ipcMain.handle('settings:validateFirecrawl', async (_, apiKey: string) => {
+  trustedHandle('settings:validateFirecrawl', async (_, apiKey: string) => {
     return SettingsManager.validateFirecrawlKey(apiKey);
   });
 
-  ipcMain.handle('settings:validateTelegram', async (_, token: string) => {
+  trustedHandle('settings:validateTelegram', async (_, token: string) => {
     return SettingsManager.validateTelegramToken(token);
   });
 
-  ipcMain.handle('settings:validateMoonshot', async (_, key: string) => {
+  trustedHandle('settings:validateMoonshot', async (_, key: string) => {
     return SettingsManager.validateMoonshotKey(key);
   });
 
-  ipcMain.handle('settings:validateGlm', async (_, key: string) => {
+  trustedHandle('settings:validateGlm', async (_, key: string) => {
     return SettingsManager.validateGlmKey(key);
   });
 
-  ipcMain.handle('settings:validateXiaomi', async (_, key: string) => {
+  trustedHandle('settings:validateXiaomi', async (_, key: string) => {
     return SettingsManager.validateXiaomiKey(key);
   });
 
-  ipcMain.handle('settings:validateMiniMax', async (_, key: string) => {
+  trustedHandle('settings:validateMiniMax', async (_, key: string) => {
     return SettingsManager.validateMiniMaxKey(key);
   });
 
-  ipcMain.handle('settings:validateDeepSeek', async (_, key: string) => {
+  trustedHandle('settings:validateDeepSeek', async (_, key: string) => {
     return SettingsManager.validateDeepSeekKey(key);
   });
 
   // Validate an already-stored key (reads real key from backend, never sent to renderer)
-  ipcMain.handle('settings:validateStoredKey', async (_, provider: string) => {
+  trustedHandle('settings:validateStoredKey', async (_, provider: string) => {
     const keyMap: Record<string, string> = {
       anthropic: 'anthropic.apiKey',
       openai: 'openai.apiKey',
@@ -464,14 +464,14 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('settings:getAvailableModels', async () => {
+  trustedHandle('settings:getAvailableModels', async () => {
     return getAvailableModels();
   });
 
   // Live model discovery — triggered by the "Check for new models" button.
   // Queries Anthropic + OpenAI, merges anything new into the persisted cache,
   // and returns how many new ids were added plus the refreshed model list.
-  ipcMain.handle('settings:discoverModels', async () => {
+  trustedHandle('settings:discoverModels', async () => {
     try {
       const { discoverModels } = await import('../../agent/model-discovery.js');
       const found = await discoverModels();
@@ -505,12 +505,12 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
   });
 
   // Customize - System prompt (read-only, developer-controlled content only)
-  ipcMain.handle('customize:getSystemPrompt', async () => {
+  trustedHandle('customize:getSystemPrompt', async () => {
     return AgentManager.getDeveloperPrompt() || '';
   });
 
   // Customize - Agent modes (read-only, for system prompt tab)
-  ipcMain.handle('customize:getAgentModes', async () => {
+  trustedHandle('customize:getAgentModes', async () => {
     const { getAllModes } = await import('../../agent/agent-modes.js');
     return getAllModes().map((m) => ({
       id: m.id,
@@ -522,7 +522,7 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
   });
 
   // Location and timezone lookup
-  ipcMain.handle('location:lookup', async (_, query: string) => {
+  trustedHandle('location:lookup', async (_, query: string) => {
     if (!query || query.length < 2) return [];
     const cityTimezones = await import('city-timezones');
     const results = cityTimezones.lookupViaCity(query);
@@ -537,7 +537,7 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
       }));
   });
 
-  ipcMain.handle('timezone:list', async () => {
+  trustedHandle('timezone:list', async () => {
     try {
       const timezones = Intl.supportedValuesOf('timeZone');
       return timezones;

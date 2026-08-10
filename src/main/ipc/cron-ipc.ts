@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import type { IPCDependencies } from './types';
 import { AgentManager } from '../../agent';
 import { getWindow } from '../windows';
@@ -6,11 +6,11 @@ import { getWindow } from '../windows';
 export function registerCronIPC(deps: IPCDependencies): void {
   const { getScheduler, updateTrayMenu, WIN } = deps;
 
-  ipcMain.handle('cron:list', async () => {
+  trustedHandle('cron:list', async () => {
     return getScheduler()?.getAllJobs() || [];
   });
 
-  ipcMain.handle(
+  trustedHandle(
     'cron:create',
     async (
       _,
@@ -33,7 +33,7 @@ export function registerCronIPC(deps: IPCDependencies): void {
     }
   );
 
-  ipcMain.handle('cron:delete', async (_, name: string) => {
+  trustedHandle('cron:delete', async (_, name: string) => {
     const scheduler = getScheduler();
     const success = scheduler?.deleteJob(name);
     updateTrayMenu();
@@ -44,7 +44,7 @@ export function registerCronIPC(deps: IPCDependencies): void {
   // deleted and a new one is created (the DB constraint is UNIQUE on name).
   // Same name + new schedule/prompt just re-saves via saveCronJob's
   // INSERT...ON CONFLICT(name) DO UPDATE clause.
-  ipcMain.handle(
+  trustedHandle(
     'cron:update',
     async (
       _,
@@ -81,14 +81,14 @@ export function registerCronIPC(deps: IPCDependencies): void {
     }
   );
 
-  ipcMain.handle('cron:toggle', async (_, name: string, enabled: boolean) => {
+  trustedHandle('cron:toggle', async (_, name: string, enabled: boolean) => {
     const scheduler = getScheduler();
     const success = scheduler?.setJobEnabled(name, enabled);
     updateTrayMenu();
     return { success };
   });
 
-  ipcMain.handle('cron:run', async (_, name: string) => {
+  trustedHandle('cron:run', async (_, name: string) => {
     const scheduler = getScheduler();
     if (!scheduler) return null;
 
@@ -141,7 +141,7 @@ export function registerCronIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('cron:history', async (_, limit: number = 20) => {
+  trustedHandle('cron:history', async (_, limit: number = 20) => {
     return getScheduler()?.getHistory(limit) || [];
   });
 }

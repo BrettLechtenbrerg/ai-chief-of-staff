@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import type { IPCDependencies } from './types';
 import type { BrandInput, BrandUpdate } from '../../memory';
 import { listPublishProfiles } from '../brand-profiles';
@@ -11,16 +11,16 @@ import { listPublishProfiles } from '../brand-profiles';
 export function registerBrandsIPC(deps: IPCDependencies): void {
   const { getMemory } = deps;
 
-  ipcMain.handle('brands:list', async () => {
+  trustedHandle('brands:list', async () => {
     return getMemory()?.listBrands() || [];
   });
 
   // Publishing profiles from ~/dev/_brand-profiles ([] when the dir is absent).
-  ipcMain.handle('brands:listPublishProfiles', async () => {
+  trustedHandle('brands:listPublishProfiles', async () => {
     return listPublishProfiles();
   });
 
-  ipcMain.handle('brands:create', async (_, input: BrandInput) => {
+  trustedHandle('brands:create', async (_, input: BrandInput) => {
     try {
       const memory = getMemory();
       if (!memory) return { success: false, error: 'Memory not ready' };
@@ -31,7 +31,7 @@ export function registerBrandsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('brands:update', async (_, id: string, update: BrandUpdate) => {
+  trustedHandle('brands:update', async (_, id: string, update: BrandUpdate) => {
     try {
       const memory = getMemory();
       if (!memory) return { success: false, error: 'Memory not ready' };
@@ -43,7 +43,7 @@ export function registerBrandsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('brands:delete', async (_, id: string) => {
+  trustedHandle('brands:delete', async (_, id: string) => {
     try {
       const memory = getMemory();
       if (!memory) return { success: false, error: 'Memory not ready' };
@@ -54,7 +54,7 @@ export function registerBrandsIPC(deps: IPCDependencies): void {
     }
   });
 
-  ipcMain.handle('brands:setDefault', async (_, id: string) => {
+  trustedHandle('brands:setDefault', async (_, id: string) => {
     try {
       const memory = getMemory();
       if (!memory) return { success: false, error: 'Memory not ready' };
@@ -66,7 +66,7 @@ export function registerBrandsIPC(deps: IPCDependencies): void {
   });
 
   // Target a session at a specific brand (null clears → uses default brand).
-  ipcMain.handle('sessions:setBrand', async (_, sessionId: string, brandId: string | null) => {
+  trustedHandle('sessions:setBrand', async (_, sessionId: string, brandId: string | null) => {
     try {
       const memory = getMemory();
       if (!memory) return { success: false, error: 'Memory not ready' };

@@ -12,7 +12,7 @@
  *    runaway extraction on a hostile PDF.
  *  - Returns text only — never writes anything to disk.
  */
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -72,7 +72,7 @@ async function extractPdf(filePath: string): Promise<string> {
 }
 
 export function registerContextIPC(): void {
-  ipcMain.handle('context:extractText', async (_, filePath: string): Promise<ExtractTextResult> => {
+  trustedHandle('context:extractText', async (_, filePath: string): Promise<ExtractTextResult> => {
     try {
       if (typeof filePath !== 'string' || !filePath) {
         return { success: false, error: 'No file path provided.' };

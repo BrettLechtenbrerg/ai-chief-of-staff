@@ -1,4 +1,4 @@
-import { app, Notification, globalShortcut, powerMonitor, ipcMain, dialog } from 'electron';
+import { app, Notification, globalShortcut, powerMonitor, dialog, session } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -20,6 +20,8 @@ import { setupBirthdayCronJobs } from './birthday';
 import { setupSeoCronJobs } from './seo-crons';
 import { createTray, updateTrayMenu, initTray } from './tray';
 import { getMCPManager } from '../mcp/manager';
+import { installPermissionPolicy } from './permission-policy.js';
+import { trustedHandle } from './ipc/trusted-ipc.js';
 import {
   registerAgentIPC,
   registerSessionsIPC,
@@ -713,7 +715,7 @@ async function restartAgent(): Promise<void> {
 
 app.whenReady().then(async () => {
   console.log('[Main] App ready, starting initialization...');
-
+  installPermissionPolicy(session.defaultSession);
   // Register ALL IPC handlers FIRST, before anything that can throw (native
   // SQLite opens, migrations, credential file setup). Registration only binds
   // channels — handlers read mutable state through getters (getMemory(), the
@@ -722,7 +724,7 @@ app.whenReady().then(async () => {
   // handlers registered, the renderer got "No handler registered for ..." on
   // every call, and ipc-error-handler.js mis-toasted "install out of date"
   // (a beta tester hit exactly this).
-  ipcMain.handle('app:getStartupError', () => startupError);
+  trustedHandle('app:getStartupError', () => startupError);
   try {
     setupIPC();
     setupUpdaterIPC();

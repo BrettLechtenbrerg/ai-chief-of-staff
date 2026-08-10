@@ -17,24 +17,24 @@
  *                          tool cards into the "Reconnect needed" state.
  */
 
-import { ipcMain } from 'electron';
+import { trustedHandle } from './trusted-ipc.js';
 import { GoogleOAuth, type GoogleTokenStatus, type FlowResult } from '../../auth/google-oauth';
 
 export function registerGoogleOAuthIPC(): void {
-  ipcMain.handle('google-oauth:start', async (): Promise<FlowResult> => {
+  trustedHandle('google-oauth:start', async (): Promise<FlowResult> => {
     return GoogleOAuth.startFlow();
   });
 
-  ipcMain.handle('google-oauth:status', async (): Promise<GoogleTokenStatus> => {
+  trustedHandle('google-oauth:status', async (): Promise<GoogleTokenStatus> => {
     return GoogleOAuth.getStatus();
   });
 
-  ipcMain.handle('google-oauth:disconnect', async (): Promise<{ success: boolean }> => {
+  trustedHandle('google-oauth:disconnect', async (): Promise<{ success: boolean }> => {
     await GoogleOAuth.disconnect();
     return { success: true };
   });
 
-  ipcMain.handle('google-oauth:ensureValid', async (): Promise<{ ok: boolean }> => {
+  trustedHandle('google-oauth:ensureValid', async (): Promise<{ ok: boolean }> => {
     const ok = await GoogleOAuth.ensureValidToken();
     return { ok };
   });
