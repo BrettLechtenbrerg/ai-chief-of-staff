@@ -49,13 +49,13 @@ Two modes:
 - **Chrome mode:** connects to your actual browser with all your logged-in sessions (Gmail, GitHub, whatever) — no re-authentication needed
 
 ### Multi-session isolation
-Up to 5 separate conversation threads, each with completely isolated memory. Work stuff doesn't bleed into personal stuff.
+Up to 20 separate conversation threads, each with isolated history. Work stuff doesn't bleed into personal stuff.
 
 ### Telegram integration (optional)
-Same brain, different interface. Talk to it from your phone with full access to memory and tools.
+Same brain, different interface. Talk to it from your phone with the unattended remote-safe tool policy; actions requiring interactive approval fail closed.
 
 ### 40+ skill integrations
-Notion, GitHub, Slack, Apple Notes, Apple Reminders, Google Workspace, Trello, Obsidian, and more. Plus MCP server support for adding your own. Full terminal access when you need it.
+Notion, GitHub, Slack, Apple Notes, Apple Reminders, Google Workspace, Trello, Obsidian, and more. Plus MCP server support for adding your own. Terminal and file tools stay within approved workspaces and require approval for sensitive capabilities.
 
 ### Connections (MCP servers)
 Settings → Connections shows every external tool your AI can use. Add/edit/disable any MCP server, test the connection before saving, and see live status (Ready / Failed / Disabled) at a glance. Edits are atomic — a crash mid-save leaves your previous config intact. Same `mcp-servers.json` shape as Claude Desktop, so you can copy configs between the two.
@@ -97,7 +97,7 @@ Tell it: *"Set up a daily briefing at 6 AM for [your city] that pulls my Google 
 - Live voice uses OpenAI `gpt-realtime-2.1` for speech/VAD/barge-in while the normal ACOS agent remains the reasoning/tool brain. If Realtime startup fails, ACOS falls back to record → transcription → normal agent turn → local system speech.
 - Realtime/transcription audio is sent to OpenAI. The recording indicator stays visible while the microphone is active.
 - Spoken `approve` / `deny` can resolve a visible pending tool approval; model-generated text cannot approve its own action.
-- Conversations, memories, routines, and settings remain in local SQLite. API secrets are `safeStorage`-encrypted and never returned to renderer JavaScript.
+- Conversations, memories, routines, and settings remain local. Provider credentials managed in Settings are `safeStorage`-encrypted and never returned to renderer JavaScript; connector config/tokens remain private app-data files protected by user-only permissions.
 - ACOS creates seven rotating WAL-consistent local backups. Enable FileVault or BitLocker/Device Encryption for whole-database protection; see [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md) and [`docs/VOICE.md`](docs/VOICE.md).
 
 ---

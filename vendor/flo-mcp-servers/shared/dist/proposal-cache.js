@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import fs from 'fs';
 import path from 'path';
 
 const DB_PATH =
@@ -8,7 +9,11 @@ export class ProposalCache {
   db;
 
   constructor() {
+    const directory = path.dirname(DB_PATH);
+    fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+    fs.chmodSync(directory, 0o700);
     this.db = new Database(DB_PATH);
+    this.db.pragma('journal_mode = WAL');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS proposals (
         id TEXT PRIMARY KEY,
@@ -26,6 +31,11 @@ export class ProposalCache {
       CREATE INDEX IF NOT EXISTS idx_executed ON proposals(executed);
       CREATE INDEX IF NOT EXISTS idx_created_at ON proposals(created_at);
     `);
+    fs.chmodSync(DB_PATH, 0o600);
+    for (const suffix of ['-wal', '-shm']) {
+      const sidecar = `${DB_PATH}${suffix}`;
+      if (fs.existsSync(sidecar)) fs.chmodSync(sidecar, 0o600);
+    }
   }
 
   saveProposal(proposal) {

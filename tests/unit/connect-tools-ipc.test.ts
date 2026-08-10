@@ -153,7 +153,7 @@ describe('connect-tools-ipc', () => {
         paths,
       );
       expect(entry.command).toBe('npx');
-      expect(entry.args).toEqual(['-y', 'dataforseo-mcp-server']);
+      expect(entry.args).toEqual(['-y', 'dataforseo-mcp-server@2.9.11']);
       expect(entry.env!.DATAFORSEO_USERNAME).toBe('u');
       expect(entry.env!.DATAFORSEO_PASSWORD).toBe('p');
     });
@@ -163,7 +163,7 @@ describe('connect-tools-ipc', () => {
       const fc = tools.find((t) => t.id === 'firecrawl')!;
       const entry = __test__.buildEntry(fc, { apiKey: 'fc-abc' }, paths);
       expect(entry.command).toBe('npx');
-      expect(entry.args).toEqual(['-y', 'firecrawl-mcp']);
+      expect(entry.args).toEqual(['-y', 'firecrawl-mcp@3.23.8']);
       expect(entry.env!.FIRECRAWL_API_KEY).toBe('fc-abc');
     });
 
@@ -176,12 +176,12 @@ describe('connect-tools-ipc', () => {
       // registration — Jun 9 spike). OAuth happens in the system browser, so
       // there's no env/secret in the entry.
       expect(entry.command).toBe('npx');
-      expect(entry.args).toContain('mcp-remote');
+      expect(entry.args).toContain('mcp-remote@0.1.38');
       expect(entry.args).toContain('https://mcp.pipeboard.co/meta-ads-mcp');
       // First-run browser OAuth easily exceeds mcp-remote's 30s default.
       const args = entry.args!;
       expect(args[args.indexOf('--auth-timeout') + 1]).toBe('120');
-      expect(entry.env).toBeUndefined();
+      expect(entry.env?.MCP_REMOTE_CONFIG_DIR).toBe(path.join(os.tmpdir(), 'mcp-remote'));
       expect((entry as Record<string, unknown>)._acos_managed).toBe(true);
       expect((entry as Record<string, unknown>)._acos_tool_id).toBe('meta-ads');
     });

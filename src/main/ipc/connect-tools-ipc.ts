@@ -133,6 +133,15 @@ type ConnectPayload =
 const ACOS_MANAGED_FLAG = '_acos_managed';
 const ACOS_TOOL_ID_FLAG = '_acos_tool_id';
 
+// Runtime npx connectors must always resolve immutable npm versions. Mutable
+// package tags would let a later publisher change code executed by existing
+// installs without an ACOS release or review.
+const PINNED_NPX_PACKAGES = Object.freeze({
+  dataForSeo: 'dataforseo-mcp-server@2.9.11',
+  firecrawl: 'firecrawl-mcp@3.23.8',
+  mcpRemote: 'mcp-remote@0.1.38',
+});
+
 /**
  * The curated menu shipped in v1. Order matches the panel card order
  * (Google first because it unlocks 3 cards at once).
@@ -299,7 +308,7 @@ function buildEntry(
       const p = payload as ConnectPayloadDataforseo;
       return {
         command: 'npx',
-        args: ['-y', 'dataforseo-mcp-server'],
+        args: ['-y', PINNED_NPX_PACKAGES.dataForSeo],
         env: {
           DATAFORSEO_USERNAME: p.username,
           DATAFORSEO_PASSWORD: p.password,
@@ -311,7 +320,7 @@ function buildEntry(
       const p = payload as ConnectPayloadApiKey;
       return {
         command: 'npx',
-        args: ['-y', 'firecrawl-mcp'],
+        args: ['-y', PINNED_NPX_PACKAGES.firecrawl],
         env: { FIRECRAWL_API_KEY: p.apiKey },
         ...acosMeta,
       };
@@ -322,18 +331,21 @@ function buildEntry(
       // dynamic client registration ("Dynamic registration is not available
       // for this client"), so we use Pipeboard's hosted Meta Ads MCP, whose
       // OAuth flow works with mcp-remote's localhost callback. Tokens cache
-      // in ~/.mcp-auth so restarts are silent. --auth-timeout 120 because
-      // the browser OAuth (Pipeboard login + Meta connect) easily exceeds
-      // the 30s default on first run.
+      // in the app's private user-data directory so restarts are silent.
+      // --auth-timeout 120 because the browser OAuth (Pipeboard login + Meta
+      // connect) easily exceeds the 30s default on first run.
       return {
         command: 'npx',
         args: [
           '-y',
-          'mcp-remote',
+          PINNED_NPX_PACKAGES.mcpRemote,
           'https://mcp.pipeboard.co/meta-ads-mcp',
           '--auth-timeout',
           '120',
         ],
+        env: {
+          MCP_REMOTE_CONFIG_DIR: path.join(app.getPath('userData'), 'mcp-remote'),
+        },
         ...acosMeta,
       };
     }

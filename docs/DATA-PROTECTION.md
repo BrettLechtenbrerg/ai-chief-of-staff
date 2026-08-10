@@ -6,8 +6,9 @@ AI Chief of Staff stores conversations, memories, routines, tasks, facts, and se
 
 - On macOS/Linux, ACOS enforces `0700` on its user-data and backup directories and `0600` on the SQLite database, WAL, SHM, rotating backups, and startup-health marker.
 - On Windows, ACOS uses the current user's private AppData directory and inherited user ACL. The Windows rescue collector reports the effective database ACL for diagnosis.
-- Provider secrets are encrypted with Electron `safeStorage`; ordinary conversation/database content is not independently field-encrypted.
-- Enable **FileVault** on macOS or **BitLocker / Device Encryption** on Windows for whole-database protection at rest. ACOS file permissions do not replace full-disk encryption or a locked OS account.
+- Provider secrets managed in Settings are encrypted with Electron `safeStorage`; ordinary conversation/database content is not independently field-encrypted.
+- MCP connector configuration, OAuth caches, and proposal records are not `safeStorage` field-encrypted. They stay under private per-user app data; ACOS enforces `0600`/`0700` where POSIX modes exist, and Windows relies on the user's inherited AppData ACL.
+- Enable **FileVault** on macOS or **BitLocker / Device Encryption** on Windows for whole-database and connector-secret protection at rest. ACOS file permissions do not replace full-disk encryption or a locked OS account.
 
 ## Automatic backups
 

@@ -30,4 +30,11 @@ const oauthSource = fs.readFileSync(oauthPath, 'utf8');
 if (!oauthSource.includes('ACOS vendor patch') || !oauthSource.includes('FLO_TOKEN_PATH')) {
   throw new Error('Reproducible Flo shared OAuth patch is missing after vendor install.');
 }
+const proposalSource = fs.readFileSync(
+  path.join(path.dirname(oauthPath), 'proposal-cache.js'),
+  'utf8'
+);
+if (!proposalSource.includes('FLO_PROPOSALS_PATH') || !proposalSource.includes('0o600')) {
+  throw new Error('Reproducible Flo private proposal-storage patch is missing after vendor install.');
+}
 console.log('[install-vendor-deps] Locked Flo MCP runtime dependencies installed and verified.');

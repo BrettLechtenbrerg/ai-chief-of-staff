@@ -36,5 +36,14 @@ describe('beta.23 release documentation', () => {
     expect(recovery).toContain('CERTIFICATE_P12');
     expect(recovery).toContain('WIN_CSC_LINK');
     expect(recovery).toContain('Do not tag or publish');
+    expect(recovery).toContain('it is not protected yet');
+  });
+
+  it('documents deferred ASAR/fuse work and immutable runtime connectors', () => {
+    const audit = read('docs/SECURITY-RELEASE-AUDIT-2026-08-10.md');
+    expect(audit).toContain('deferred to beta.24');
+    expect(audit).toContain('dataforseo-mcp-server@2.9.11');
+    expect(audit).toContain('firecrawl-mcp@3.23.8');
+    expect(audit).toContain('mcp-remote@0.1.38');
   });
 });

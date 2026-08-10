@@ -4,11 +4,13 @@
 # Usage: ./refresh-vendor.sh [FLO_REPO_PATH]
 #   FLO_REPO_PATH defaults to ~/flo-assistant
 #
-# Re-runs after upstream changes:
+# Re-runs after reviewed upstream changes:
 #   1. Copy each server's dist/index.js into ./<server>/index.js
-#   2. Copy @flo/shared dist/*.js into node_modules/@flo/shared/dist/
-#   3. Re-apply the FLO_TOKEN_PATH / FLO_CREDENTIALS_PATH patch to oauth.js
-#   4. Run `npm install` for the runtime deps (googleapis, mcp sdk, zod)
+#   2. Preserve the tracked, security-patched ./shared package
+#   3. Reinstall exact runtime dependencies from package-lock.json
+#
+# Upstream shared changes must be reviewed and ported manually; this script never
+# overwrites ACOS's OAuth-path and private-proposal-storage patches.
 #
 # Idempotent — safe to re-run.
 
@@ -36,38 +38,30 @@ for srv in gmail calendar docs bookmarks; do
   echo "  ✓ $srv/index.js"
 done
 
-# 2. Install runtime deps (googleapis, mcp sdk, zod).
-( cd "$VENDOR_DIR" && npm install --no-package-lock --no-audit --no-fund --omit=dev --ignore-scripts >/dev/null )
-echo "  ✓ node_modules installed"
+# 2. Install the exact locked runtime graph. The local @flo/shared dependency
+# comes from ./shared, so npm ci reproduces the ACOS patches in node_modules.
+( cd "$VENDOR_DIR" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund >/dev/null )
+echo "  ✓ locked node_modules installed"
 
-# 3. Re-vendor @flo/shared compiled output (must happen AFTER npm install,
-# since @flo/shared isn't on npm — npm install removes anything not in
-# package.json).
-mkdir -p "$VENDOR_DIR/node_modules/@flo/shared/dist"
-cp "$FLO_REPO/shared/dist/"*.js "$VENDOR_DIR/node_modules/@flo/shared/dist/"
-cp "$FLO_REPO/shared/package.json" "$VENDOR_DIR/node_modules/@flo/shared/package.json"
-echo "  ✓ @flo/shared vendored"
-
-# 4. Re-apply the env-var override patch to oauth.js.
+# 3. Fail closed if either security patch disappeared.
 OAUTH_FILE="$VENDOR_DIR/node_modules/@flo/shared/dist/oauth.js"
-if grep -q "ACOS vendor patch" "$OAUTH_FILE"; then
-  echo "  ✓ oauth.js already patched"
-else
-  # Use a Node one-liner so we don't depend on GNU vs BSD sed differences.
-  node -e "
-    const fs = require('fs');
-    const f = '$OAUTH_FILE';
-    let s = fs.readFileSync(f, 'utf8');
-    const before = \"const TOKEN_PATH = path.join(process.env.HOME || '', '.flo', 'tokens.json');\\nconst CREDENTIALS_PATH = path.join(process.env.HOME || '', '.flo', 'credentials.json');\";
-    const after = \"// ACOS vendor patch (plan §6): honor FLO_TOKEN_PATH and FLO_CREDENTIALS_PATH.\\nconst TOKEN_PATH = process.env.FLO_TOKEN_PATH || path.join(process.env.HOME || '', '.flo', 'tokens.json');\\nconst CREDENTIALS_PATH = process.env.FLO_CREDENTIALS_PATH || path.join(process.env.HOME || '', '.flo', 'credentials.json');\";
-    if (!s.includes(before)) {
-      console.error('Upstream oauth.js no longer matches the expected pattern — patch manually.');
-      process.exit(2);
-    }
-    s = s.replace(before, after);
-    fs.writeFileSync(f, s);
-  "
-  echo "  ✓ oauth.js patched"
+PROPOSAL_FILE="$VENDOR_DIR/node_modules/@flo/shared/dist/proposal-cache.js"
+grep -q "ACOS vendor patch" "$OAUTH_FILE" || {
+  echo "Error: tracked FLO_TOKEN_PATH/FLO_CREDENTIALS_PATH patch is missing" >&2
+  exit 2
+}
+grep -q "FLO_PROPOSALS_PATH" "$PROPOSAL_FILE" || {
+  echo "Error: tracked private proposal path patch is missing" >&2
+  exit 2
+}
+grep -q "0o600" "$PROPOSAL_FILE" || {
+  echo "Error: tracked private proposal permission patch is missing" >&2
+  exit 2
+}
+echo "  ✓ tracked @flo/shared security patches verified"
+
+if ! diff -qr "$FLO_REPO/shared/dist" "$VENDOR_DIR/shared/dist" >/dev/null 2>&1; then
+  echo "  ! Upstream shared output differs; review and port changes manually into ./shared/dist"
 fi
 
 echo "==> Vendor refresh complete."

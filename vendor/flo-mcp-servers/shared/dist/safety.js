@@ -9,9 +9,12 @@ export class SafetyChecker {
     const violations = [];
     const allRecipients = [...to, ...cc, ...bcc];
     if (!this.config.allow_external_recipients) {
+      const allowedDomains = new Set(
+        this.config.allowed_domains.map((domain) => String(domain).trim().toLowerCase()),
+      );
       const external = allRecipients.filter((email) => {
-        const domain = email.split('@')[1];
-        return !this.config.allowed_domains.includes(domain);
+        const domain = String(email).split('@').pop()?.trim().toLowerCase();
+        return !domain || !allowedDomains.has(domain);
       });
       if (external.length > 0) {
         violations.push(`external_recipients_blocked: ${external.join(', ')}`);

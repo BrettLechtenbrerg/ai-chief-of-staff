@@ -28,7 +28,7 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > **Build/ship reminders (learned the hard way):**
 > - **Versioning is tag-driven.** `scripts/sync-version.cjs` overwrites `package.json` version from the latest git tag. To cut beta.N: commit code → `git tag -a v1.0.0-beta.N` → THEN build (prebuild's sync-version stamps it). Editing the version by hand gets reverted by sync-version.
 > - **Never hot-copy files into the installed signed `.app`.** It invalidates the code signature, and macOS then silently denies entitlement-gated features (mic/voice → phantom "you", and others) and can throw Gatekeeper "damaged." Ship a real signed build or use the auto-updater instead.
-> - **The release pipeline is tag-first and manually published.** GitHub Actions uses `npm ci`, full gates, native-module architecture checks, checksums, macOS signing/notarization, Windows Authenticode validation, and a protected `release` environment. Unsigned Windows artifacts cannot publish.
+> - **The release pipeline is tag-first and manually published.** GitHub Actions uses `npm ci`, full gates, native-module architecture checks, checksums, macOS signing/notarization, Windows Authenticode validation, a manual `publish` input, and a declared `release` environment. Configure required reviewers on that environment before beta.23; it is not protected yet. Unsigned Windows artifacts cannot publish.
 > - **Do not use `gh release create` as an unverified bulk uploader.** Let the workflow download its own build artifacts, verify both SHA-256 manifests, then publish the prerelease from the exact tag.
 >
 > **Important rules:**

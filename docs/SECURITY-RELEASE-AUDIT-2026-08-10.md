@@ -18,7 +18,7 @@ Recorded on 2026-08-10 before implementation:
 - Tester page: `https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app`
 - Repository URLs and release assets are served directly by GitHub Releases; the website does not proxy installer bytes
 
-## Confirmed security findings (baseline; remediated on current `main`)
+## Confirmed security findings (baseline; remediated or explicitly dispositioned on current `main`)
 
 | Severity | Boundary | Confirmed risk | Required release gate |
 | --- | --- | --- | --- |
@@ -31,6 +31,12 @@ Recorded on 2026-08-10 before implementation:
 | Medium | Logging | Tool wrappers log the first 200 input characters, exposing private content in logs. | Log only redacted structural metadata, status, and duration. |
 | Medium | Electron hardening | Electron 41, implicit permission behavior, sandbox ambiguity, ASAR off, and unhardened fuses increase attack surface. | Electron 43, explicit sandbox, deny-by-default permissions, then ASAR/fuses only after packaged compatibility tests. |
 | Medium | CI/release | Broad write permissions, mutable action tags, `npm install`, stale artifact names, and no native/checksum/manual gate undermine provenance. | Least privilege, immutable SHAs, `npm ci`, native checks, checksums, current names, and manual publish approval. |
+
+### Explicit platform-hardening disposition
+
+Electron 43, explicit renderer sandboxing, deny-by-default permissions, and chat-only microphone access are implemented. ASAR/integrity fuses remain deferred to beta.24 because beta.23 still relies on unpacked bundled MCP/native resources and `RunAsNode`; they must not be enabled until packaged MCP, ffmpeg, browser automation, native-module, and updater compatibility is proven under that layout. This is a documented deferral from the approved plan, not a bypassed beta.23 gate.
+
+Runtime `npx` connectors now use exact pinned package versions (`dataforseo-mcp-server@2.9.11`, `firecrawl-mcp@3.23.8`, and `mcp-remote@0.1.38`) rather than mutable latest tags. Version updates require a reviewed ACOS release.
 
 ## Dependency audit
 
@@ -85,5 +91,8 @@ The isolated local Docker path, native Windows x64 CI package, PE machine valida
 - [x] Production and nested Flo runtime audits report zero advisories.
 - [x] Typecheck, lint, 1,315 tests, Node ABI sequence, Electron ABI restoration, and native-module verification pass.
 - [x] Local packaged x64 Mac startup and native Windows x64 package/checksum/updater gates pass.
+- [x] Mutable runtime connector packages are pinned to exact reviewed versions.
+- [x] ASAR/integrity fuse work is explicitly deferred to beta.24 pending packaged compatibility proof; `RunAsNode` remains required for bundled MCP servers.
 - [ ] Configure GitHub macOS certificate/notary and Windows production Authenticode secrets.
+- [ ] Configure required reviewers on the declared but currently unprotected GitHub `release` environment.
 - [ ] Create the tag before builds, then complete real Mac + Windows tester acceptance before publication/website promotion.

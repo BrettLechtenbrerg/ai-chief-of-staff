@@ -6,9 +6,9 @@
  * `<userData>/google-tokens.json` and `<userData>/google-credentials.json`
  * so they read ACOS-managed auth state instead of `~/.flo/`.
  *
- * If this test fails after a vendor refresh, run
- * `dev/ai-chief-of-staff/vendor/flo-mcp-servers/refresh-vendor.sh` to
- * re-apply the patch idempotently.
+ * If this test fails after a vendor refresh, restore the tracked ./shared
+ * security patch. refresh-vendor.sh intentionally fails closed rather than
+ * rewriting it from mutable upstream output.
  */
 
 import * as fs from 'fs';
@@ -18,6 +18,10 @@ import { describe, expect, it } from 'vitest';
 const VENDORED_OAUTH = path.resolve(
   __dirname,
   '../../vendor/flo-mcp-servers/node_modules/@flo/shared/dist/oauth.js',
+);
+const TRACKED_PROPOSAL_CACHE = path.resolve(
+  __dirname,
+  '../../vendor/flo-mcp-servers/shared/dist/proposal-cache.js',
 );
 
 describe('vendored @flo/shared/dist/oauth.js env-var override', () => {
@@ -43,5 +47,13 @@ describe('vendored @flo/shared/dist/oauth.js env-var override', () => {
     const src = fs.readFileSync(VENDORED_OAUTH, 'utf8');
     expect(src).toContain('export class OAuthManager');
     expect(src).toContain('export const oauthManager');
+  });
+
+  it('keeps proposal data in the app-selected path with private permissions', () => {
+    const src = fs.readFileSync(TRACKED_PROPOSAL_CACHE, 'utf8');
+    expect(src).toContain('FLO_PROPOSALS_PATH');
+    expect(src).toContain("mode: 0o700");
+    expect(src).toContain('fs.chmodSync(DB_PATH, 0o600)');
+    expect(src).toContain("this.db.pragma('journal_mode = WAL')");
   });
 });
