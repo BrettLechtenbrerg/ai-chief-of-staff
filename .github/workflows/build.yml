@@ -11,6 +11,11 @@ on:
         required: true
         type: boolean
         default: false
+      rescue_only:
+        description: 'Run only the lightweight Windows rescue-collector validation'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,8 +25,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify-windows-rescue:
+    name: Windows rescue collector smoke test
+    if: github.event_name == 'workflow_dispatch' && inputs.rescue_only
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Run collector
+        shell: pwsh
+        run: |
+          ./scripts/tester-rescue.ps1 -OutputDirectory "$env:RUNNER_TEMP"
+          $bundle = Get-ChildItem "$env:RUNNER_TEMP/AI-Chief-of-Staff-rescue-*.zip" | Select-Object -First 1
+          if (-not $bundle -or $bundle.Length -eq 0) { throw 'Rescue collector bundle is missing or empty.' }
+          Write-Host "Verified $($bundle.Name) ($($bundle.Length) bytes)"
+
   build-mac:
     name: macOS signed build
+    if: github.event_name != 'workflow_dispatch' || !inputs.rescue_only
     runs-on: macos-latest
     permissions:
       contents: read
@@ -101,6 +124,7 @@ jobs:
 
   build-win-x64:
     name: Windows x64 native build
+    if: github.event_name != 'workflow_dispatch' || !inputs.rescue_only
     runs-on: windows-latest
     permissions:
       contents: read
@@ -155,10 +179,19 @@ jobs:
             Write-Warning 'WIN_CSC_LINK is not configured; production publication remains blocked on code signing.'
           }
 
+      - name: Verify tester rescue collector on Windows runner
+        shell: pwsh
+        run: |
+          ./scripts/tester-rescue.ps1 -OutputDirectory "$env:RUNNER_TEMP"
+          if (-not (Get-ChildItem "$env:RUNNER_TEMP/AI-Chief-of-Staff-rescue-*.zip")) {
+            throw 'Windows rescue collector did not produce a bundle.'
+          }
+
       - name: Create Windows checksums
         shell: pwsh
         run: |
-          $files = Get-ChildItem release/AI-Chief-of-Staff-*-x64-setup.exe, release/AI-Chief-of-Staff-*-x64-win.zip
+          Copy-Item scripts/tester-rescue.ps1 release/tester-rescue.ps1
+          $files = Get-ChildItem release/AI-Chief-of-Staff-*-x64-setup.exe, release/AI-Chief-of-Staff-*-x64-win.zip, release/tester-rescue.ps1
           $lines = $files | ForEach-Object {
             $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
             "$hash  $($_.Name)"
@@ -176,6 +209,7 @@ jobs:
             release/latest.yml
             release/SHA256SUMS-windows-x64.txt
             release/WINDOWS-SIGNING-STATUS.txt
+            release/tester-rescue.ps1
 
   publish-prerelease:
     name: Manual prerelease publication
@@ -223,6 +257,7 @@ jobs:
             release/latest-mac.yml
             release/latest.yml
             release/SHA256SUMS-*.txt
+            release/tester-rescue.ps1
           body: |
             ## AI Chief of Staff ${{ github.ref_name }}
 

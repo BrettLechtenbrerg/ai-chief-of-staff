@@ -66,6 +66,28 @@ let telegramBot: TelegramBot | null = null;
 // database or an unloadable native module) instead of the misleading
 // "install out of date" toast that fires on missing IPC handlers.
 let startupError: string | null = null;
+const startupHealth = {
+  version: app.getVersion(),
+  startedAt: new Date().toISOString(),
+  ipcRegistered: false,
+  sqliteLoaded: false,
+  initializationComplete: false,
+  error: null as string | null,
+};
+
+function writeStartupHealth(update: Partial<typeof startupHealth>): void {
+  Object.assign(startupHealth, update);
+  try {
+    const destination = path.join(app.getPath('userData'), 'startup-health.json');
+    const temporary = `${destination}.tmp`;
+    fs.mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 });
+    fs.writeFileSync(temporary, JSON.stringify(startupHealth, null, 2), { mode: 0o600 });
+    fs.renameSync(temporary, destination);
+    fs.chmodSync(destination, 0o600);
+  } catch (error) {
+    console.warn('[Main] Could not write startup health marker:', error);
+  }
+}
 // tray menu updates are event-driven via IPC handlers
 let modelChangedHandler: ((model: string) => void) | null = null;
 
@@ -744,9 +766,11 @@ app.whenReady().then(async () => {
     setupIPC();
     setupUpdaterIPC();
     console.log('[Main] IPC handlers registered');
+    writeStartupHealth({ ipcRegistered: true });
   } catch (err) {
     startupError = err instanceof Error ? err.message : String(err);
     console.error('[Main] FATAL ERROR registering IPC:', err);
+    writeStartupHealth({ error: startupError });
   }
 
   try {
@@ -828,6 +852,7 @@ app.whenReady().then(async () => {
     console.log('[Main] Initializing memory...');
     memory = new MemoryManager(dbPath);
     console.log('[Main] Memory initialized');
+    writeStartupHealth({ sqliteLoaded: true });
 
     console.log('[Main] Creating tray...');
     initTray({
@@ -881,9 +906,11 @@ app.whenReady().then(async () => {
 
     // Tray menu is updated event-driven (after messages, cron changes, etc.)
     // No polling needed — updateTrayMenu() is called directly by IPC handlers
+    writeStartupHealth({ initializationComplete: true, error: null });
   } catch (error) {
     startupError = error instanceof Error ? error.message : String(error);
     console.error('[Main] FATAL ERROR during initialization:', error);
+    writeStartupHealth({ error: startupError });
     // Surface the real failure immediately — a tray app with a broken main
     // process otherwise looks "open but ignoring you".
     dialog.showErrorBox(
