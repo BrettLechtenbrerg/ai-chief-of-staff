@@ -91,6 +91,8 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ACOS_GOOGLE_CLIENT_ID: ${{ secrets.ACOS_GOOGLE_CLIENT_ID }}
+          ACOS_GOOGLE_CLIENT_SECRET: ${{ secrets.ACOS_GOOGLE_CLIENT_SECRET }}
           BUILD_KIND: release
         shell: bash
         run: |
@@ -126,8 +128,10 @@ jobs:
     name: Windows x64 native build
     if: github.event_name != 'workflow_dispatch' || !inputs.rescue_only
     runs-on: windows-latest
+    environment: release
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Check out release source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -156,28 +160,44 @@ jobs:
           node scripts/check-native.cjs
           node -e "const Database=require('better-sqlite3'); const db=new Database(':memory:'); db.prepare('select 1').get(); db.close()"
 
-      - name: Build Windows x64 and verify PE architecture
+      - name: Sign in to Azure with GitHub OIDC
+        uses: Azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build, sign, and verify Windows x64
         env:
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          ACOS_GOOGLE_CLIENT_ID: ${{ secrets.ACOS_GOOGLE_CLIENT_ID }}
+          ACOS_GOOGLE_CLIENT_SECRET: ${{ secrets.ACOS_GOOGLE_CLIENT_SECRET }}
+          TRUSTED_SIGNING_ENDPOINT: ${{ vars.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT: ${{ vars.TRUSTED_SIGNING_ACCOUNT }}
+          TRUSTED_SIGNING_PROFILE: ${{ vars.TRUSTED_SIGNING_PROFILE }}
           BUILD_KIND: release
         shell: pwsh
         run: |
+          if (-not $env:TRUSTED_SIGNING_ENDPOINT -or -not $env:TRUSTED_SIGNING_ACCOUNT -or -not $env:TRUSTED_SIGNING_PROFILE) {
+            throw 'Azure Artifact Signing configuration is incomplete.'
+          }
           npm run build
-          npx electron-builder --win --x64 -p never 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/package-win.log"
+          npx electron-builder --win --x64 -p never `
+            --config.win.azureSignOptions.endpoint="$env:TRUSTED_SIGNING_ENDPOINT" `
+            --config.win.azureSignOptions.certificateProfileName="$env:TRUSTED_SIGNING_PROFILE" `
+            --config.win.azureSignOptions.codeSigningAccountName="$env:TRUSTED_SIGNING_ACCOUNT" `
+            --config.win.azureSignOptions.publisherName="Brett Lechtenberg" `
+            2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/package-win.log"
           if (-not (Select-String -Quiet -Path "$env:RUNNER_TEMP/package-win.log" -Pattern '\[verify-native-modules\] OK')) {
             throw 'Native-module afterPack verification did not run.'
           }
           $installer = Get-ChildItem release/AI-Chief-of-Staff-*-x64-setup.exe | Select-Object -First 1
           if (-not $installer) { throw 'x64 installer was not produced.' }
-          if ($env:WIN_CSC_LINK) {
-            $signature = Get-AuthenticodeSignature $installer.FullName
-            if ($signature.Status -ne 'Valid') { throw "Invalid Windows signature: $($signature.Status)" }
-            'valid' | Set-Content -Encoding ascii release/WINDOWS-SIGNING-STATUS.txt
-          } else {
-            'unsigned' | Set-Content -Encoding ascii release/WINDOWS-SIGNING-STATUS.txt
-            Write-Warning 'WIN_CSC_LINK is not configured; production publication remains blocked on code signing.'
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          if ($signature.Status -ne 'Valid') { throw "Invalid Windows signature: $($signature.Status)" }
+          if ($signature.SignerCertificate.Subject -notmatch 'CN=Brett Lechtenberg(?:,|$)') {
+            throw "Unexpected Windows signer: $($signature.SignerCertificate.Subject)"
           }
+          'valid' | Set-Content -Encoding ascii release/WINDOWS-SIGNING-STATUS.txt
 
       - name: Verify tester rescue collector on Windows runner
         shell: pwsh
