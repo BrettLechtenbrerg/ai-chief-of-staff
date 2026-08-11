@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -92,7 +93,7 @@ describe('settings secret boundary', () => {
   });
 
   it('keeps renderer source on presence/write/delete operations only', () => {
-    const projectRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
     const ipcSource = fs.readFileSync(
       path.join(projectRoot, 'src/main/ipc/settings-ipc.ts'),
       'utf8'

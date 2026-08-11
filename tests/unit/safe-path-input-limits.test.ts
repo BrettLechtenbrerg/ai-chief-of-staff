@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   decodeBoundedAttachment,
@@ -34,7 +35,7 @@ describe('canonical path containment', () => {
     fs.writeFileSync(validFile, 'safe');
     fs.writeFileSync(siblingFile, 'stolen');
 
-    expect(resolveExistingPathWithin(allowed, validFile)).toBe(fs.realpathSync(validFile));
+    expect(resolveExistingPathWithin(allowed, validFile)).toBe(fs.realpathSync.native(validFile));
     expect(() => resolveExistingPathWithin(allowed, siblingFile)).toThrow(/outside/i);
     expect(() => resolveExistingPathWithin(allowed, path.join(allowed, '..', 'AI Chief of Staff-evil', 'stolen.txt'))).toThrow(/outside/i);
     expect(isPathWithin(allowed, siblingFile)).toBe(false);
@@ -56,7 +57,7 @@ describe('canonical path containment', () => {
 
   it('resolves safe new direct children', () => {
     expect(resolvePathForCreateWithin(allowed, path.join(allowed, 'new.txt'))).toBe(
-      path.join(fs.realpathSync(allowed), 'new.txt')
+      path.join(fs.realpathSync.native(allowed), 'new.txt')
     );
   });
 });
@@ -87,7 +88,7 @@ describe('bounded attachment input', () => {
   });
 
   it('keeps remote image downloads out of the privileged process', () => {
-    const projectRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
     const source = fs.readFileSync(path.join(projectRoot, 'src/main/ipc/misc-ipc.ts'), 'utf8');
     expect(source).not.toMatch(/fetch\(src\)/);
     expect(source).not.toMatch(/resolvedPath\.startsWith/);

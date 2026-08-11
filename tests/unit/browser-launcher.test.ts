@@ -57,9 +57,11 @@ describe('browser-launcher', () => {
     });
 
     it('returns browser info when Chrome path exists', () => {
-      // Return true for Chrome's macOS path, false for everything else
-      (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
-        return p === '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+      (existsSync as ReturnType<typeof vi.fn>).mockImplementation((candidatePath: string) => {
+        const normalizedPath = candidatePath.replaceAll('\\', '/');
+        return process.platform === 'win32'
+          ? normalizedPath.endsWith('/Google/Chrome/Application/chrome.exe')
+          : candidatePath === '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
       });
 
       const browsers = detectInstalledBrowsers();

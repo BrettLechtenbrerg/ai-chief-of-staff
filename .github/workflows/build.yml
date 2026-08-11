@@ -153,6 +153,7 @@ jobs:
         run: npm ci
 
       - name: Run release gates and native SQLite load
+        shell: bash
         run: |
           npm run typecheck
           npm run lint

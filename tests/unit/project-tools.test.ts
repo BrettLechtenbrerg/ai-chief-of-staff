@@ -91,10 +91,11 @@ describe('Project Tools', () => {
     });
 
     it('returns error when path does not exist', async () => {
-      mockExistsSync.mockImplementation((p: unknown) => {
+      mockExistsSync.mockImplementation((candidatePath: unknown) => {
+        const normalizedPath = String(candidatePath).replaceAll('\\', '/');
         // DB path exists, but the project path does not
-        if (typeof p === 'string' && p.includes('ai-chief-of-staff.db')) return true;
-        if (typeof p === 'string' && p === '/nonexistent/project') return false;
+        if (normalizedPath.includes('ai-chief-of-staff.db')) return true;
+        if (normalizedPath.endsWith('/nonexistent/project')) return false;
         return true;
       });
 

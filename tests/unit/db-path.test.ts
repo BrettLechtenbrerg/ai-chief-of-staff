@@ -13,9 +13,11 @@ vi.mock('path', async () => {
 });
 
 import * as fs from 'fs';
+import path from 'path';
 import { getDbPath, getDbCandidates } from '../../src/utils/db-path';
 
 const mockExistsSync = vi.mocked(fs.existsSync);
+const normalizePath = (value: string): string => value.replaceAll(path.sep, '/');
 
 describe('getDbCandidates', () => {
   const originalHome = process.env.HOME;
@@ -40,25 +42,25 @@ describe('getDbCandidates', () => {
   });
 
   it('canonical macOS path uses lowercase slug (matches package.json name)', () => {
-    const candidates = getDbCandidates();
+    const candidates = getDbCandidates().map(normalizePath);
     expect(candidates[0]).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
     expect(candidates[0]).toContain('/home/testuser');
   });
 
   it('legacy macOS path uses Title Case productName as fallback', () => {
-    const candidates = getDbCandidates();
+    const candidates = getDbCandidates().map(normalizePath);
     expect(candidates[1]).toContain('Library/Application Support/AI Chief of Staff/ai-chief-of-staff.db');
     expect(candidates[1]).toContain('/home/testuser');
   });
 
   it('Linux path uses HOME and .config', () => {
-    const candidates = getDbCandidates();
+    const candidates = getDbCandidates().map(normalizePath);
     expect(candidates[2]).toContain('.config/ai-chief-of-staff/ai-chief-of-staff.db');
     expect(candidates[2]).toContain('/home/testuser');
   });
 
   it('Windows path uses USERPROFILE and AppData/Roaming', () => {
-    const candidates = getDbCandidates();
+    const candidates = getDbCandidates().map(normalizePath);
     expect(candidates[3]).toContain('AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 });
@@ -80,29 +82,29 @@ describe('getDbPath', () => {
 
   it('returns the first existing path (canonical macOS lowercase slug)', () => {
     // Only the canonical macOS lowercase-slug path exists
-    mockExistsSync.mockImplementation((p) =>
-      String(p).includes('Library/Application Support/ai-chief-of-staff')
+    mockExistsSync.mockImplementation((candidatePath) =>
+      normalizePath(String(candidatePath)).includes('Library/Application Support/ai-chief-of-staff')
     );
 
-    const result = getDbPath();
+    const result = normalizePath(getDbPath());
     expect(result).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
   it('skips macOS path and returns Linux path when only Linux path exists', () => {
-    mockExistsSync.mockImplementation((p) =>
-      String(p).includes('.config/ai-chief-of-staff')
+    mockExistsSync.mockImplementation((candidatePath) =>
+      normalizePath(String(candidatePath)).includes('.config/ai-chief-of-staff')
     );
 
-    const result = getDbPath();
+    const result = normalizePath(getDbPath());
     expect(result).toContain('.config/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
   it('skips macOS and Linux paths and returns Windows path when only Windows path exists', () => {
-    mockExistsSync.mockImplementation((p) =>
-      String(p).includes('AppData/Roaming')
+    mockExistsSync.mockImplementation((candidatePath) =>
+      normalizePath(String(candidatePath)).includes('AppData/Roaming')
     );
 
-    const result = getDbPath();
+    const result = normalizePath(getDbPath());
     expect(result).toContain('AppData/Roaming/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
@@ -112,14 +114,14 @@ describe('getDbPath', () => {
     const result = getDbPath();
     const candidates = getDbCandidates();
     expect(result).toBe(candidates[0]);
-    expect(result).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
+    expect(normalizePath(result)).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 
   it('returns canonical macOS path when multiple paths exist (first match wins)', () => {
     // All paths "exist" — should still return the first one (lowercase slug)
     mockExistsSync.mockReturnValue(true);
 
-    const result = getDbPath();
+    const result = normalizePath(getDbPath());
     expect(result).toContain('Library/Application Support/ai-chief-of-staff/ai-chief-of-staff.db');
   });
 });

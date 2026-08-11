@@ -109,7 +109,7 @@ describe('connect-tools-ipc', () => {
       const gmail = tools.find((t) => t.id === 'gmail')!;
       const entry = __test__.buildEntry(gmail, {}, paths);
       expect(entry.command).toBe(process.execPath);
-      expect(entry.args![0]).toContain('gmail/index.js');
+      expect(entry.args![0]).toContain(path.join('gmail', 'index.js'));
       expect(entry.env!.ELECTRON_RUN_AS_NODE).toBe('1');
       expect(entry.env!.FLO_TOKEN_PATH).toContain('google-tokens.json');
       expect(entry.env!.FLO_CREDENTIALS_PATH).toContain('google-credentials.json');
@@ -121,7 +121,7 @@ describe('connect-tools-ipc', () => {
       const tools = __test__.getSupportedTools();
       const drive = tools.find((t) => t.id === 'drive')!;
       const entry = __test__.buildEntry(drive, {}, paths);
-      expect(entry.args![0]).toContain('docs/index.js');
+      expect(entry.args![0]).toContain(path.join('docs', 'index.js'));
       // Even though args point at the docs script, the tool_id is still 'drive'.
       expect((entry as Record<string, unknown>)._acos_tool_id).toBe('drive');
     });
@@ -137,7 +137,7 @@ describe('connect-tools-ipc', () => {
       // Spawns the bundled Node port via Electron's own Node — would run on a
       // machine with no python3 at all.
       expect(entry.command).toBe(process.execPath);
-      expect(entry.args![0]).toContain('ghl-mcp-node/index.js');
+      expect(entry.args![0]).toContain(path.join('ghl-mcp-node', 'index.js'));
       expect(entry.command).not.toBe('python3');
       expect(entry.env!.ELECTRON_RUN_AS_NODE).toBe('1');
       expect(entry.env!.GHL_PRIVATE_TOKEN).toBe('pit-xyz');

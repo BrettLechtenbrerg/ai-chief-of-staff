@@ -65,7 +65,7 @@ function detectNodeManagerPaths(homeDir: string): string[] {
   return paths;
 }
 
-function detectWindowsNodePaths(homeDir: string): string[] {
+function detectWindowsNodePaths(homeDir: string, programData = 'C:\\ProgramData'): string[] {
   const paths: string[] = [];
   const appData = process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
   const localAppData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
@@ -91,7 +91,7 @@ function detectWindowsNodePaths(homeDir: string): string[] {
   if (fs.existsSync(scoopShims)) paths.push(scoopShims);
 
   // chocolatey
-  const chocoBin = 'C:\\ProgramData\\chocolatey\\bin';
+  const chocoBin = path.win32.join(programData, 'chocolatey', 'bin');
   if (fs.existsSync(chocoBin)) paths.push(chocoBin);
 
   // nodist
@@ -339,7 +339,7 @@ describe('Node PATH Detection', () => {
       process.env.APPDATA = appData;
       process.env.LOCALAPPDATA = path.join(tmpDir, 'AppData', 'Local');
       try {
-        const result = detectWindowsNodePaths(tmpDir);
+        const result = detectWindowsNodePaths(tmpDir, tmpDir);
         expect(result).toEqual([]);
       } finally {
         if (originalAppData === undefined) {
