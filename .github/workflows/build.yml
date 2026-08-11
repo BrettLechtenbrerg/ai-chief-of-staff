@@ -178,16 +178,19 @@ jobs:
           BUILD_KIND: release
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           if (-not $env:TRUSTED_SIGNING_ENDPOINT -or -not $env:TRUSTED_SIGNING_ACCOUNT -or -not $env:TRUSTED_SIGNING_PROFILE) {
             throw 'Azure Artifact Signing configuration is incomplete.'
           }
           npm run build
+          if ($LASTEXITCODE -ne 0) { throw "Application build failed with exit code $LASTEXITCODE." }
           npx electron-builder --win --x64 -p never `
             --config.win.azureSignOptions.endpoint="$env:TRUSTED_SIGNING_ENDPOINT" `
             --config.win.azureSignOptions.certificateProfileName="$env:TRUSTED_SIGNING_PROFILE" `
             --config.win.azureSignOptions.codeSigningAccountName="$env:TRUSTED_SIGNING_ACCOUNT" `
             --config.win.azureSignOptions.publisherName="Brett Lechtenberg" `
             2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/package-win.log"
+          if ($LASTEXITCODE -ne 0) { throw "Windows packaging failed with exit code $LASTEXITCODE." }
           if (-not (Select-String -Quiet -Path "$env:RUNNER_TEMP/package-win.log" -Pattern '\[verify-native-modules\] OK')) {
             throw 'Native-module afterPack verification did not run.'
           }
