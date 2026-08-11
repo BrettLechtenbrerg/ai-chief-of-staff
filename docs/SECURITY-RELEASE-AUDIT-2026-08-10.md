@@ -96,4 +96,5 @@ The isolated local Docker path, native Windows x64 CI package, PE machine valida
 - [x] GitHub macOS certificate/notary secrets and Azure Artifact Signing OIDC/profile are configured and proven in native preflight builds.
 - [x] GitHub `release` environment requires Brett's approval before publication.
 - [x] Immutable `v1.0.0-beta.23` tag was created before native signed builds; tag run artifacts and checksums were independently downloaded and verified.
-- [ ] Complete real Mac + Windows tester acceptance before publication/website promotion.
+- [x] Real Intel Mac acceptance passed: startup/history, healthy GPT chat, multi-question voice, private backup, and AEO paid-action denial.
+- [ ] Complete real Windows x64 tester acceptance before publication/website promotion.
