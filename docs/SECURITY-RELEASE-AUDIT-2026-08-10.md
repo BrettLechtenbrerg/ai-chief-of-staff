@@ -2,7 +2,7 @@
 
 ## Release decision
 
-**Implementation gates are complete on `main`; publication is still blocked on production signing credentials and real tester acceptance.** The historical findings below describe the original `58e0425` baseline. Beta.23 remains a trust-and-voice release, and the gg-agent 4 → 5 migration remains deferred.
+**Implementation, signing, tag-build, and artifact-verification gates are complete; publication is still blocked on real Mac and Windows tester acceptance.** The historical findings below describe the original `58e0425` baseline. Beta.23 remains a trust-and-voice release, and the gg-agent 4 → 5 migration remains deferred.
 
 ## Reproducible baseline
 
@@ -78,7 +78,7 @@ Voice now preserves OpenAI Realtime as ears/mouth and the normal ACOS agent as t
 
 The prior website linked the 641,626,761-byte universal installer despite stating x64 requirements. The live hotfix now links the 324,192,956-byte beta.20 x64 installer mirrored under beta.22 and displays SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`.
 
-The isolated local Docker path, native Windows x64 CI package, PE machine validation, full tests/native SQLite probe, afterPack verification, checksums, updater metadata, PowerShell rescue collector, and production Azure Authenticode signature pass. Tag run `31497949376` produced installer SHA-256 `676aad7d359b47cf7afd4fb683c955f01623f67c399f96ab96be09bd04b91df1`; independent extraction verified 24 native modules as x64. Download verification caught `latest.yml` referencing unpublished universal/ARM64 installers, so the publication gate now atomically rebuilds and verifies an x64-only manifest. Publication remains blocked until a tester completes the installed Windows startup/chat/voice/AEO acceptance pass. SmartScreen reputation cannot be solved by website changes.
+The isolated local Docker path, native Windows x64 CI package, PE machine validation, full tests/native SQLite probe, afterPack verification, checksums, PowerShell rescue collector, and production Azure Authenticode signature pass. Tag run `31497949376` produced installer SHA-256 `676aad7d359b47cf7afd4fb683c955f01623f67c399f96ab96be09bd04b91df1`; independent extraction verified 24 native modules as x64. Download verification caught the generated `latest.yml` referencing unpublished universal/ARM64 installers, so the publication gate now atomically rebuilds and verifies an x64-only manifest from the final signed installer. Publication remains blocked until a tester completes the installed Windows startup/chat/voice/AEO acceptance pass. SmartScreen reputation cannot be solved by website changes.
 
 ## beta.23 release gates
 
