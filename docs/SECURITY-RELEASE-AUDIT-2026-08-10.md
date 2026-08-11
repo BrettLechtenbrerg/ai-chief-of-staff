@@ -89,10 +89,10 @@ The isolated local Docker path, native Windows x64 CI package, PE machine valida
 - [x] AEO paid requests, encrypted credentials, timeouts/retries/progress, and citation matching are tested.
 - [x] Realtime and forced-failure fallback voice flows can run/cancel/approve/deny safely.
 - [x] Production and nested Flo runtime audits report zero advisories.
-- [x] Typecheck, lint, 1,315 tests, Node ABI sequence, Electron ABI restoration, and native-module verification pass.
-- [x] Local packaged x64 Mac startup and native Windows x64 package/checksum/updater gates pass.
-- [x] Mutable runtime connector packages are pinned to exact reviewed versions.
+- [x] Typecheck, lint, 1,321 tests, Node ABI sequence, Electron ABI restoration, and native-module verification pass.
+- [x] Signed/notarized Mac and native Authenticode-signed Windows x64 package/checksum/updater gates pass.
+- [x] Mutable runtime connector package tags are replaced with exact pinned versions.
 - [x] ASAR/integrity fuse work is explicitly deferred to beta.24 pending packaged compatibility proof; `RunAsNode` remains required for bundled MCP servers.
-- [ ] Configure GitHub macOS certificate/notary and Windows production Authenticode secrets.
+- [x] GitHub macOS certificate/notary secrets and Azure Artifact Signing OIDC/profile are configured and proven in native preflight builds.
 - [x] GitHub `release` environment requires Brett's approval before publication.
 - [ ] Create the tag before builds, then complete real Mac + Windows tester acceptance before publication/website promotion.

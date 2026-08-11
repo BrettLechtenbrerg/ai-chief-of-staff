@@ -30,13 +30,15 @@ describe('beta.23 release documentation', () => {
     expect(aeo).toContain('30 seconds');
   });
 
-  it('records release blockers instead of claiming beta.23 is public', () => {
+  it('records signed preflight evidence without claiming beta.23 is public', () => {
     const recovery = read('RECOVERY.md');
     expect(recovery).toContain('Public release remains beta.22');
-    expect(recovery).toContain('CERTIFICATE_P12');
-    expect(recovery).toContain('WIN_CSC_LINK');
-    expect(recovery).toContain('Do not tag or publish');
-    expect(recovery).toContain("protected `release` environment requiring Brett's approval");
+    expect(recovery).toContain('Azure Artifact Signing');
+    expect(recovery).toContain('acos-windows-release');
+    expect(recovery).toContain('31490076731');
+    expect(recovery).toContain('31493333399');
+    expect(recovery).toContain('protected GitHub `release` environment');
+    expect(recovery).toContain('Do not publish or promote beta.23');
   });
 
   it('documents deferred ASAR/fuse work and immutable runtime connectors', () => {
