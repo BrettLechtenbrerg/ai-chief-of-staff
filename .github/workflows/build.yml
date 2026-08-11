@@ -46,6 +46,7 @@ jobs:
     name: macOS signed build
     if: github.event_name != 'workflow_dispatch' || !inputs.rescue_only
     runs-on: macos-latest
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:
@@ -83,6 +84,7 @@ jobs:
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -lut 5400 build.keychain
           security import "$RUNNER_TEMP/certificate.p12" -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
@@ -128,6 +130,7 @@ jobs:
     name: Windows x64 native build
     if: github.event_name != 'workflow_dispatch' || !inputs.rescue_only
     runs-on: windows-latest
+    timeout-minutes: 90
     environment: release
     permissions:
       contents: read
