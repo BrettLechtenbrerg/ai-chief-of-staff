@@ -2,7 +2,7 @@
 
 ## Release decision
 
-**Implementation, signing, tag-build, and artifact-verification gates are complete; publication is still blocked on real Mac and Windows tester acceptance.** The historical findings below describe the original `58e0425` baseline. Beta.23 remains a trust-and-voice release, and the gg-agent 4 → 5 migration remains deferred.
+**Implementation, signing, tag-build, artifact-verification, and real Intel Mac acceptance gates are complete; publication is blocked only on real Windows x64 tester acceptance.** All 11 release assets are preserved in private GitHub draft `368717082` with upload digests matched to local source bytes. The historical findings below describe the original `58e0425` baseline. Beta.23 remains a trust-and-voice release, and the gg-agent 4 → 5 migration remains deferred.
 
 ## Reproducible baseline
 
