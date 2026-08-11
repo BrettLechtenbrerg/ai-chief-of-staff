@@ -126,6 +126,7 @@ jobs:
         run: |
           npm run build
           npx electron-builder --mac --arm64 --x64 -p never 2>&1 | tee "$RUNNER_TEMP/package-mac.log"
+          node scripts/patch-latest-mac-yml.cjs release "$GITHUB_REF_NAME"
           grep -q '\[verify-native-modules\] OK' "$RUNNER_TEMP/package-mac.log"
           for app in release/mac*/AI\ Chief\ of\ Staff.app; do
             codesign --verify --deep --strict --verbose=2 "$app"
@@ -139,7 +140,7 @@ jobs:
         shell: bash
         run: |
           cd release
-          shasum -a 256 AI-Chief-of-Staff-*.dmg AI-Chief-of-Staff-*.zip > SHA256SUMS-macos.txt
+          shasum -a 256 AI-Chief-of-Staff-*.dmg AI-Chief-of-Staff-*.zip latest-mac.yml > SHA256SUMS-macos.txt
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -220,6 +221,8 @@ jobs:
             --config.win.azureSignOptions.publisherName="Brett Lechtenberg" `
             2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/package-win.log"
           if ($LASTEXITCODE -ne 0) { throw "Windows packaging failed with exit code $LASTEXITCODE." }
+          node scripts/patch-latest-windows-yml.cjs release "$env:GITHUB_REF_NAME"
+          if ($LASTEXITCODE -ne 0) { throw "Windows updater manifest validation failed with exit code $LASTEXITCODE." }
           if (-not (Select-String -Quiet -Path "$env:RUNNER_TEMP/package-win.log" -Pattern '\[verify-native-modules\] OK')) {
             throw 'Native-module afterPack verification did not run.'
           }
@@ -244,7 +247,7 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item scripts/tester-rescue.ps1 release/tester-rescue.ps1
-          $files = Get-ChildItem release/AI-Chief-of-Staff-*-x64-setup.exe, release/AI-Chief-of-Staff-*-x64-win.zip, release/tester-rescue.ps1
+          $files = Get-ChildItem release/AI-Chief-of-Staff-*-x64-setup.exe, release/AI-Chief-of-Staff-*-x64-win.zip, release/latest.yml, release/tester-rescue.ps1
           $lines = $files | ForEach-Object {
             $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
             "$hash  $($_.Name)"
@@ -276,6 +279,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out release source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f544cf033ba # v6
+
       - name: Download macOS artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
@@ -288,10 +294,13 @@ jobs:
           name: ai-chief-of-staff-windows-x64-${{ github.ref_name }}
           path: release
 
-      - name: Verify downloaded checksums and Windows signing gate
+      - name: Verify downloaded checksums, updater manifests, and signing gate
         working-directory: release
         run: |
+          node ../scripts/patch-latest-mac-yml.cjs . "${GITHUB_REF_NAME}"
+          node ../scripts/patch-latest-windows-yml.cjs . "${GITHUB_REF_NAME}"
           sha256sum --check SHA256SUMS-macos.txt
+          sed -i 's/\r$//' SHA256SUMS-windows-x64.txt
           sha256sum --check SHA256SUMS-windows-x64.txt
           grep -qx 'valid' WINDOWS-SIGNING-STATUS.txt || {
             echo 'Publication blocked: Windows installer lacks a valid production signature.' >&2

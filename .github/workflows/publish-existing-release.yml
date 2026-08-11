@@ -1,0 +1,139 @@
+name: Publish Verified Existing Tag Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing immutable tag whose successful build artifacts will be published
+        required: true
+        type: string
+      source_run_id:
+        description: Successful tag-triggered Build and Release workflow run ID
+        required: true
+        type: string
+      mac_acceptance_confirmed:
+        description: A real Mac completed startup, chat, voice, and AEO acceptance
+        required: true
+        default: false
+        type: boolean
+      windows_acceptance_confirmed:
+        description: A real Windows x64 PC completed install, startup, chat, voice, and AEO acceptance
+        required: true
+        default: false
+        type: boolean
+      publish:
+        description: Publish the verified files as a public GitHub prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions: {}
+
+concurrency:
+  group: publish-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish-prerelease:
+    name: Publish accepted prerelease
+    if: >-
+      inputs.publish &&
+      inputs.mac_acceptance_confirmed &&
+      inputs.windows_acceptance_confirmed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Check out publication gate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f544cf033ba # v6
+        with:
+          fetch-depth: 0
+
+      - name: Prove source run built the exact immutable tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v1\.0\.0-beta\.[0-9]+([.][0-9]+)?$ ]] || {
+            echo "Invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          }
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || {
+            echo 'Source run ID must contain only digits.' >&2
+            exit 1
+          }
+
+          git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
+          test "$(jq -r .event <<<"$run_json")" = push
+          test "$(jq -r .status <<<"$run_json")" = completed
+          test "$(jq -r .conclusion <<<"$run_json")" = success
+          test "$(jq -r .head_branch <<<"$run_json")" = "$RELEASE_TAG"
+          test "$(jq -r .head_sha <<<"$run_json")" = "$tag_commit"
+          echo "Verified run $SOURCE_RUN_ID built $RELEASE_TAG at $tag_commit."
+
+      - name: Download macOS artifacts from verified tag run
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ai-chief-of-staff-macos-${{ inputs.release_tag }}
+          path: release
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.source_run_id }}
+
+      - name: Download Windows x64 artifacts from verified tag run
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ai-chief-of-staff-windows-x64-${{ inputs.release_tag }}
+          path: release
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.source_run_id }}
+
+      - name: Rebuild and verify updater/checksum gates
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          node scripts/patch-latest-mac-yml.cjs release "$RELEASE_TAG"
+          node scripts/patch-latest-windows-yml.cjs release "$RELEASE_TAG"
+          sed -i 's/\r$//' release/SHA256SUMS-windows-x64.txt
+          (
+            cd release
+            sha256sum --check SHA256SUMS-macos.txt
+            sha256sum --check SHA256SUMS-windows-x64.txt
+          )
+          grep -qx 'valid' release/WINDOWS-SIGNING-STATUS.txt || {
+            echo 'Publication blocked: Windows installer lacks a valid production signature.' >&2
+            exit 1
+          }
+
+      - name: Publish accepted prerelease
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            release/AI-Chief-of-Staff-*.dmg
+            release/AI-Chief-of-Staff-*.zip
+            release/AI-Chief-of-Staff-*-x64-setup.exe
+            release/latest-mac.yml
+            release/latest.yml
+            release/SHA256SUMS-*.txt
+            release/tester-rescue.ps1
+          body: |
+            ## AI Chief of Staff ${{ inputs.release_tag }}
+
+            Trust-and-voice prerelease. Artifacts were built from the immutable tag, passed locked dependency, type, lint, test, native-module, signature, checksum, and updater gates, and completed real Mac and Windows acceptance before manual promotion.
+
+            ### Downloads
+            - macOS Apple Silicon: `AI-Chief-of-Staff-*-arm64-mac.dmg`
+            - macOS Intel: `AI-Chief-of-Staff-*-x64-mac.dmg`
+            - Windows x64: `AI-Chief-of-Staff-*-x64-setup.exe`

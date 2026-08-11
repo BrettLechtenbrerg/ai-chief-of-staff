@@ -1,132 +1,130 @@
 #!/usr/bin/env node
-/**
- * Post-build patcher for release/latest-mac.yml.
- *
- * Why this exists:
- * electron-builder writes `latest-mac.yml` AFTER our `afterAllArtifactBuild`
- * hook returns — clobbering whatever the hook patched. Three releases shipped
- * with stale DMG sha512/size as a result. The permanent fix is to run the
- * same patcher AGAIN, as a separate process, AFTER electron-builder fully
- * exits. That's this script.
- *
- * Wired into `dist:signed` so it always runs.
- *
- * What it does:
- * 1. Read release/latest-mac.yml.
- * 2. For every `.dmg` artifact in release/, recompute size + sha512 from the
- *    bytes on disk (which reflect the stapled state).
- * 3. Patch entries in `files:[]` whose `url` matches a DMG filename.
- * 4. Patch the top-level `path:` + `sha512:` (the "primary" download).
- * 5. Write the YAML back if anything changed. Verify by re-reading and
- *    asserting every patched entry's sha512 matches the file on disk.
- *
- * Safe to run repeatedly — it's idempotent and exits 0 with a no-op message
- * if the YAML is already correct.
- */
+'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const yaml = require('js-yaml');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const releaseDir = path.join(__dirname, '..', 'release');
-const yamlPath = path.join(releaseDir, 'latest-mac.yml');
+const ARTIFACT_PATTERN = /^AI-Chief-of-Staff-(.+)-(x64|arm64)(-mac\.zip|\.dmg)$/;
+const REQUIRED_VARIANTS = ['x64-mac.zip', 'arm64-mac.zip', 'x64.dmg', 'arm64.dmg'];
 
-if (!fs.existsSync(yamlPath)) {
-  console.log(`[patch-latest-mac-yml] ${yamlPath} not found — nothing to patch.`);
-  process.exit(0);
+function parseManifestValue(source, key) {
+  const match = source.match(new RegExp(`^${key}:\\s*['\"]?([^'\"\\r\\n]+)['\"]?\\s*$`, 'm'));
+  return match?.[1]?.trim() || null;
 }
 
-const doc = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
-
-// Build lookup: filename -> { size, sha512 } from actual DMG bytes on disk.
-const dmgs = fs
-  .readdirSync(releaseDir)
-  .filter((f) => f.endsWith('.dmg'))
-  .map((f) => {
-    const buf = fs.readFileSync(path.join(releaseDir, f));
-    return {
-      filename: f,
-      size: buf.length,
-      sha512: crypto.createHash('sha512').update(buf).digest('base64'),
-    };
+function hashFile(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha512');
+    const input = fs.createReadStream(filePath);
+    input.on('error', reject);
+    input.on('data', (chunk) => hash.update(chunk));
+    input.on('end', () => resolve(hash.digest('base64')));
   });
-
-if (dmgs.length === 0) {
-  console.log('[patch-latest-mac-yml] no .dmg files in release/ — nothing to patch.');
-  process.exit(0);
 }
 
-const updates = new Map(dmgs.map((d) => [d.filename, d]));
-
-let changed = 0;
-const patched = new Set();
-
-// Patch entries in `files:` array.
-if (Array.isArray(doc.files)) {
-  for (const entry of doc.files) {
-    const u = entry && entry.url && updates.get(entry.url);
-    if (!u) continue;
-    if (entry.sha512 !== u.sha512 || entry.size !== u.size) {
-      entry.sha512 = u.sha512;
-      entry.size = u.size;
-      changed++;
-    }
-    patched.add(entry.url);
+async function patchMacManifest(releaseDir, expectedTag) {
+  const manifestPath = path.join(releaseDir, 'latest-mac.yml');
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`[patch-latest-mac-yml] missing updater manifest: ${manifestPath}`);
   }
-}
 
-// Patch top-level `path:` + `sha512:` (primary download).
-if (doc.path && updates.has(doc.path)) {
-  const u = updates.get(doc.path);
-  if (doc.sha512 !== u.sha512) {
-    doc.sha512 = u.sha512;
-    changed++;
+  const matchedArtifacts = fs
+    .readdirSync(releaseDir)
+    .map((filename) => ({ filename, match: filename.match(ARTIFACT_PATTERN) }))
+    .filter((artifact) => artifact.match);
+  const byVariant = new Map(
+    matchedArtifacts.map(({ filename, match }) => [
+      `${match[2]}${match[3]}`,
+      { filename, version: match[1] },
+    ])
+  );
+  const missingVariants = REQUIRED_VARIANTS.filter((variant) => !byVariant.has(variant));
+  if (matchedArtifacts.length !== REQUIRED_VARIANTS.length || missingVariants.length > 0) {
+    throw new Error(
+      `[patch-latest-mac-yml] expected exactly x64/arm64 ZIP and DMG artifacts; missing: ${missingVariants.join(', ') || 'none'}, matched: ${matchedArtifacts.length}`
+    );
   }
-  patched.add('(top-level path: ' + doc.path + ')');
-}
 
-if (changed === 0) {
-  console.log('[patch-latest-mac-yml] YAML already matches stapled bytes — no changes needed.');
-  process.exit(0);
-}
-
-fs.writeFileSync(
-  yamlPath,
-  yaml.dump(doc, { lineWidth: -1, noRefs: true, quotingType: "'" }),
-);
-
-console.log(`[patch-latest-mac-yml] patched ${changed} field(s) in latest-mac.yml:`);
-for (const f of patched) console.log(`  ${f}`);
-
-// Verify: re-read the YAML and assert every patched entry matches disk.
-const verify = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
-let verifyFailed = false;
-
-const checks = [];
-if (Array.isArray(verify.files)) {
-  for (const entry of verify.files) {
-    if (entry && entry.url && updates.has(entry.url)) {
-      const u = updates.get(entry.url);
-      checks.push({ label: entry.url, got: entry.sha512, want: u.sha512 });
-    }
+  const versions = new Set(matchedArtifacts.map(({ match }) => match[1]));
+  if (versions.size !== 1) {
+    throw new Error('[patch-latest-mac-yml] Mac artifacts do not share one version');
   }
-}
-if (verify.path && updates.has(verify.path)) {
-  const u = updates.get(verify.path);
-  checks.push({ label: '(top-level)', got: verify.sha512, want: u.sha512 });
-}
-
-for (const c of checks) {
-  if (c.got !== c.want) {
-    console.error(`[patch-latest-mac-yml] VERIFY FAIL for ${c.label}: got ${c.got}, want ${c.want}`);
-    verifyFailed = true;
+  const version = [...versions][0];
+  const normalizedExpectedTag = expectedTag?.replace(/^v/, '');
+  if (normalizedExpectedTag && version !== normalizedExpectedTag) {
+    throw new Error(
+      `[patch-latest-mac-yml] artifact version ${version} does not match tag ${expectedTag}`
+    );
   }
+
+  const originalManifest = fs.readFileSync(manifestPath, 'utf8');
+  const originalVersion = parseManifestValue(originalManifest, 'version');
+  if (originalVersion !== version) {
+    throw new Error(
+      `[patch-latest-mac-yml] manifest version ${originalVersion || '(missing)'} does not match artifacts ${version}`
+    );
+  }
+
+  const artifacts = [];
+  for (const variant of REQUIRED_VARIANTS) {
+    const { filename } = byVariant.get(variant);
+    const artifactPath = path.join(releaseDir, filename);
+    artifacts.push({
+      filename,
+      sha512: await hashFile(artifactPath),
+      size: fs.statSync(artifactPath).size,
+    });
+  }
+
+  const primary = artifacts[0];
+  const releaseDate =
+    parseManifestValue(originalManifest, 'releaseDate') || new Date().toISOString();
+  const lines = [`version: ${version}`, 'files:'];
+  for (const artifact of artifacts) {
+    lines.push(
+      `  - url: ${artifact.filename}`,
+      `    sha512: ${artifact.sha512}`,
+      `    size: ${artifact.size}`
+    );
+  }
+  lines.push(
+    `path: ${primary.filename}`,
+    `sha512: ${primary.sha512}`,
+    `releaseDate: '${releaseDate}'`,
+    ''
+  );
+
+  const temporaryPath = `${manifestPath}.tmp-${process.pid}`;
+  fs.writeFileSync(temporaryPath, lines.join('\n'), { encoding: 'utf8', mode: 0o644 });
+  fs.renameSync(temporaryPath, manifestPath);
+
+  const verifiedManifest = fs.readFileSync(manifestPath, 'utf8');
+  const urls = [...verifiedManifest.matchAll(/^\s*- url:\s*(.+)$/gm)].map((match) =>
+    match[1].trim()
+  );
+  if (
+    urls.length !== artifacts.length ||
+    artifacts.some((artifact, index) => urls[index] !== artifact.filename) ||
+    parseManifestValue(verifiedManifest, 'path') !== primary.filename ||
+    parseManifestValue(verifiedManifest, 'sha512') !== primary.sha512
+  ) {
+    throw new Error('[patch-latest-mac-yml] verification failed after atomic manifest write');
+  }
+
+  console.log(
+    `[patch-latest-mac-yml] OK — verified ${artifacts.length} updater entries against final artifact bytes`
+  );
+  return { artifacts, manifestPath, version };
 }
 
-if (verifyFailed) {
-  console.error('[patch-latest-mac-yml] verification failed — aborting.');
-  process.exit(1);
-}
+exports.parseManifestValue = parseManifestValue;
+exports.patchMacManifest = patchMacManifest;
 
-console.log(`[patch-latest-mac-yml] verified ${checks.length} sha512 entries match disk bytes.`);
+if (require.main === module) {
+  const releaseDir = path.resolve(process.argv[2] || path.join(__dirname, '..', 'release'));
+  patchMacManifest(releaseDir, process.argv[3]).catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

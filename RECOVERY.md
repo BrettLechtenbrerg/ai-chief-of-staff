@@ -43,11 +43,13 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > - Production and nested Flo runtime audits are zero. `@kenkaiiii/ggcoder` stays pinned to 4.3.151; do not mix its 5.x migration into beta.23.
 >
 > **beta.23 trust-and-voice candidate (August 11, 2026):**
-> - Steps 1–20 of `.gg/plans/daily-driver-security-voice-windows.md` are implemented on `main`; beta.23 is ready for the tag-first release build.
-> - Release gates pass on native macOS and Windows runners: 71 test files / 1,321 tests, typecheck, lint, production audits, Electron-ABI rebuild, better-sqlite3 load, and architecture-aware native-module verification.
-> - Signed/notarized Mac preflight run `31490076731` produced stapled x64 and arm64 DMGs plus updater metadata and checksums.
-> - Azure Artifact Signing account `acosbrettsigning23` and public profile `acos-windows-release` are connected to the protected GitHub `release` environment through OIDC. Native Windows preflight run `31493333399` produced a valid Brett Lechtenberg Authenticode-signed x64 installer, updater metadata, checksums, and rescue bundle.
-> - Public release remains beta.22. Its Windows link intentionally points to the tested beta.20 x64 installer and digest; do not call it a beta.22 rebuild. Do not publish or promote beta.23 until the tag build passes and real Mac/Windows acceptance is recorded.
+> - Steps 1–20 of `.gg/plans/daily-driver-security-voice-windows.md` are implemented. Immutable tag `v1.0.0-beta.23` points to commit `2bf31045778d47e37793d370e9d655b7890742dc`.
+> - Tag-triggered build run `31497949376` passed on native macOS and Windows runners: 71 test files / 1,321 tests, typecheck, lint, production audits, Electron-ABI rebuild, better-sqlite3 load, architecture-aware native-module verification, signed/notarized Mac artifacts, and an Authenticode-signed Windows x64 installer.
+> - Signed/notarized Mac preflight run `31490076731` and Azure Artifact Signing preflight run `31493333399` also passed. Azure account `acosbrettsigning23` and public profile `acos-windows-release` remain protected by GitHub OIDC and the `release` environment.
+> - Downloaded Mac tag artifacts match their SHA-256 manifest. Both DMGs pass stapler validation; the Intel app passes strict code-signing, Gatekeeper, version, executable-architecture, and x64 native-module checks. Intel DMG SHA-256: `e1739a7437ded46f84b802ee9de7c95264e768613215ddc3b28d5adcc34c98ac`.
+> - Downloaded Windows tag artifacts match their SHA-256 manifest. The x64 installer digest is `676aad7d359b47cf7afd4fb683c955f01623f67c399f96ab96be09bd04b91df1`, and an independent extraction verified 24 native modules as Windows x64.
+> - Release verification caught `latest.yml` pointing at unpublished universal/ARM64 installers and `latest-mac.yml` retaining pre-staple DMG hashes/sizes. The manifest patchers now atomically rebuild updater metadata from final signed files, and `.github/workflows/publish-existing-release.yml` can promote the immutable tag-run artifacts only after exact-run proof, checksums, updater repair, both real-device acceptance confirmations, and protected-environment approval.
+> - Public release remains beta.22. Its Windows link intentionally points to the tested beta.20 x64 installer and digest; do not call it a beta.22 rebuild. Do not publish or promote beta.23 until real Mac and Windows acceptance is recorded. No Windows tester is currently available.
 > - Current data protection and restore procedure: [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md). Windows diagnostics: [`docs/WINDOWS-TESTER-RESCUE.md`](docs/WINDOWS-TESTER-RESCUE.md).
 
 ## beta.23 rollback procedure

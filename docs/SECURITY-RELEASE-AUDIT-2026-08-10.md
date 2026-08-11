@@ -78,7 +78,7 @@ Voice now preserves OpenAI Realtime as ears/mouth and the normal ACOS agent as t
 
 The prior website linked the 641,626,761-byte universal installer despite stating x64 requirements. The live hotfix now links the 324,192,956-byte beta.20 x64 installer mirrored under beta.22 and displays SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`.
 
-The isolated local Docker path, native Windows x64 CI package, PE machine validation, full tests/native SQLite probe, afterPack verification, checksums, updater metadata, and PowerShell rescue collector now pass (run `31432214558`). Publication remains blocked until a production Windows Authenticode certificate is configured and a tester completes the installed startup/chat/voice/AEO acceptance pass. SmartScreen reputation cannot be solved by website changes.
+The isolated local Docker path, native Windows x64 CI package, PE machine validation, full tests/native SQLite probe, afterPack verification, checksums, updater metadata, PowerShell rescue collector, and production Azure Authenticode signature pass. Tag run `31497949376` produced installer SHA-256 `676aad7d359b47cf7afd4fb683c955f01623f67c399f96ab96be09bd04b91df1`; independent extraction verified 24 native modules as x64. Download verification caught `latest.yml` referencing unpublished universal/ARM64 installers, so the publication gate now atomically rebuilds and verifies an x64-only manifest. Publication remains blocked until a tester completes the installed Windows startup/chat/voice/AEO acceptance pass. SmartScreen reputation cannot be solved by website changes.
 
 ## beta.23 release gates
 
@@ -90,9 +90,10 @@ The isolated local Docker path, native Windows x64 CI package, PE machine valida
 - [x] Realtime and forced-failure fallback voice flows can run/cancel/approve/deny safely.
 - [x] Production and nested Flo runtime audits report zero advisories.
 - [x] Typecheck, lint, 1,321 tests, Node ABI sequence, Electron ABI restoration, and native-module verification pass.
-- [x] Signed/notarized Mac and native Authenticode-signed Windows x64 package/checksum/updater gates pass.
+- [x] Signed/notarized Mac and native Authenticode-signed Windows x64 package/checksum gates pass; updater manifests are atomically rebuilt from the final signed/stapled bytes before publication.
 - [x] Mutable runtime connector package tags are replaced with exact pinned versions.
 - [x] ASAR/integrity fuse work is explicitly deferred to beta.24 pending packaged compatibility proof; `RunAsNode` remains required for bundled MCP servers.
 - [x] GitHub macOS certificate/notary secrets and Azure Artifact Signing OIDC/profile are configured and proven in native preflight builds.
 - [x] GitHub `release` environment requires Brett's approval before publication.
-- [ ] Create the tag before builds, then complete real Mac + Windows tester acceptance before publication/website promotion.
+- [x] Immutable `v1.0.0-beta.23` tag was created before native signed builds; tag run artifacts and checksums were independently downloaded and verified.
+- [ ] Complete real Mac + Windows tester acceptance before publication/website promotion.

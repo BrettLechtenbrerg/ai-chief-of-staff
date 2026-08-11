@@ -8,7 +8,11 @@ const read = (name: string) => fs.readFileSync(path.join(root, name), 'utf8');
 describe('beta.23 release documentation', () => {
   it('states the exact current Windows fallback asset and digest', () => {
     const digest = '7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e';
-    for (const document of [read('README.md'), read('RECOVERY.md'), read('docs/WINDOWS-TESTER-RESCUE.md')]) {
+    for (const document of [
+      read('README.md'),
+      read('RECOVERY.md'),
+      read('docs/WINDOWS-TESTER-RESCUE.md'),
+    ]) {
       expect(document).toContain('beta.20 x64');
       expect(document).toContain(digest);
     }
@@ -30,15 +34,18 @@ describe('beta.23 release documentation', () => {
     expect(aeo).toContain('30 seconds');
   });
 
-  it('records signed preflight evidence without claiming beta.23 is public', () => {
+  it('records verified tag-build evidence without claiming beta.23 is public', () => {
     const recovery = read('RECOVERY.md');
     expect(recovery).toContain('Public release remains beta.22');
     expect(recovery).toContain('Azure Artifact Signing');
     expect(recovery).toContain('acos-windows-release');
     expect(recovery).toContain('31490076731');
     expect(recovery).toContain('31493333399');
-    expect(recovery).toContain('protected GitHub `release` environment');
+    expect(recovery).toContain('31497949376');
+    expect(recovery).toContain('676aad7d359b47cf7afd4fb683c955f01623f67c399f96ab96be09bd04b91df1');
+    expect(recovery).toContain('protected by GitHub OIDC and the `release` environment');
     expect(recovery).toContain('Do not publish or promote beta.23');
+    expect(recovery).toContain('No Windows tester is currently available');
   });
 
   it('documents deferred ASAR/fuse work and immutable runtime connectors', () => {

@@ -15,6 +15,7 @@ dist/
 config.json
 mcp-servers.json
 release/
+.release-verification/
 *.cer
 *.p12
 .claude/
