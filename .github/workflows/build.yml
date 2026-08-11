@@ -16,6 +16,11 @@ on:
         required: true
         type: boolean
         default: false
+      mac_only:
+        description: 'Run only the signed macOS build for signing diagnostics'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -128,7 +133,7 @@ jobs:
 
   build-win-x64:
     name: Windows x64 native build
-    if: github.event_name != 'workflow_dispatch' || !inputs.rescue_only
+    if: github.event_name != 'workflow_dispatch' || (!inputs.rescue_only && !inputs.mac_only)
     runs-on: windows-latest
     timeout-minutes: 90
     environment: release
