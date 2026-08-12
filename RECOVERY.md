@@ -42,12 +42,13 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > - Voice is explicit-toggle only (`Alt+Shift+V`), uses `gpt-realtime-2.1` for ears/mouth, and falls back to transcription → normal ACOS agent → local speech. Never add an always-on microphone to beta.23.
 > - Production and nested Flo runtime audits are zero. `@kenkaiiii/ggcoder` stays pinned to 4.3.151; do not mix its 5.x migration into beta.23.
 >
-> **beta.24 Windows OAuth hotfix candidate (August 12, 2026):**
+> **beta.25 Windows OAuth hotfix candidate (August 12, 2026):**
 > - Real Windows 11 x64 acceptance of beta.23 passed download checksum, Authenticode trust, installation, first launch, Windows Credential Manager setup, OpenAI OAuth login, personalization, and onboarding.
 > - The first chat exposed a release blocker: Settings correctly showed OpenAI OAuth as Connected, but `SettingsManager.hasRequiredKeys()` ignored the OpenAI OAuth token and `agent:initialize` returned "No API keys configured." This is an app defect, not tester error.
 > - The fix recognizes OpenAI OAuth only when both `openai.auth.method=oauth` and an encrypted `openai.accessToken` exist. The same readiness gate now includes every API-key chat provider already supported by model resolution. Regression coverage verifies OAuth method alone is insufficient and deleting the token returns the app to unconfigured state.
-> - Local verification passed: 73 test files / 1,329 tests, targeted secret-boundary tests, typecheck, lint, and `git diff --check`.
-> - Do not replace or retag beta.23. Create immutable `v1.0.0-beta.24`, run the signed Windows x64 workflow, and repeat only install/upgrade plus chat/voice acceptance on the real Windows PC. Keep the beta.23 draft private and keep production on beta.22 until beta.24 passes.
+> - Local verification passed: 73 test files / 1,329 tests, targeted secret-boundary and release-documentation tests, typecheck, lint, and `git diff --check`.
+> - `v1.0.0-beta.24` was abandoned after its immutable tag exposed a stale release-documentation test in CI; its artifacts must not ship. Do not retag it.
+> - Create immutable `v1.0.0-beta.25`, run the full signed native workflow, and repeat only install/upgrade plus chat/voice acceptance on the real Windows PC. Keep the beta.23 draft private and keep production on beta.22 until beta.25 passes.
 > - The beta.23 installer remains useful only as acceptance evidence; do not promote it because OpenAI subscription-auth chat is blocked.
 >
 > **beta.23 trust-and-voice candidate (August 11, 2026):**
