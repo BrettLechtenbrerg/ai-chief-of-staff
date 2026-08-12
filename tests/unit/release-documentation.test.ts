@@ -46,7 +46,9 @@ describe('beta.23 release documentation', () => {
     expect(recovery).toContain('protected by GitHub OIDC and the `release` environment');
     expect(recovery).toContain('Beta.23 failed real Windows chat acceptance');
     expect(recovery).toContain('Settings correctly showed OpenAI OAuth as Connected');
-    expect(recovery).toContain('Create immutable `v1.0.0-beta.25`');
+    expect(recovery).toContain('Immutable annotated tag `v1.0.0-beta.25`');
+    expect(recovery).toContain('31603383781');
+    expect(recovery).toContain('000d155d0db1e4eb32fde692e8f9fa262245088b5406e989969f3b3d1e69acaa');
     expect(recovery).toContain('`v1.0.0-beta.24` was abandoned');
   });
 

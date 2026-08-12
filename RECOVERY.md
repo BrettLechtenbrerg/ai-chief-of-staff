@@ -48,7 +48,10 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > - The fix recognizes OpenAI OAuth only when both `openai.auth.method=oauth` and an encrypted `openai.accessToken` exist. The same readiness gate now includes every API-key chat provider already supported by model resolution. Regression coverage verifies OAuth method alone is insufficient and deleting the token returns the app to unconfigured state.
 > - Local verification passed: 73 test files / 1,329 tests, targeted secret-boundary and release-documentation tests, typecheck, lint, and `git diff --check`.
 > - `v1.0.0-beta.24` was abandoned after its immutable tag exposed a stale release-documentation test in CI; its artifacts must not ship. Do not retag it.
-> - Create immutable `v1.0.0-beta.25`, run the full signed native workflow, and repeat only install/upgrade plus chat/voice acceptance on the real Windows PC. Keep the beta.23 draft private and keep production on beta.22 until beta.25 passes.
+> - Immutable annotated tag `v1.0.0-beta.25` points to commit `94a61cb579ef6b86c6755aa07475de42c2f37250`. Tag-triggered workflow run `31603383781` passed its signed/notarized macOS and Authenticode-signed Windows x64 native builds. The Windows signing status is `valid`.
+> - Downloaded beta.25 Windows artifacts match their SHA-256 manifest. Installer SHA-256: `000d155d0db1e4eb32fde692e8f9fa262245088b5406e989969f3b3d1e69acaa`.
+> - Verified local beta.25 Windows artifacts, workflow metadata, an all-ref Git bundle, and checksums live under ignored/private `.release-verification/v1.0.0-beta.25/`. ACOS `main` and TSAI Site `main` match GitHub; Vercel production deployment `dpl_EZiaH68T1BvyWd81381iXDSESy9N` remains `READY` and intentionally serves public beta.22.
+> - Next gate: repeat only beta.25 install/upgrade plus chat/voice acceptance on the real Windows 11 x64 PC. Keep the beta.23 draft private and keep production on beta.22 until beta.25 passes.
 > - The beta.23 installer remains useful only as acceptance evidence; do not promote it because OpenAI subscription-auth chat is blocked.
 >
 > **beta.23 trust-and-voice candidate (August 11, 2026):**
