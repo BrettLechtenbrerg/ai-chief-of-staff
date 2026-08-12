@@ -34,7 +34,7 @@ describe('beta.23 release documentation', () => {
     expect(aeo).toContain('30 seconds');
   });
 
-  it('records verified tag-build evidence without claiming beta.23 is public', () => {
+  it('records verified beta.23 evidence and its Windows acceptance blocker', () => {
     const recovery = read('RECOVERY.md');
     expect(recovery).toContain('Public release remains beta.22');
     expect(recovery).toContain('Azure Artifact Signing');
@@ -44,8 +44,9 @@ describe('beta.23 release documentation', () => {
     expect(recovery).toContain('31497949376');
     expect(recovery).toContain('676aad7d359b47cf7afd4fb683c955f01623f67c399f96ab96be09bd04b91df1');
     expect(recovery).toContain('protected by GitHub OIDC and the `release` environment');
-    expect(recovery).toContain('Do not publish or promote beta.23');
-    expect(recovery).toContain('No Windows tester is currently available');
+    expect(recovery).toContain('Beta.23 failed real Windows chat acceptance');
+    expect(recovery).toContain('Settings correctly showed OpenAI OAuth as Connected');
+    expect(recovery).toContain('Create immutable `v1.0.0-beta.24`');
   });
 
   it('documents deferred ASAR/fuse work and immutable runtime connectors', () => {
