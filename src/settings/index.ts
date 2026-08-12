@@ -423,23 +423,26 @@ class SettingsManagerClass {
   }
 
   /**
-   * Check if required authentication is set
-   * Returns true if any LLM provider key is configured (Anthropic, Moonshot, or OAuth)
+   * Check whether any supported LLM provider has usable credentials.
+   * OAuth methods only count when their encrypted access token is present.
    */
   hasRequiredKeys(): boolean {
-    const authMethod = this.get('auth.method');
+    const hasAnthropicOAuth =
+      this.get('auth.method') === 'oauth' && !!this.get('auth.oauthToken');
+    const hasOpenAIOAuth =
+      this.get('openai.auth.method') === 'oauth' && !!this.get('openai.accessToken');
 
-    // Check for OAuth authentication
-    if (authMethod === 'oauth') {
-      const oauthToken = this.get('auth.oauthToken');
-      return !!oauthToken;
-    }
-
-    // Check for API key authentication (any supported provider)
-    const anthropicKey = this.get('anthropic.apiKey');
-    const moonshotKey = this.get('moonshot.apiKey');
-    const glmKey = this.get('glm.apiKey');
-    return !!anthropicKey || !!moonshotKey || !!glmKey;
+    return (
+      hasAnthropicOAuth ||
+      hasOpenAIOAuth ||
+      !!this.get('anthropic.apiKey') ||
+      !!this.get('openai.apiKey') ||
+      !!this.get('moonshot.apiKey') ||
+      !!this.get('glm.apiKey') ||
+      !!this.get('xiaomi.apiKey') ||
+      !!this.get('minimax.apiKey') ||
+      !!this.get('deepseek.apiKey')
+    );
   }
 
   /**

@@ -42,6 +42,14 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > - Voice is explicit-toggle only (`Alt+Shift+V`), uses `gpt-realtime-2.1` for ears/mouth, and falls back to transcription → normal ACOS agent → local speech. Never add an always-on microphone to beta.23.
 > - Production and nested Flo runtime audits are zero. `@kenkaiiii/ggcoder` stays pinned to 4.3.151; do not mix its 5.x migration into beta.23.
 >
+> **beta.24 Windows OAuth hotfix candidate (August 12, 2026):**
+> - Real Windows 11 x64 acceptance of beta.23 passed download checksum, Authenticode trust, installation, first launch, Windows Credential Manager setup, OpenAI OAuth login, personalization, and onboarding.
+> - The first chat exposed a release blocker: Settings correctly showed OpenAI OAuth as Connected, but `SettingsManager.hasRequiredKeys()` ignored the OpenAI OAuth token and `agent:initialize` returned "No API keys configured." This is an app defect, not tester error.
+> - The fix recognizes OpenAI OAuth only when both `openai.auth.method=oauth` and an encrypted `openai.accessToken` exist. The same readiness gate now includes every API-key chat provider already supported by model resolution. Regression coverage verifies OAuth method alone is insufficient and deleting the token returns the app to unconfigured state.
+> - Local verification passed: 73 test files / 1,329 tests, targeted secret-boundary tests, typecheck, lint, and `git diff --check`.
+> - Do not replace or retag beta.23. Create immutable `v1.0.0-beta.24`, run the signed Windows x64 workflow, and repeat only install/upgrade plus chat/voice acceptance on the real Windows PC. Keep the beta.23 draft private and keep production on beta.22 until beta.24 passes.
+> - The beta.23 installer remains useful only as acceptance evidence; do not promote it because OpenAI subscription-auth chat is blocked.
+>
 > **beta.23 trust-and-voice candidate (August 11, 2026):**
 > - Steps 1–20 of `.gg/plans/daily-driver-security-voice-windows.md` are implemented. Immutable tag `v1.0.0-beta.23` points to commit `2bf31045778d47e37793d370e9d655b7890742dc`.
 > - Tag-triggered build run `31497949376` passed on native macOS and Windows runners: 71 test files / 1,321 tests, typecheck, lint, production audits, Electron-ABI rebuild, better-sqlite3 load, architecture-aware native-module verification, signed/notarized Mac artifacts, and an Authenticode-signed Windows x64 installer.
@@ -50,10 +58,11 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > - Downloaded Windows tag artifacts match their SHA-256 manifest. The x64 installer digest is `676aad7d359b47cf7afd4fb683c955f01623f67c399f96ab96be09bd04b91df1`, and an independent extraction verified 24 native modules as Windows x64.
 > - Release verification caught `latest.yml` pointing at unpublished universal/ARM64 installers and `latest-mac.yml` retaining pre-staple DMG hashes/sizes. The manifest patchers now atomically rebuild updater metadata from final signed files, and `.github/workflows/publish-existing-release.yml` can promote the immutable tag-run artifacts only after exact-run proof, checksums, updater repair, both real-device acceptance confirmations, and protected-environment approval.
 > - Real Intel Mac acceptance passed on August 11: beta.23 opened from the signed DMG, loaded existing history/facts, created a private integrity-checked rotating backup, completed a healthy GPT chat, sustained a multi-question voice conversation after provider reauthentication, displayed the AEO paid-action gate with the correct 75-request maximum, and denied the batch without running provider searches.
-> - Private GitHub draft release `368717082` now preserves all 11 corrected Mac/Windows assets. GitHub SHA-256 digests match every local source byte; the release is still `draft: true` and is not visible to the public.
+> - Private GitHub draft release `368717082` preserves all 11 corrected Mac/Windows assets. GitHub SHA-256 digests match every local source byte; the release is still `draft: true` and is not visible to the public.
 > - ACOS and TSAI source are pushed to GitHub. Verified local all-ref bundles and checksums live under ignored/private `.release-verification/v1.0.0-beta.23/source-backups/`. Production Vercel deployment `dpl_EZiaH68T1BvyWd81381iXDSESy9N` is `READY` and still serves the beta.22 page with the tested beta.20 x64 link/digest.
 > - Private SQLite backups passed `PRAGMA quick_check` under `~/Library/Application Support/ai-chief-of-staff/backups/`; do not upload those plaintext personal-data files to GitHub.
-> - Public release remains beta.22. Its Windows link intentionally points to the tested beta.20 x64 installer and digest; do not call it a beta.22 rebuild. Do not publish or promote beta.23 until real Windows x64 acceptance is recorded. No Windows tester is currently available.
+> - Public release remains beta.22. Its Windows link intentionally points to the tested beta.20 x64 installer and digest; do not call it a beta.22 rebuild. Beta.23 failed real Windows chat acceptance and must never be promoted.
+> - Current data protection and restore procedure: [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md). Windows diagnostics: [`docs/WINDOWS-TESTER-RESCUE.md`](docs/WINDOWS-TESTER-RESCUE.md).
 > - Current data protection and restore procedure: [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md). Windows diagnostics: [`docs/WINDOWS-TESTER-RESCUE.md`](docs/WINDOWS-TESTER-RESCUE.md).
 
 ## beta.23 rollback procedure

@@ -59,6 +59,40 @@ describe('settings secret boundary', () => {
     expect(SettingsManager.getSecretPresence()['openai.apiKey']).toBe(false);
   });
 
+  it('recognizes OpenAI OAuth only when its encrypted access token is present', () => {
+    initializeSettings();
+
+    SettingsManager.set('openai.auth.method', 'oauth');
+    expect(SettingsManager.hasRequiredKeys()).toBe(false);
+    expect(SettingsManager.isFirstRun()).toBe(true);
+
+    SettingsManager.setSecret('openai.accessToken', 'oauth-access-token');
+    expect(SettingsManager.hasRequiredKeys()).toBe(true);
+    expect(SettingsManager.isFirstRun()).toBe(false);
+
+    SettingsManager.deleteSecret('openai.accessToken');
+    expect(SettingsManager.hasRequiredKeys()).toBe(false);
+  });
+
+  it('recognizes every supported API-key chat provider', () => {
+    initializeSettings();
+
+    for (const key of [
+      'anthropic.apiKey',
+      'openai.apiKey',
+      'moonshot.apiKey',
+      'glm.apiKey',
+      'xiaomi.apiKey',
+      'minimax.apiKey',
+      'deepseek.apiKey',
+    ]) {
+      SettingsManager.setSecret(key, `test-${key}`);
+      expect(SettingsManager.hasRequiredKeys(), key).toBe(true);
+      SettingsManager.deleteSecret(key);
+      expect(SettingsManager.hasRequiredKeys(), key).toBe(false);
+    }
+  });
+
   it('rejects unknown, public, empty, and oversized secret writes', () => {
     initializeSettings();
 
