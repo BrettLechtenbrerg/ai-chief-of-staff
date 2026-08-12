@@ -64,7 +64,6 @@ This is the canonical session-kickoff document. If you're a fresh Claude session
 > - Private SQLite backups passed `PRAGMA quick_check` under `~/Library/Application Support/ai-chief-of-staff/backups/`; do not upload those plaintext personal-data files to GitHub.
 > - Public release remains beta.22. Its Windows link intentionally points to the tested beta.20 x64 installer and digest; do not call it a beta.22 rebuild. Beta.23 failed real Windows chat acceptance and must never be promoted.
 > - Current data protection and restore procedure: [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md). Windows diagnostics: [`docs/WINDOWS-TESTER-RESCUE.md`](docs/WINDOWS-TESTER-RESCUE.md).
-> - Current data protection and restore procedure: [`docs/DATA-PROTECTION.md`](docs/DATA-PROTECTION.md). Windows diagnostics: [`docs/WINDOWS-TESTER-RESCUE.md`](docs/WINDOWS-TESTER-RESCUE.md).
 
 ## beta.23 rollback procedure
 
