@@ -62,7 +62,7 @@ jobs:
       contents: write
     steps:
       - name: Check out protected publication gate
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f544cf033ba # v6
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
