@@ -2,7 +2,7 @@
 
 ## Release decision
 
-**Mac beta.25 implementation, immutable tag-build provenance, artifact verification, and real Intel acceptance gates are complete.** The approved public scope excludes every beta.23/beta.25 Windows candidate and keeps Windows updater clients pinned to the verified beta.20 x64 fallback. Publication uses a protected Mac-only draft/publish workflow; Apple Silicon has build-gate verification but no real-device acceptance. The historical findings below describe the original `58e0425` baseline, and the private beta.23 draft remains unchanged.
+**Mac beta.25 is a public GitHub prerelease after immutable tag-build provenance, artifact verification, protected private-draft review, and exact run-artifact Intel acceptance.** Protected draft run `31849210095` and publish run `31850297453` produced release `370865321`. The public scope excludes every beta.23/beta.25 Windows candidate and keeps Windows updater clients pinned to the verified beta.20 x64 fallback. Apple Silicon has build-gate verification but no real-device acceptance. The historical findings below describe the original `58e0425` baseline, and the private beta.23 draft remains unchanged.
 
 ## Reproducible baseline
 
