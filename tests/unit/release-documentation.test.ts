@@ -59,4 +59,34 @@ describe('beta.23 release documentation', () => {
     expect(audit).toContain('firecrawl-mcp@3.23.8');
     expect(audit).toContain('mcp-remote@0.1.38');
   });
+
+  it('keeps the Mac-only beta.25 publication path pinned to beta.20 Windows x64', () => {
+    const workflow = read('.github/workflows/publish-mac-only-release.yml');
+    const fallbackDigest =
+      '7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e';
+
+    expect(workflow).toContain('environment: release');
+    expect(workflow).toContain('WINDOWS_FALLBACK_SOURCE_TAG: v1.0.0-beta.22');
+    expect(workflow).toContain('WINDOWS_FALLBACK_VERSION: 1.0.0-beta.20');
+    expect(workflow).toContain('AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe');
+    expect(workflow).toContain(fallbackDigest);
+    expect(workflow).toContain('inputs.publication_mode == \'draft\'');
+    expect(workflow).toContain('inputs.publication_mode == \'publish\'');
+    expect(workflow).toContain('draft_assets_verified_confirmed');
+    expect(workflow).toContain('xcrun stapler validate');
+    expect(workflow).toContain('spctl --assess --type execute');
+
+    expect(workflow).toContain('name: ai-chief-of-staff-macos-${{ inputs.release_tag }}');
+    expect(workflow).not.toContain(
+      'name: ai-chief-of-staff-windows-x64-${{ inputs.release_tag }}'
+    );
+
+    const uploadedWindowsFiles = [...workflow.matchAll(/^\s+release\/(.*\.exe(?:\.blockmap)?)$/gm)]
+      .map((match) => match[1])
+      .sort();
+    expect(uploadedWindowsFiles).toEqual([
+      'AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe',
+      'AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe.blockmap',
+    ]);
+  });
 });

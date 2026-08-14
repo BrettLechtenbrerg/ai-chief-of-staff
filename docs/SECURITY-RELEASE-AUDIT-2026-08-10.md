@@ -2,7 +2,7 @@
 
 ## Release decision
 
-**Implementation, signing, tag-build, artifact-verification, and real Intel Mac acceptance gates are complete; publication is blocked only on real Windows x64 tester acceptance.** All 11 release assets are preserved in private GitHub draft `368717082` with upload digests matched to local source bytes. The historical findings below describe the original `58e0425` baseline. Beta.23 remains a trust-and-voice release, and the gg-agent 4 → 5 migration remains deferred.
+**Mac beta.25 implementation, immutable tag-build provenance, artifact verification, and real Intel acceptance gates are complete.** The approved public scope excludes every beta.23/beta.25 Windows candidate and keeps Windows updater clients pinned to the verified beta.20 x64 fallback. Publication uses a protected Mac-only draft/publish workflow; Apple Silicon has build-gate verification but no real-device acceptance. The historical findings below describe the original `58e0425` baseline, and the private beta.23 draft remains unchanged.
 
 ## Reproducible baseline
 
@@ -17,6 +17,16 @@ Recorded on 2026-08-10 before implementation:
 - Active GitHub account: `BrettLechtenbrerg`
 - Tester page: `https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app`
 - Repository URLs and release assets are served directly by GitHub Releases; the website does not proxy installer bytes
+
+## beta.25 filtered release assessment
+
+- **Provenance:** immutable tag `v1.0.0-beta.25`, commit `94a61cb579ef6b86c6755aa07475de42c2f37250`, and successful `.github/workflows/build.yml` run `31603383781`. The publication workflow requires the current tag commit, source-run SHA, tag branch, successful conclusion, build-workflow path, and exact unexpired Mac artifact to agree before download.
+- **Mac artifact integrity:** `SHA256SUMS-macos.txt` and rebuilt `latest-mac.yml` match the downloaded bytes. The Intel DMG SHA-256 is `5a02ce65a31ea2fc5a0823ce3cb3929fd61a871a556a860cc10433370fa35039`; Apple Silicon is `de97c8ea4d03b56a44761361acc7b549b46499e02825de5cf8f33f52f55ecfb4`. Both app bundles pass native-module architecture, strict Developer ID/team, Gatekeeper, and notarization-staple checks.
+- **Accepted Mac scope:** the Intel iMac preserved history/facts, completed Claude and GPT typed chat, dictation, two interactive Voice turns, database backup, and restart persistence on beta.25. SQLite integrity remained `ok`. The user separately confirmed manual input and Voice behavior.
+- **Remaining Apple Silicon limitation:** the arm64 artifact passed architecture/signature/Gatekeeper/notarization build gates, but no real Apple Silicon device completed startup or feature acceptance. The release copy must state that limitation rather than imply real-device coverage.
+- **Deferred Windows scope:** the beta.25 Windows artifact is not downloaded, checked, uploaded, or referenced by either updater manifest. Its separate Voice/API-key and model-discovery acceptance remains open. No beta.23 Windows artifact is eligible either.
+- **Pinned Windows fallback:** only `AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe` from public release `v1.0.0-beta.22` is mirrored. GitHub's published size/digest and downloaded bytes must equal 324,192,956 bytes and SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`; its blockmap is separately pinned to SHA-256 `a05235bed923ada2f4313bd3455389521726dc249d427e39fba0db060e273134`. `latest.yml` reports beta.20 and contains exactly one x64 installer entry.
+- **Promotion control:** `.github/workflows/publish-mac-only-release.yml` runs from `main` in the protected `release` environment. Draft mode refuses a public overwrite and verifies the resulting exact asset inventory. Publish mode requires a second explicit confirmation and compares every private-draft asset size/SHA-256 to freshly reconstructed verified local assets before changing `draft` to `false`.
 
 ## Confirmed security findings (baseline; remediated or explicitly dispositioned on current `main`)
 

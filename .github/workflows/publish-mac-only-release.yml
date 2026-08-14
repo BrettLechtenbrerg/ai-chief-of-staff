@@ -1,0 +1,406 @@
+name: Publish Verified Mac-Only Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing immutable tag whose successful Mac artifacts will be published
+        required: true
+        type: string
+      source_run_id:
+        description: Successful tag-triggered Build and Release workflow run ID
+        required: true
+        type: string
+      mac_acceptance_confirmed:
+        description: Intel Mac completed startup, history, GPT/Claude chat, dictation, Voice, backup, and restart acceptance
+        required: true
+        default: false
+        type: boolean
+      publication_mode:
+        description: Create/update a private draft first; publish only after independently verifying that draft
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - publish
+      draft_assets_verified_confirmed:
+        description: Required for publish mode after the draft inventory and both updater manifests were verified
+        required: true
+        default: false
+        type: boolean
+
+permissions: {}
+
+concurrency:
+  group: publish-mac-only-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+env:
+  WINDOWS_FALLBACK_SOURCE_TAG: v1.0.0-beta.22
+  WINDOWS_FALLBACK_VERSION: 1.0.0-beta.20
+  WINDOWS_FALLBACK_INSTALLER: AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe
+  WINDOWS_FALLBACK_INSTALLER_SIZE: '324192956'
+  WINDOWS_FALLBACK_INSTALLER_SHA256: 7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e
+  WINDOWS_FALLBACK_INSTALLER_SHA512: sHB+BUGBl8HQRbkdyB+KOKgLeQfQLG1uQqBNqUc1Rfhl++5a+inZ6HCOu/UOcx7EPf3vYzFFcp0sZ+BPc6m85A==
+  WINDOWS_FALLBACK_BLOCKMAP: AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe.blockmap
+  WINDOWS_FALLBACK_BLOCKMAP_SIZE: '321820'
+  WINDOWS_FALLBACK_BLOCKMAP_SHA256: a05235bed923ada2f4313bd3455389521726dc249d427e39fba0db060e273134
+  WINDOWS_FALLBACK_RELEASE_DATE: '2026-07-03T23:14:24.123Z'
+  WINDOWS_FALLBACK_CHECKSUMS: SHA256SUMS-windows-beta.20-x64.txt
+  EXPECTED_APPLE_TEAM_ID: 2LRU5T4HN9
+
+jobs:
+  publish-mac-only-prerelease:
+    name: Protect Mac release and Windows fallback
+    if: inputs.mac_acceptance_confirmed
+    runs-on: macos-latest
+    timeout-minutes: 90
+    environment: release
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Check out protected publication gate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f544cf033ba # v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate dispatch and immutable source provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          PUBLICATION_MODE: ${{ inputs.publication_mode }}
+          DRAFT_ASSETS_VERIFIED: ${{ inputs.draft_assets_verified_confirmed }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main' || {
+            echo 'Publication must run from the protected main branch.' >&2
+            exit 1
+          }
+          [[ "$RELEASE_TAG" =~ ^v1\.0\.0-beta\.[0-9]+([.][0-9]+)?$ ]] || {
+            echo "Invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          }
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || {
+            echo 'Source run ID must contain only digits.' >&2
+            exit 1
+          }
+          [[ "$PUBLICATION_MODE" = draft || "$PUBLICATION_MODE" = publish ]]
+          if [[ "$PUBLICATION_MODE" = publish && "$DRAFT_ASSETS_VERIFIED" != true ]]; then
+            echo 'Publish mode requires explicit confirmation that the private draft was verified.' >&2
+            exit 1
+          fi
+
+          git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
+          test "$(jq -r .event <<<"$run_json")" = push
+          test "$(jq -r .status <<<"$run_json")" = completed
+          test "$(jq -r .conclusion <<<"$run_json")" = success
+          test "$(jq -r .path <<<"$run_json")" = '.github/workflows/build.yml'
+          test "$(jq -r .head_branch <<<"$run_json")" = "$RELEASE_TAG"
+          test "$(jq -r .head_sha <<<"$run_json")" = "$tag_commit"
+
+          artifact_name="ai-chief-of-staff-macos-${RELEASE_TAG}"
+          artifacts_json="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts?per_page=100")"
+          test "$(jq --arg name "$artifact_name" '[.artifacts[] | select(.name == $name)] | length' <<<"$artifacts_json")" = 1
+          test "$(jq -r --arg name "$artifact_name" '.artifacts[] | select(.name == $name) | .expired' <<<"$artifacts_json")" = false
+          echo "Verified $artifact_name from run $SOURCE_RUN_ID at immutable tag commit $tag_commit."
+
+      - name: Refuse public overwrite before draft verification
+        if: inputs.publication_mode == 'draft'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          existing="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq ".[] | select(.tag_name == \"$RELEASE_TAG\")")"
+          if [[ -n "$existing" ]]; then
+            test "$(jq -r .draft <<<"$existing")" = true || {
+              echo 'Draft mode refuses to alter an already-public release.' >&2
+              exit 1
+            }
+          fi
+
+      - name: Download only Mac artifacts from verified tag run
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ai-chief-of-staff-macos-${{ inputs.release_tag }}
+          path: release
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.source_run_id }}
+
+      - name: Enforce exact Mac candidate allowlist
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          cat > "$RUNNER_TEMP/expected-mac-assets.txt" <<EOF
+          AI-Chief-of-Staff-${version}-arm64-mac.zip
+          AI-Chief-of-Staff-${version}-arm64-mac.zip.blockmap
+          AI-Chief-of-Staff-${version}-arm64.dmg
+          AI-Chief-of-Staff-${version}-arm64.dmg.blockmap
+          AI-Chief-of-Staff-${version}-x64-mac.zip
+          AI-Chief-of-Staff-${version}-x64-mac.zip.blockmap
+          AI-Chief-of-Staff-${version}-x64.dmg
+          AI-Chief-of-Staff-${version}-x64.dmg.blockmap
+          SHA256SUMS-macos.txt
+          latest-mac.yml
+          EOF
+          find release -mindepth 1 -maxdepth 1 -type f -exec basename {} \; | LC_ALL=C sort > "$RUNNER_TEMP/actual-mac-assets.txt"
+          LC_ALL=C sort -o "$RUNNER_TEMP/expected-mac-assets.txt" "$RUNNER_TEMP/expected-mac-assets.txt"
+          diff -u "$RUNNER_TEMP/expected-mac-assets.txt" "$RUNNER_TEMP/actual-mac-assets.txt"
+          if find release -mindepth 1 -maxdepth 1 -type f \( -iname '*.exe' -o -iname 'latest.yml' -o -iname '*windows*' \) | grep -q .; then
+            echo 'Candidate Windows content is forbidden in the Mac artifact.' >&2
+            exit 1
+          fi
+
+      - name: Verify Mac checksums and updater manifest
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          node scripts/patch-latest-mac-yml.cjs release "$RELEASE_TAG"
+          (
+            cd release
+            shasum -a 256 -c SHA256SUMS-macos.txt
+          )
+
+      - name: Verify Mac architecture, signatures, Gatekeeper, and notarization
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+
+          verify_app() {
+            local app="$1"
+            local expected_arch="$2"
+            local actual_arches signing_details app_version
+            actual_arches="$(lipo -archs "$app/Contents/MacOS/AI Chief of Staff")"
+            [[ " $actual_arches " = *" $expected_arch "* ]] || {
+              echo "$app has architectures '$actual_arches', expected $expected_arch." >&2
+              return 1
+            }
+            app_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
+            test "$app_version" = "$version"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            signing_details="$(codesign -dv --verbose=4 "$app" 2>&1)"
+            grep -Fqx "TeamIdentifier=$EXPECTED_APPLE_TEAM_ID" <<<"$signing_details"
+            grep -Fqx "Authority=Developer ID Application: Total Success AI LLC ($EXPECTED_APPLE_TEAM_ID)" <<<"$signing_details"
+            spctl --assess --type execute --verbose=2 "$app"
+          }
+
+          for arch in x64 arm64; do
+            if [[ "$arch" = x64 ]]; then
+              expected_arch=x86_64
+              node_arch=1
+            else
+              expected_arch=arm64
+              node_arch=3
+            fi
+
+            extract_dir="$RUNNER_TEMP/extracted-$arch"
+            mkdir -p "$extract_dir"
+            ditto -x -k "release/AI-Chief-of-Staff-${version}-${arch}-mac.zip" "$extract_dir"
+            extracted_app="$extract_dir/AI Chief of Staff.app"
+            verify_app "$extracted_app" "$expected_arch"
+            APP_TO_VERIFY="$extracted_app" NODE_ARCH="$node_arch" node <<'NODE'
+          const verifyNativeModules = require('./scripts/verify-native-modules.cjs').default;
+          verifyNativeModules({
+            electronPlatformName: 'darwin',
+            arch: Number(process.env.NODE_ARCH),
+            appOutDir: process.env.APP_TO_VERIFY,
+          }).catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
+            dmg="release/AI-Chief-of-Staff-${version}-${arch}.dmg"
+            xcrun stapler validate "$dmg"
+            mount_dir="$RUNNER_TEMP/mount-$arch"
+            mkdir -p "$mount_dir"
+            hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir" >/dev/null
+            verify_app "$mount_dir/AI Chief of Staff.app" "$expected_arch"
+            hdiutil detach "$mount_dir" >/dev/null
+          done
+
+      - name: Mirror and pin only the beta.20 Windows x64 fallback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${WINDOWS_FALLBACK_SOURCE_TAG}")"
+          test "$(jq -r .draft <<<"$source_json")" = false
+
+          assert_published_asset() {
+            local name="$1"
+            local expected_size="$2"
+            local expected_sha256="$3"
+            test "$(jq --arg name "$name" '[.assets[] | select(.name == $name)] | length' <<<"$source_json")" = 1
+            test "$(jq -r --arg name "$name" '.assets[] | select(.name == $name) | .size' <<<"$source_json")" = "$expected_size"
+            test "$(jq -r --arg name "$name" '.assets[] | select(.name == $name) | .digest' <<<"$source_json")" = "sha256:$expected_sha256"
+          }
+          assert_published_asset "$WINDOWS_FALLBACK_INSTALLER" "$WINDOWS_FALLBACK_INSTALLER_SIZE" "$WINDOWS_FALLBACK_INSTALLER_SHA256"
+          assert_published_asset "$WINDOWS_FALLBACK_BLOCKMAP" "$WINDOWS_FALLBACK_BLOCKMAP_SIZE" "$WINDOWS_FALLBACK_BLOCKMAP_SHA256"
+
+          gh release download "$WINDOWS_FALLBACK_SOURCE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$WINDOWS_FALLBACK_INSTALLER" \
+            --pattern "$WINDOWS_FALLBACK_BLOCKMAP" \
+            --dir release
+
+          test "$(stat -f %z "release/$WINDOWS_FALLBACK_INSTALLER")" = "$WINDOWS_FALLBACK_INSTALLER_SIZE"
+          test "$(stat -f %z "release/$WINDOWS_FALLBACK_BLOCKMAP")" = "$WINDOWS_FALLBACK_BLOCKMAP_SIZE"
+          test "$(shasum -a 256 "release/$WINDOWS_FALLBACK_INSTALLER" | awk '{print $1}')" = "$WINDOWS_FALLBACK_INSTALLER_SHA256"
+          test "$(shasum -a 256 "release/$WINDOWS_FALLBACK_BLOCKMAP" | awk '{print $1}')" = "$WINDOWS_FALLBACK_BLOCKMAP_SHA256"
+          actual_sha512="$(openssl dgst -sha512 -binary "release/$WINDOWS_FALLBACK_INSTALLER" | openssl base64 -A)"
+          test "$actual_sha512" = "$WINDOWS_FALLBACK_INSTALLER_SHA512"
+
+          printf '%s  %s\n%s  %s\n' \
+            "$WINDOWS_FALLBACK_INSTALLER_SHA256" "$WINDOWS_FALLBACK_INSTALLER" \
+            "$WINDOWS_FALLBACK_BLOCKMAP_SHA256" "$WINDOWS_FALLBACK_BLOCKMAP" \
+            > "release/$WINDOWS_FALLBACK_CHECKSUMS"
+
+          python3 <<'PY'
+          import os
+          from pathlib import Path
+
+          installer = os.environ['WINDOWS_FALLBACK_INSTALLER']
+          manifest = (
+              f"version: {os.environ['WINDOWS_FALLBACK_VERSION']}\n"
+              "files:\n"
+              f"  - url: {installer}\n"
+              f"    sha512: {os.environ['WINDOWS_FALLBACK_INSTALLER_SHA512']}\n"
+              f"    size: {os.environ['WINDOWS_FALLBACK_INSTALLER_SIZE']}\n"
+              f"path: {installer}\n"
+              f"sha512: {os.environ['WINDOWS_FALLBACK_INSTALLER_SHA512']}\n"
+              f"releaseDate: '{os.environ['WINDOWS_FALLBACK_RELEASE_DATE']}'\n"
+          )
+          Path('release/latest.yml').write_text(manifest, encoding='utf-8')
+          PY
+
+          grep -Fqx "version: $WINDOWS_FALLBACK_VERSION" release/latest.yml
+          test "$(grep -c '^  - url:' release/latest.yml)" = 1
+          grep -Fqx "  - url: $WINDOWS_FALLBACK_INSTALLER" release/latest.yml
+          if grep -Eiq 'arm64|beta\.(2[1-9]|[3-9][0-9])' release/latest.yml; then
+            echo 'Windows updater manifest escaped the pinned beta.20 x64 fallback.' >&2
+            exit 1
+          fi
+
+      - name: Verify private draft before public promotion
+        if: inputs.publication_mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          draft_json="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq ".[] | select(.tag_name == \"$RELEASE_TAG\")")"
+          test -n "$draft_json"
+          test "$(jq -r .draft <<<"$draft_json")" = true
+          test "$(jq -r .prerelease <<<"$draft_json")" = true
+          RELEASE_JSON="$draft_json" python3 <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          release = json.loads(os.environ['RELEASE_JSON'])
+          local = {}
+          for path in Path('release').iterdir():
+              if path.is_file():
+                  digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                  local[path.name] = (path.stat().st_size, f'sha256:{digest}')
+          remote = {asset['name']: (asset['size'], asset.get('digest')) for asset in release['assets']}
+          if remote != local:
+              raise SystemExit(f'Draft assets differ from verified local assets. local={sorted(local)} remote={sorted(remote)}')
+          forbidden = [name for name in remote if ('beta.25' in name and name.lower().endswith(('.exe', '.exe.blockmap'))) or 'beta.23' in name.lower()]
+          if forbidden:
+              raise SystemExit(f'Forbidden Windows candidate assets in draft: {forbidden}')
+          print(f'Verified {len(remote)} exact draft assets before publication.')
+          PY
+
+      - name: Create or update private draft
+        if: inputs.publication_mode == 'draft'
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          draft: true
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            release/AI-Chief-of-Staff-*-arm64.dmg
+            release/AI-Chief-of-Staff-*-arm64.dmg.blockmap
+            release/AI-Chief-of-Staff-*-arm64-mac.zip
+            release/AI-Chief-of-Staff-*-arm64-mac.zip.blockmap
+            release/AI-Chief-of-Staff-*-x64.dmg
+            release/AI-Chief-of-Staff-*-x64.dmg.blockmap
+            release/AI-Chief-of-Staff-*-x64-mac.zip
+            release/AI-Chief-of-Staff-*-x64-mac.zip.blockmap
+            release/latest-mac.yml
+            release/SHA256SUMS-macos.txt
+            release/AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe
+            release/AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe.blockmap
+            release/latest.yml
+            release/SHA256SUMS-windows-beta.20-x64.txt
+          body: |
+            ## AI Chief of Staff ${{ inputs.release_tag }}
+
+            Mac beta release with both Intel and Apple Silicon artifacts. Intel completed live startup, history, GPT/Claude chat, dictation, two-turn interactive Voice, database backup, and restart acceptance. Apple Silicon passed architecture, native-module, Developer ID, Gatekeeper, checksum, updater, and notarization build gates; real-device acceptance remains outstanding.
+
+            Windows remains pinned to the known beta.20 x64 installer. This release intentionally contains no beta.23 or beta.25 Windows candidate artifact.
+
+            ### Downloads
+            - macOS Apple Silicon: `AI-Chief-of-Staff-*-arm64.dmg`
+            - macOS Intel: `AI-Chief-of-Staff-*-x64.dmg`
+            - Windows x64 fallback: `AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe`
+
+      - name: Verify resulting private draft inventory
+        if: inputs.publication_mode == 'draft'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          draft_json="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq ".[] | select(.tag_name == \"$RELEASE_TAG\")")"
+          test "$(jq -r .draft <<<"$draft_json")" = true
+          RELEASE_JSON="$draft_json" python3 <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          release = json.loads(os.environ['RELEASE_JSON'])
+          local = {}
+          for path in Path('release').iterdir():
+              if path.is_file():
+                  digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                  local[path.name] = (path.stat().st_size, f'sha256:{digest}')
+          remote = {asset['name']: (asset['size'], asset.get('digest')) for asset in release['assets']}
+          if remote != local:
+              raise SystemExit(f'Draft upload verification failed. local={sorted(local)} remote={sorted(remote)}')
+          print(f'Private draft contains exactly {len(remote)} verified assets.')
+          PY
+
+      - name: Publish previously verified draft as prerelease
+        if: inputs.publication_mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          release_id="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq ".[] | select(.tag_name == \"$RELEASE_TAG\" and .draft == true) | .id")"
+          [[ "$release_id" =~ ^[0-9]+$ ]]
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+            -F draft=false \
+            -F prerelease=true \
+            >/dev/null
+          published="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+          test "$(jq -r .draft <<<"$published")" = false
+          test "$(jq -r .prerelease <<<"$published")" = true
+          echo "Published verified prerelease $RELEASE_TAG."
