@@ -48,7 +48,7 @@ env:
   WINDOWS_FALLBACK_BLOCKMAP_SHA256: a05235bed923ada2f4313bd3455389521726dc249d427e39fba0db060e273134
   WINDOWS_FALLBACK_RELEASE_DATE: '2026-07-03T23:14:24.123Z'
   WINDOWS_FALLBACK_CHECKSUMS: SHA256SUMS-windows-beta.20-x64.txt
-  EXPECTED_APPLE_TEAM_ID: 2LRU5T4HN9
+  EXPECTED_APPLE_TEAM_ID: 2HQTY95NHD
 
 jobs:
   publish-mac-only-prerelease:
@@ -187,7 +187,7 @@ jobs:
             codesign --verify --deep --strict --verbose=2 "$app"
             signing_details="$(codesign -dv --verbose=4 "$app" 2>&1)"
             grep -Fqx "TeamIdentifier=$EXPECTED_APPLE_TEAM_ID" <<<"$signing_details"
-            grep -Fqx "Authority=Developer ID Application: Total Success AI LLC ($EXPECTED_APPLE_TEAM_ID)" <<<"$signing_details"
+            grep -Fqx "Authority=Developer ID Application: Brett Lechtenberg ($EXPECTED_APPLE_TEAM_ID)" <<<"$signing_details"
             spctl --assess --type execute --verbose=2 "$app"
           }
 
