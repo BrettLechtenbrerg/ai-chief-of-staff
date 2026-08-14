@@ -141,13 +141,9 @@ jobs:
           version="${RELEASE_TAG#v}"
           cat > "$RUNNER_TEMP/expected-mac-assets.txt" <<EOF
           AI-Chief-of-Staff-${version}-arm64-mac.zip
-          AI-Chief-of-Staff-${version}-arm64-mac.zip.blockmap
           AI-Chief-of-Staff-${version}-arm64.dmg
-          AI-Chief-of-Staff-${version}-arm64.dmg.blockmap
           AI-Chief-of-Staff-${version}-x64-mac.zip
-          AI-Chief-of-Staff-${version}-x64-mac.zip.blockmap
           AI-Chief-of-Staff-${version}-x64.dmg
-          AI-Chief-of-Staff-${version}-x64.dmg.blockmap
           SHA256SUMS-macos.txt
           latest-mac.yml
           EOF
@@ -335,13 +331,9 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             release/AI-Chief-of-Staff-*-arm64.dmg
-            release/AI-Chief-of-Staff-*-arm64.dmg.blockmap
             release/AI-Chief-of-Staff-*-arm64-mac.zip
-            release/AI-Chief-of-Staff-*-arm64-mac.zip.blockmap
             release/AI-Chief-of-Staff-*-x64.dmg
-            release/AI-Chief-of-Staff-*-x64.dmg.blockmap
             release/AI-Chief-of-Staff-*-x64-mac.zip
-            release/AI-Chief-of-Staff-*-x64-mac.zip.blockmap
             release/latest-mac.yml
             release/SHA256SUMS-macos.txt
             release/AI-Chief-of-Staff-1.0.0-beta.20-x64-setup.exe
