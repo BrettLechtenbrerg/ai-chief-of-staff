@@ -918,14 +918,12 @@ app.whenReady().then(async () => {
     // of whether the agent will be initialized (isFirstRun may skip initializeAgent).
     ensureAgentWorkspace();
 
-    // Initialize agent if not first run. The chat window opens via the tray
-    // (this is a tray-resident app — no auto-launched window on startup).
+    // Open the chat window on launch so a Dock/Finder click shows the app on the
+    // first click. Login-item launches stay quiet in the tray.
+    if (!app.getLoginItemSettings().wasOpenedAtLogin) openChatWindow();
     if (!SettingsManager.isFirstRun()) {
       console.log('[Main] Initializing agent...');
       await initializeAgent();
-    } else {
-      // First-run: open chat so the user lands on onboarding.
-      openChatWindow();
     }
 
     // Tray menu is updated event-driven (after messages, cron changes, etc.)

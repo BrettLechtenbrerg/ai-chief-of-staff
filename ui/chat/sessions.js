@@ -22,13 +22,10 @@ function _sessionShowToast(message, type) {
 async function loadSessions() {
   try {
     sessions = await window.pocketAgent.sessions.list();
-    // Restore last selected session from localStorage, or default to first session
+    // Open the most recently active chat (list is sorted by updated_at DESC).
     // Must be set BEFORE renderTabs() so the correct tab is highlighted
     if (sessions.length > 0) {
-      const savedSessionId = localStorage.getItem('currentSessionId');
-      const sessionExists = savedSessionId && sessions.some(s => s.id === savedSessionId);
-      currentSessionId = sessionExists ? savedSessionId : sessions[0].id;
-      // Save in case we defaulted to first session
+      currentSessionId = sessions[0].id;
       localStorage.setItem('currentSessionId', currentSessionId);
     }
     renderTabs();
