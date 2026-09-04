@@ -34,6 +34,17 @@ describe('beta.23 release documentation', () => {
     expect(aeo).toContain('30 seconds');
   });
 
+  it('pins the beta.25 real-Windows acceptance and recovery gate', () => {
+    const acceptance = read('docs/WINDOWS-BETA-25-ACCEPTANCE.md');
+    expect(acceptance).toContain('v1.0.0-beta.25');
+    expect(acceptance).toContain('31603383781');
+    expect(acceptance).toContain('000d155d0db1e4eb32fde692e8f9fa262245088b5406e989969f3b3d1e69acaa');
+    expect(acceptance).toContain('Status` must be `Valid');
+    expect(acceptance).toContain('OpenAI subscription authentication as connected');
+    expect(acceptance).toContain('tester-rescue.ps1');
+    expect(acceptance).toContain('Do not uninstall, delete AppData, or manually copy the database');
+  });
+
   it('records verified beta.23 evidence and its Windows acceptance blocker', () => {
     const recovery = read('RECOVERY.md');
     expect(recovery).toContain('Public release remains beta.22');

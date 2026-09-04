@@ -1,10 +1,10 @@
 # Windows tester rescue bundle
 
-Use this collector when AI Chief of Staff will not install, start, open chat, load SQLite, or update correctly on Windows. Until beta.23 is signed and published, the public beta.22 page intentionally links the tested beta.20 x64 installer (324,192,956 bytes; SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`), not the universal installer.
+Use this collector when AI Chief of Staff will not install, start, open chat, load SQLite, or update correctly on Windows. The public beta.22 page still intentionally links the tested beta.20 x64 installer (324,192,956 bytes; SHA-256 `7464181a0dbb60bdce8aa3b9948ba164898b326aff84703c94468cf919c46d6e`), not the universal installer. For an unpublished candidate, use the collector from the same verified workflow artifact bundle as the installer.
 
 ## Run it
 
-1. Download `tester-rescue.ps1` from the same GitHub prerelease as the installer.
+1. Get `tester-rescue.ps1` from the same release or verified workflow artifact bundle as the installer.
 2. Open **PowerShell** in Downloads; administrator access is not required.
 3. Run:
 
