@@ -31,3 +31,6 @@ ACOS-RESUME-*.md
 # Python bytecode caches (e.g. from the bundled video-silence-trimmer skill)
 __pycache__/
 *.pyc
+
+# local backup archives (copied to iCloud + 8TB drive)
+_backups/
