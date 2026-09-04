@@ -97,11 +97,14 @@ const vendorNm = path.join(
   'node_modules',
 );
 const appNm = path.join(dest, 'Contents', 'Resources', 'app', 'node_modules');
+// build/afterPack.cjs already creates these links (relative) before signing.
+// Re-creating them here rewrites sealed bytes and Gatekeeper reports the app
+// as "damaged", so only fill in links that are actually missing.
 if (fs.existsSync(vendorNm) && fs.existsSync(appNm)) {
   for (const pkg of ['better-sqlite3', 'bindings', 'file-uri-to-path']) {
     const target = path.join(appNm, pkg);
     const link = path.join(vendorNm, pkg);
-    if (!fs.existsSync(target)) continue;
+    if (!fs.existsSync(target) || fs.existsSync(link)) continue;
     try {
       fs.rmSync(link, { recursive: true, force: true });
       fs.symlinkSync(target, link, 'dir');
