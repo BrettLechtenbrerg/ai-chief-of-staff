@@ -294,7 +294,8 @@ npm run typecheck && npm run lint
 
 ### Next session — pick up here (added Sep 4, 2026 — approval-fatigue fix installed locally, beta.26 not yet cut)
 
-**State:** `main` is 6 commits ahead of `v1.0.0-beta.25` (all pushed). Brett's
+**State:** `main` is ahead of `v1.0.0-beta.25` (all pushed; the Sep 4 code
+fixes are the five commits in the table below). Brett's
 Intel iMac runs a locally built, signed + notarized x64 bundle of `main`
 (`474a83f`) installed via `npm run install:local -- x64`. It still reports
 version `1.0.0-beta.25`, so the auto-updater sees no newer public release and
@@ -314,7 +315,8 @@ chief of staff. Daily briefing confirmed working after the fix.
 | `99043c6` | `src/main/ipc/connect-tools-ipc.ts` — meta-ads `mcp-remote --auth-timeout` 120 → 600. Brett hit a dead `localhost` callback ("site can't be reached") because the Pipeboard login took longer than 2 min. Also patched live in `~/Library/Application Support/ai-chief-of-staff/mcp-servers.json` (backup `.bak-<ts>` beside it). |
 | `8a2872d` | `src/main/index.ts` — open chat window on launch unless `wasOpenedAtLogin` (fixes "first Dock click bounces, second opens"). `ui/chat/sessions.js` — land on most recently active session (`updated_at DESC`) instead of the last-clicked tab. |
 | `474a83f` | Follow-up: keep the current tab on `sessions:changed` reloads (Telegram link/unlink); first run always opens the window for onboarding. |
-| (docs) | `docs/WINDOWS-BETA-25-ACCEPTANCE.md` + tester-rescue wording + doc test, carried over from the Sep 2 Windows session. |
+| `d587672` | `docs/WINDOWS-BETA-25-ACCEPTANCE.md` + tester-rescue wording + doc test, carried over from the Sep 2 Windows session. |
+| `f1b0332` + 1 | These session notes; `.gitignore` for `_backups/` (local source zip + all-refs bundle, copied to iCloud and the 8 TB drive). |
 
 **Gotchas learned this session:**
 

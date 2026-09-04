@@ -8,7 +8,10 @@
 
 - **Public release:** `v1.0.0-beta.25` (Aug 14). Landing page and Vercel
   unchanged — nothing to deploy until beta.26 is cut.
-- **`main`:** 6 commits past beta.25, all pushed to GitHub. Worktree clean.
+- **`main`:** pushed to GitHub, worktree clean. Code fixes end at `474a83f`;
+  session docs at `f1b0332`; one `.gitignore` commit after that. Source zip +
+  all-refs git bundle copied to iCloud and the 8 TB drive
+  (`Backups/AI-Chief-of-Staff/`).
 - **Brett's Intel iMac:** runs a signed + notarized local build of `main`
   (`474a83f`) installed with `npm run install:local -- x64`. Still reports
   version beta.25, so the updater leaves it alone. Daily briefing verified
@@ -56,10 +59,11 @@ desktop AI agent (Electron app, MIT rebrand of KenKaiii/pocket-agent).
 **GitHub:** https://github.com/BrettLechtenbrerg/ai-chief-of-staff
   (note: the `Lechtenbrerg` spelling is the REAL handle — not a typo. The
   "corrected" `BrettLechtenberg` 404s. Never auto-fix it.)
-**Latest release:** v1.0.0-beta.21 (public prerelease, Jul 7 2026 — same-day
-  emergency incident response). `git log` head is `162c9a9`. Repo clean —
-  everything on `main` is shipped. 16 release assets live, links verified.
-  Landing page serving beta.21 (`TSAI-Site@8a9baf6`).
+**Latest release:** v1.0.0-beta.25 (public prerelease, Aug 14 2026). `main`
+  is ahead of that tag with the Sep 4 approval/launch fixes (see "Where
+  things stand" above) — installed on Brett's iMac, not yet released.
+  Landing page serving beta.25 (`TSAI-Site@413ea1d`).
+  Everything below this line is historical context from beta.21 and earlier.
 **Landing page:** https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app
   (Vercel auto-deploys from BrettLechtenbrerg/TSAI-Site)
 **Upstream:** https://github.com/KenKaiii/pocket-agent (MIT, fork point
