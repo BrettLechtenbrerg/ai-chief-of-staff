@@ -19,15 +19,21 @@ function _sessionShowToast(message, type) {
   _sessionNotyf[type === 'error' ? 'error' : 'success'](message);
 }
 
+let _sessionsLoadedOnce = false;
+
 async function loadSessions() {
   try {
     sessions = await window.pocketAgent.sessions.list();
-    // Open the most recently active chat (list is sorted by updated_at DESC).
+    // On first load open the most recently active chat (list is sorted by
+    // updated_at DESC). Later reloads (e.g. Telegram link/unlink) keep the
+    // user's current tab unless it disappeared.
     // Must be set BEFORE renderTabs() so the correct tab is highlighted
     if (sessions.length > 0) {
-      currentSessionId = sessions[0].id;
+      const keepCurrent = _sessionsLoadedOnce && sessions.some((s) => s.id === currentSessionId);
+      if (!keepCurrent) currentSessionId = sessions[0].id;
       localStorage.setItem('currentSessionId', currentSessionId);
     }
+    _sessionsLoadedOnce = true;
     renderTabs();
   } catch (err) {
     console.error('Failed to load sessions:', err);

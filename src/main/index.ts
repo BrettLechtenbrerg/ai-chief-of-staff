@@ -919,9 +919,11 @@ app.whenReady().then(async () => {
     ensureAgentWorkspace();
 
     // Open the chat window on launch so a Dock/Finder click shows the app on the
-    // first click. Login-item launches stay quiet in the tray.
-    if (!app.getLoginItemSettings().wasOpenedAtLogin) openChatWindow();
-    if (!SettingsManager.isFirstRun()) {
+    // first click. Login-item launches stay quiet in the tray; first run always
+    // opens so the user lands on onboarding.
+    const firstRun = SettingsManager.isFirstRun();
+    if (firstRun || !app.getLoginItemSettings().wasOpenedAtLogin) openChatWindow();
+    if (!firstRun) {
       console.log('[Main] Initializing agent...');
       await initializeAgent();
     }
