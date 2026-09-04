@@ -292,7 +292,46 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
-### Next session — pick up here (added Jun 29 — Silence Trimmer implemented, not yet released)
+### Next session — pick up here (added Sep 4, 2026 — approval-fatigue fix installed locally, beta.26 not yet cut)
+
+**State:** `main` is 6 commits ahead of `v1.0.0-beta.25` (all pushed). Brett's
+Intel iMac runs a locally built, signed + notarized x64 bundle of `main`
+(`474a83f`) installed via `npm run install:local -- x64`. It still reports
+version `1.0.0-beta.25`, so the auto-updater sees no newer public release and
+leaves it alone. Public release and the landing page are unchanged at beta.25.
+
+**Why:** the Aug 10 hardening (`36357c6`, `eae8fd5`, `75c5215`) prompted for
+approval on every file read/write, shell, subagent and every MCP tool, and
+confined file access to `~/Documents/AI Chief of Staff`. Brett: unusable as a
+chief of staff. Daily briefing confirmed working after the fix.
+
+**Commits since beta.25 (oldest first):**
+
+| Commit | What |
+|---|---|
+| `d1d81c0` | `src/agent/tool-policy.ts` — approval only for `external-write` capability, `browser` click/type/evaluate/upload (arg-level gate), and the paid `fetch_aeo_visibility` batch. MCP tools classified by verb (`propose_*`/get/list/search/read… = read; send/create/update/delete/execute/… = write); `destructiveHint` can escalate, never downgrade. `notify`, reminders, routines are local. `src/main/index.ts` adds `app.getPath('home')` to `approvedRoots`; `tool-sandbox.ts` still blocks `.ssh`, `.env`, keychains, browser profiles. Tests updated. |
+| `3a33670` | `scripts/install-local.cjs` — stop re-creating the Flo native-dep symlinks after copy (afterPack already makes them before signing). Re-creating them broke the seal → Gatekeeper "app is damaged, move to Trash" → Brett trashed it. |
+| `99043c6` | `src/main/ipc/connect-tools-ipc.ts` — meta-ads `mcp-remote --auth-timeout` 120 → 600. Brett hit a dead `localhost` callback ("site can't be reached") because the Pipeboard login took longer than 2 min. Also patched live in `~/Library/Application Support/ai-chief-of-staff/mcp-servers.json` (backup `.bak-<ts>` beside it). |
+| `8a2872d` | `src/main/index.ts` — open chat window on launch unless `wasOpenedAtLogin` (fixes "first Dock click bounces, second opens"). `ui/chat/sessions.js` — land on most recently active session (`updated_at DESC`) instead of the last-clicked tab. |
+| `474a83f` | Follow-up: keep the current tab on `sessions:changed` reloads (Telegram link/unlink); first run always opens the window for onboarding. |
+| (docs) | `docs/WINDOWS-BETA-25-ACCEPTANCE.md` + tester-rescue wording + doc test, carried over from the Sep 2 Windows session. |
+
+**Gotchas learned this session:**
+
+- `npx electron-builder --mac --x64` still builds arm64 too because `package.json` `mac.target[].arch` lists both; use `--mac dir --x64` for a fast local-only app bundle (no DMG/zip). A full run is ~20 min and ~3.5 GB in `release/`.
+- The arm64 DMG step can fail with `dmgbuild … Unable to shrink`; and one run died with `ENOSPC` even though `df` showed 49 GB free (APFS purgeable). Delete `release/mac-arm64`, `release/mac.tmp`, `*.dmg`, `*.zip`, `*.blockmap` and retry.
+- The Pipeboard (meta-ads) login tab opening on launch is `mcp-remote` needing a fresh OAuth token, not an app bug. Brett must sign in within the auth window.
+- `~/Library/Application Support/ai-chief-of-staff/mcp-servers.json` is regenerated from `connect-tools-ipc.ts` when a connector is re-added, so source and live config must agree.
+
+**To release beta.26 (when Brett gives the go after a few days of use):**
+
+1. `git -C ~/dev/ai-chief-of-staff status` must be clean; bump `package.json` version to `1.0.0-beta.26`; commit; `git tag v1.0.0-beta.26`; push tag.
+2. Run `Build and Release` on the tag → verify → `publish-mac-only-release.yml` (Windows mirrors from beta.25 carry forward; Windows acceptance is still gated by `docs/WINDOWS-BETA-25-ACCEPTANCE.md`).
+3. Add the beta.26 row to the Rollback tags table above and update the `RESUME-PROMPT.md` header.
+4. Landing page: `~/dev/TSAI-Site/app/hidden/ai-chief-of-staff-app/page.tsx` (header comment at line 9 + download links) → commit → Vercel auto-deploys.
+5. Brett's iMac: the updater will pull beta.26 on its own once public; or `npm run install:local -- x64` from a fresh signed build.
+
+### Silence Trimmer (added Jun 29 — implemented, not yet released)
 
 **Silence Trimmer** — a `trim_video_silence` tool — is implemented on `main` (not yet tagged/built). Removes filler words ("um/uh/ah/hmm") + silences/pauses longer than a threshold (default 0.8s) from any video OR audio file, then re-exports a clean, in-sync file to `~/Desktop/Trimmed/`. Built from Brett's "Silence Trimmer Skill.docx" (which targeted a different system — adapted to AICOS conventions: `assets/skills/` asset + a registered custom tool, not the doc's `/Users/mtorres/.gemini/...` path).
 
@@ -742,6 +781,20 @@ We ship DMGs to GitHub Releases for testers, but the locally-installed `/Applica
 ---
 
 ## Past sessions
+
+### Sep 4, 2026 — approval-fatigue fix, local reinstall, launch UX (no release)
+
+Brett resumed after the Aug 10–14 security/Windows push and found the app
+asking permission for nearly every tool call. Diagnosed to `36357c6` (blanket
+`confirmationRequired` on local/unknown/MCP capabilities) plus the workspace
+sandbox. Rewrote the policy so only outbound writes prompt, widened the
+sandbox to `$HOME`, rebuilt signed x64, and installed locally. Three follow-on
+issues surfaced and were fixed the same session: (1) installer rewrote signed
+symlinks → Gatekeeper "damaged"; (2) Pipeboard OAuth timed out at 120s;
+(3) first Dock click didn't open a window and the window opened on a stale
+tab. Full detail and the beta.26 release checklist are under **Active
+workstreams → Next session**. Brett will use the build for a few days before
+authorizing the release.
 
 ### May 18, 2026 (morning) — v1.0.0-beta.8 release (voice input)
 

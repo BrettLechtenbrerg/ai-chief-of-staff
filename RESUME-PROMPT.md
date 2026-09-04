@@ -4,35 +4,46 @@
 > source of truth — read it for the build pipeline, the per-release rollback
 > table, and gotchas. This file is the short, current-state bookmark.
 
-## Sep 4, 2026 — approval-fatigue fix (UNCOMMITTED, local install only)
+## Where things stand (Sep 4, 2026, end of session)
 
-Latest public release is **v1.0.0-beta.25** (Aug 14). The Aug 10 security
-hardening (`36357c6`, `eae8fd5`, `75c5215`) made the app prompt for approval on
-**every** file read/write, shell command, subagent, and **every MCP tool**
-(GHL, Gmail, Calendar, DataForSEO, Firecrawl…), and confined file/shell access
-to `~/Documents/AI Chief of Staff`. Brett's verdict: unusable as a chief of
-staff. Fixed in the worktree (not yet committed/tagged/released):
+- **Public release:** `v1.0.0-beta.25` (Aug 14). Landing page and Vercel
+  unchanged — nothing to deploy until beta.26 is cut.
+- **`main`:** 6 commits past beta.25, all pushed to GitHub. Worktree clean.
+- **Brett's Intel iMac:** runs a signed + notarized local build of `main`
+  (`474a83f`) installed with `npm run install:local -- x64`. Still reports
+  version beta.25, so the updater leaves it alone. Daily briefing verified
+  working with no permission prompts.
+- **Brett's plan:** use it for a few days, then say "go" → cut beta.26.
 
-- `src/agent/tool-policy.ts` — approval only for `external-write` (send /
-  create / update / delete / execute on GHL, Gmail, Calendar, Docs, Meta,
-  Telegram, campaign_* writes), `browser` click/type/evaluate/upload, and the
-  paid `fetch_aeo_visibility` batch. MCP tools are classified by name
-  (`propose_*`, `get_/list_/search_…` = read; `send/create/execute/…` = write);
-  a `destructiveHint` annotation can escalate, never downgrade. Local
-  read/write/shell/subagent/memory/notify/routines run unattended.
-- `src/main/index.ts` — home folder added to `approvedRoots` (credential /
-  browser-profile paths still blocked by `tool-sandbox.ts`).
-- Tests updated (`tests/unit/tool-policy.test.ts`, `approval-manager.test.ts`);
-  full suite green, typecheck + lint clean.
-- Installed locally via signed x64 `electron-builder --mac --x64` +
-  `npm run install:local` at version beta.25 (matches public, so the updater
-  leaves it alone). The installed build predates a final widening of
-  `WRITE_VERBS` (launch/start/stop/pause/set/…) — no current server uses
-  those verbs, so behavior is identical; the beta.26 build picks it up.
+### What changed this session (all on `main`)
 
-**Next:** commit → tag `v1.0.0-beta.26` → `dist:signed` (both arches) → publish
-via `.github/workflows/publish-mac-only-release.yml` → bump landing page.
-Windows mirrors from beta.25 carry forward.
+1. **Approval prompts** (`d1d81c0`) — only outbound actions ask: send
+   email/SMS/Telegram, calendar/docs `*_execute`, GHL/Meta create/update/
+   delete, browser click/type/evaluate/upload, paid `fetch_aeo_visibility`
+   batch. Reads, `propose_*`, local files/shell/subagent/memory/routines run
+   unattended. Sandbox now covers `$HOME` (credential paths still blocked).
+2. **Gatekeeper "damaged"** (`3a33670`) — `install:local` no longer rewrites
+   signed symlinks.
+3. **Pipeboard login timeout** (`99043c6`) — meta-ads `--auth-timeout` 600s.
+   Also patched in the live `mcp-servers.json`.
+4. **Launch UX** (`8a2872d`, `474a83f`) — one Dock click opens chat; lands on
+   the most recently active session; keeps your tab on reconnects.
+
+### Next session — the beta.26 release checklist
+
+See `RECOVERY.md → Active workstreams → Next session` for the step-by-step
+(version bump → tag → Build and Release → publish workflow → rollback table →
+`TSAI-Site` landing page → Vercel). Windows stays on the beta.25 mirror until
+`docs/WINDOWS-BETA-25-ACCEPTANCE.md` passes on a real PC.
+
+### Paste-in kickoff for next time
+
+> Resume AI Chief of Staff at `~/dev/ai-chief-of-staff`. Read
+> `RESUME-PROMPT.md` then `RECOVERY.md` → "Next session". Confirm `main` is
+> clean and at/after `474a83f`. Brett has been using the local build; if he
+> reports no problems, run the beta.26 release checklist. If he reports an
+> issue, reproduce against the installed app first — do not rebuild until the
+> cause is known.
 
 ---
 
