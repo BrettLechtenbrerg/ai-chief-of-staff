@@ -561,7 +561,9 @@ async function initializeAgent(): Promise<void> {
   // Build tools config from settings
   const toolsConfig = {
     mcpServers: {},
-    approvedRoots: [workspace, path.join(app.getPath('userData'), 'attachments')],
+    // The whole home folder is in scope for a personal chief of staff (Desktop/Blogs,
+    // ~/dev repos). Credential and browser-profile paths stay blocked by the sandbox.
+    approvedRoots: [workspace, path.join(app.getPath('userData'), 'attachments'), app.getPath('home')],
     computerUse: {
       enabled: false,
       dockerized: true,

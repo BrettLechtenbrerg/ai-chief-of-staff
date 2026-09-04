@@ -102,8 +102,8 @@ describe('approval tool guard', () => {
   it('blocks unattended side effects and never reaches the handler', async () => {
     const execute = vi.fn(async () => 'executed');
     const tool = attachToolPolicy(
-      { name: 'shell_command', description: 'shell', parameters: z.object({}), execute } as AgentTool,
-      'native'
+      { name: 'mcp__flo-gmail__gmail_send', description: 'send', parameters: z.object({}), execute } as AgentTool,
+      'mcp'
     );
     guardToolWithApproval(tool, {
       sessionId: 'cron-session',
@@ -119,8 +119,8 @@ describe('approval tool guard', () => {
   it('runs an interactive tool once approved', async () => {
     const execute = vi.fn(async () => 'executed');
     const tool = attachToolPolicy(
-      { name: 'write', description: 'write', parameters: z.object({}), execute } as AgentTool,
-      'native'
+      { name: 'send_telegram_message', description: 'send', parameters: z.object({}), execute } as AgentTool,
+      'custom'
     );
     let request: ApprovalRequest | undefined;
     ApprovalManager.setNotifier((next) => {

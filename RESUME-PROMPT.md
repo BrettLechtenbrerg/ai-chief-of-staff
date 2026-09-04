@@ -1,9 +1,38 @@
 # AI Chief of Staff — Resume Prompt (current)
 
-> Updated July 7, 2026 (post-beta.21 emergency ship). This is the up-to-date
-> paste-into-chat kickoff. `RECOVERY.md` remains the canonical, full-history
+> Updated Sep 4, 2026. `RECOVERY.md` remains the canonical, full-history
 > source of truth — read it for the build pipeline, the per-release rollback
 > table, and gotchas. This file is the short, current-state bookmark.
+
+## Sep 4, 2026 — approval-fatigue fix (UNCOMMITTED, local install only)
+
+Latest public release is **v1.0.0-beta.25** (Aug 14). The Aug 10 security
+hardening (`36357c6`, `eae8fd5`, `75c5215`) made the app prompt for approval on
+**every** file read/write, shell command, subagent, and **every MCP tool**
+(GHL, Gmail, Calendar, DataForSEO, Firecrawl…), and confined file/shell access
+to `~/Documents/AI Chief of Staff`. Brett's verdict: unusable as a chief of
+staff. Fixed in the worktree (not yet committed/tagged/released):
+
+- `src/agent/tool-policy.ts` — approval only for `external-write` (send /
+  create / update / delete / execute on GHL, Gmail, Calendar, Docs, Meta,
+  Telegram, campaign_* writes), `browser` click/type/evaluate/upload, and the
+  paid `fetch_aeo_visibility` batch. MCP tools are classified by name
+  (`propose_*`, `get_/list_/search_…` = read; `send/create/execute/…` = write);
+  a `destructiveHint` annotation can escalate, never downgrade. Local
+  read/write/shell/subagent/memory/notify/routines run unattended.
+- `src/main/index.ts` — home folder added to `approvedRoots` (credential /
+  browser-profile paths still blocked by `tool-sandbox.ts`).
+- Tests updated (`tests/unit/tool-policy.test.ts`, `approval-manager.test.ts`);
+  full suite green, typecheck + lint clean.
+- Installed locally via signed x64 `electron-builder --mac --x64` +
+  `npm run install:local` at version beta.25 (matches public, so the updater
+  leaves it alone). The installed build predates a final widening of
+  `WRITE_VERBS` (launch/start/stop/pause/set/…) — no current server uses
+  those verbs, so behavior is identical; the beta.26 build picks it up.
+
+**Next:** commit → tag `v1.0.0-beta.26` → `dist:signed` (both arches) → publish
+via `.github/workflows/publish-mac-only-release.yml` → bump landing page.
+Windows mirrors from beta.25 carry forward.
 
 ---
 

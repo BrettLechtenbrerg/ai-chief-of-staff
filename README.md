@@ -55,7 +55,7 @@ Up to 20 separate conversation threads, each with isolated history. Work stuff d
 Same brain, different interface. Talk to it from your phone with the unattended remote-safe tool policy; actions requiring interactive approval fail closed.
 
 ### 40+ skill integrations
-Notion, GitHub, Slack, Apple Notes, Apple Reminders, Google Workspace, Trello, Obsidian, and more. Plus MCP server support for adding your own. Terminal and file tools stay within approved workspaces and require approval for sensitive capabilities.
+Notion, GitHub, Slack, Apple Notes, Apple Reminders, Google Workspace, Trello, Obsidian, and more. Plus MCP server support for adding your own. Terminal and file tools stay out of credential paths, and only outbound actions (sending email/messages, calendar or CRM writes, browser clicks, paid batch runs) ask for your approval; reads and local work run unattended.
 
 ### Connections (MCP servers)
 Settings → Connections shows every external tool your AI can use. Add/edit/disable any MCP server, test the connection before saving, and see live status (Ready / Failed / Disabled) at a glance. Edits are atomic — a crash mid-save leaves your previous config intact. Same `mcp-servers.json` shape as Claude Desktop, so you can copy configs between the two.

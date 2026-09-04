@@ -51,8 +51,8 @@ const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
   skill: 'safe-local',
   enter_plan: 'safe-local',
   exit_plan: 'safe-local',
-  browser: 'external-write',
-  notify: 'external-write',
+  browser: 'web-read',
+  notify: 'safe-local',
   send_telegram_message: 'external-write',
   set_project: 'local-write',
   get_project: 'local-read',
@@ -65,10 +65,10 @@ const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
   soul_get: 'memory-read',
   soul_list: 'memory-read',
   soul_delete: 'memory-write',
-  create_reminder: 'external-write',
-  create_routine: 'external-write',
+  create_reminder: 'local-write',
+  create_routine: 'local-write',
   list_routines: 'local-read',
-  delete_routine: 'external-write',
+  delete_routine: 'local-write',
   switch_agent: 'safe-local',
   generate_blog_image: 'paid-action',
   write_daily_posting_packet: 'local-write',
@@ -85,15 +85,44 @@ const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
   trim_video_silence: 'local-execute',
 };
 
-const CONFIRMATION_CAPABILITIES = new Set<ToolCapability>([
-  'local-read',
-  'local-write',
-  'local-execute',
-  'delegation',
-  'external-write',
-  'paid-action',
-  'unknown',
+// Only actions that leave the machine (send/post/modify external systems) or
+// bill a batch of provider calls need a human. Local file/shell/memory work,
+// reads of connected services, and single paid image renders run unattended.
+const CONFIRMATION_CAPABILITIES = new Set<ToolCapability>(['external-write']);
+const CONFIRMATION_TOOLS = new Set<string>(['fetch_aeo_visibility']);
+
+// Per-call gate for tools whose side effects depend on arguments.
+const BROWSER_ACTING_ACTIONS = new Set(['click', 'type', 'evaluate', 'upload']);
+const ARG_CONFIRMATION: Readonly<Record<string, (args: unknown) => boolean>> = {
+  browser: (args) =>
+    BROWSER_ACTING_ACTIONS.has(String((args as { action?: unknown } | null)?.action ?? '')),
+};
+
+// MCP tool-name heuristics. Flo servers stage changes with `*_propose_*` and
+// commit them with `*_execute`; GHL/Meta use verb_noun names. We inspect the
+// first two words so `gmail_send` and `send_message` both classify as writes.
+const READ_VERBS = new Set([
+  'get', 'list', 'search', 'read', 'find', 'fetch', 'check', 'lookup', 'query',
+  'describe', 'verify', 'debug', 'scrape', 'crawl', 'map', 'extract', 'propose',
 ]);
+const WRITE_VERBS = new Set([
+  'send', 'create', 'update', 'delete', 'remove', 'add', 'execute', 'schedule',
+  'publish', 'post', 'insert', 'patch', 'put', 'void', 'record', 'move', 'upload',
+  'block', 'sync', 'modify', 'cancel', 'reply', 'forward', 'archive', 'trash',
+  'empty', 'pay', 'charge', 'enroll', 'assign', 'invite', 'share', 'grant',
+  'revoke', 'rename', 'write', 'append', 'apply', 'replace', 'submit', 'trigger',
+  'book', 'reschedule', 'merge', 'import', 'clear', 'reset', 'restore',
+  'launch', 'start', 'stop', 'pause', 'resume', 'activate', 'deactivate',
+  'enable', 'disable', 'set', 'mark', 'toggle', 'run', 'edit', 'purge', 'drop',
+]);
+
+function classifyMcpToolByName(toolName: string): ToolCapability {
+  const bare = toolName.replace(/^mcp__.+?__/, '');
+  const words = bare.toLowerCase().split(/[_-]+/).slice(0, 2);
+  if (words.includes('propose')) return 'external-read';
+  if (READ_VERBS.has(words[0] ?? '')) return 'external-read';
+  return words.some((w) => WRITE_VERBS.has(w)) ? 'external-write' : 'external-read';
+}
 
 function isExternalMcpTool(name: string): boolean {
   return name.startsWith('mcp__') &&
@@ -113,17 +142,18 @@ export function getToolPolicy(
 ): ToolPolicy {
   let capability = TOOL_CAPABILITIES[toolName];
   if (!capability && source === 'mcp') {
-    capability = annotations?.readOnlyHint === true && annotations.destructiveHint !== true
-      ? 'external-read'
-      : 'unknown';
+    // Annotations are hints only; a destructive hint can escalate, never downgrade.
+    capability = classifyMcpToolByName(toolName);
+    if (annotations?.destructiveHint === true) capability = 'external-write';
   }
   capability ||= 'unknown';
 
-  // MCP annotations are preserved as useful hints, never as an authorization grant.
-  const unknownExternal = source === 'mcp' && !(toolName in TOOL_CAPABILITIES);
   return {
     capability,
-    confirmationRequired: unknownExternal || CONFIRMATION_CAPABILITIES.has(capability),
+    confirmationRequired:
+      CONFIRMATION_TOOLS.has(toolName) ||
+      toolName in ARG_CONFIRMATION ||
+      CONFIRMATION_CAPABILITIES.has(capability),
     source,
     ...(annotations ? { annotations: { ...annotations } } : {}),
   };
@@ -147,7 +177,9 @@ export function guardToolWithApproval(
 ): PolicyAwareAgentTool {
   if (!tool.policy.confirmationRequired) return tool;
   const originalExecute = tool.execute.bind(tool);
+  const needsApproval = ARG_CONFIRMATION[tool.name] ?? (() => true);
   tool.execute = async (args, context) => {
+    if (!needsApproval(args)) return originalExecute(args, context);
     const approved = await ApprovalManager.request({
       toolName: tool.name,
       capability: tool.policy.capability,
