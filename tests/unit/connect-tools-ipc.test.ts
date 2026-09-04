@@ -180,7 +180,7 @@ describe('connect-tools-ipc', () => {
       expect(entry.args).toContain('https://mcp.pipeboard.co/meta-ads-mcp');
       // First-run browser OAuth easily exceeds mcp-remote's 30s default.
       const args = entry.args!;
-      expect(args[args.indexOf('--auth-timeout') + 1]).toBe('120');
+      expect(args[args.indexOf('--auth-timeout') + 1]).toBe('600');
       expect(entry.env?.MCP_REMOTE_CONFIG_DIR).toBe(path.join(os.tmpdir(), 'mcp-remote'));
       expect((entry as Record<string, unknown>)._acos_managed).toBe(true);
       expect((entry as Record<string, unknown>)._acos_tool_id).toBe('meta-ads');

@@ -332,8 +332,9 @@ function buildEntry(
       // for this client"), so we use Pipeboard's hosted Meta Ads MCP, whose
       // OAuth flow works with mcp-remote's localhost callback. Tokens cache
       // in the app's private user-data directory so restarts are silent.
-      // --auth-timeout 120 because the browser OAuth (Pipeboard login + Meta
-      // connect) easily exceeds the 30s default on first run.
+      // --auth-timeout 600 because the browser OAuth (Pipeboard login + Meta
+      // connect) easily exceeds the 30s default; 120 left users landing on a
+      // dead localhost callback when the sign-in took a few minutes.
       return {
         command: 'npx',
         args: [
@@ -341,7 +342,7 @@ function buildEntry(
           PINNED_NPX_PACKAGES.mcpRemote,
           'https://mcp.pipeboard.co/meta-ads-mcp',
           '--auth-timeout',
-          '120',
+          '600',
         ],
         env: {
           MCP_REMOTE_CONFIG_DIR: path.join(app.getPath('userData'), 'mcp-remote'),
