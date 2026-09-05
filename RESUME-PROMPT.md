@@ -9,9 +9,9 @@
 - **Public release:** `v1.0.0-beta.25` (Aug 14). Landing page and Vercel
   unchanged — nothing to deploy until beta.26 is cut.
 - **`main`:** pushed to GitHub, worktree clean. Code fixes end at `f8a6507`
-  (model picker); session docs commit after that. Source zip + all-refs git
-  bundle in `_backups/` (copy to iCloud + 8 TB drive
-  `Backups/AI-Chief-of-Staff/`).
+  (model picker); session docs at `c7bd6fc`. Source zip + all-refs git
+  bundle (`*-20260905*`) in `_backups/`, copied to iCloud and the 8 TB drive
+  (`Backups/AI-Chief-of-Staff/`).
 - **Brett's Intel iMac:** runs an **unsigned** local x64 build of `main`
   (`f8a6507`) via `npm run dist:install`. Still reports beta.25, so the
   updater leaves it alone. Fable 5.1 + GPT-6 Astra confirmed in the picker.
