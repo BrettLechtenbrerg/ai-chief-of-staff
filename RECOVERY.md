@@ -292,12 +292,11 @@ npm run typecheck && npm run lint
 
 ## Active workstreams
 
-### Next session — pick up here (added Sep 4, 2026 — approval-fatigue fix installed locally, beta.26 not yet cut)
+### Next session — pick up here (updated Sep 5, 2026 — approval fix + model picker installed locally, beta.26 not yet cut)
 
-**State:** `main` is ahead of `v1.0.0-beta.25` (all pushed; the Sep 4 code
-fixes are the five commits in the table below). Brett's
-Intel iMac runs a locally built, signed + notarized x64 bundle of `main`
-(`474a83f`) installed via `npm run install:local -- x64`. It still reports
+**State:** `main` is ahead of `v1.0.0-beta.25` (all pushed; code commits are
+in the table below). Brett's Intel iMac runs an **unsigned** local x64 build
+of `main` (`f8a6507`) installed via `npm run dist:install`. It still reports
 version `1.0.0-beta.25`, so the auto-updater sees no newer public release and
 leaves it alone. Public release and the landing page are unchanged at beta.25.
 
@@ -316,7 +315,8 @@ chief of staff. Daily briefing confirmed working after the fix.
 | `8a2872d` | `src/main/index.ts` — open chat window on launch unless `wasOpenedAtLogin` (fixes "first Dock click bounces, second opens"). `ui/chat/sessions.js` — land on most recently active session (`updated_at DESC`) instead of the last-clicked tab. |
 | `474a83f` | Follow-up: keep the current tab on `sessions:changed` reloads (Telegram link/unlink); first run always opens the window for onboarding. |
 | `d587672` | `docs/WINDOWS-BETA-25-ACCEPTANCE.md` + tester-rescue wording + doc test, carried over from the Sep 2 Windows session. |
-| `f1b0332` + 1 | These session notes; `.gitignore` for `_backups/` (local source zip + all-refs bundle, copied to iCloud and the 8 TB drive). |
+| `f1b0332` + 1 | Sep 4 session notes; `.gitignore` for `_backups/` (local source zip + all-refs bundle, copied to iCloud and the 8 TB drive). |
+| `f8a6507` | **Sep 5 — model picker.** Live discovery now runs on every launch (`refreshDiscoveredModels()` in `settings-ipc.ts`, called from `app.whenReady` after `initializeAgent`); previously it only ran on the "Check for new models" click, so Fable 5.1 (Sep 1) and GPT-6 Astra (Sep 3) never appeared. Curated list + `MODEL_PROVIDERS` + `MODEL_CONTEXT_WINDOWS` add Fable 5.1, Opus 5, Sonnet 5, GPT-6 Astra, GPT-5.6 Sol/Terra/Luna. `friendlyModelName` handles any `claude-<family>-<ver>` and capitalises GPT word suffixes (`gpt-6-astra` → "GPT-6 Astra"); `getContextWindow` defaults unknown Claude ≥ 4.6 / GPT ≥ 5.4 ids to 1M. Discovered Anthropic display names drop the "Claude " prefix. Verified live: both models in the picker after relaunch. |
 
 **Gotchas learned this session:**
 
@@ -324,6 +324,8 @@ chief of staff. Daily briefing confirmed working after the fix.
 - The arm64 DMG step can fail with `dmgbuild … Unable to shrink`; and one run died with `ENOSPC` even though `df` showed 49 GB free (APFS purgeable). Delete `release/mac-arm64`, `release/mac.tmp`, `*.dmg`, `*.zip`, `*.blockmap` and retry.
 - The Pipeboard (meta-ads) login tab opening on launch is `mcp-remote` needing a fresh OAuth token, not an app bug. Brett must sign in within the auth window.
 - `~/Library/Application Support/ai-chief-of-staff/mcp-servers.json` is regenerated from `connect-tools-ipc.ts` when a connector is re-added, so source and live config must agree.
+- (Sep 5) `npm run dist:install` produces an **unsigned** app → first launch hangs invisibly on a macOS keychain prompt ("wants to use … Safe Storage"). Enter the Mac login password and click *Always Allow*. Prefer `npm run dist:signed:install`. Detect with `osascript -e 'tell application "System Events" to tell process "SecurityAgent" to get value of every static text of window 1'`.
+- (Sep 5) `build/afterAllArtifactBuild.cjs` decides whether to notarize DMGs from `package.json` `mac.identity`, ignoring the `--config.mac.identity=null` CLI override, so `dist:local` still spends ~10 min per DMG in `notarytool` and then fails to staple. Harmless; install proceeds.
 
 **To release beta.26 (when Brett gives the go after a few days of use):**
 
@@ -797,6 +799,17 @@ symlinks → Gatekeeper "damaged"; (2) Pipeboard OAuth timed out at 120s;
 tab. Full detail and the beta.26 release checklist are under **Active
 workstreams → Next session**. Brett will use the build for a few days before
 authorizing the release.
+
+### Sep 5, 2026 — model picker missing Fable 5.1 / GPT-6 Astra (no release)
+
+Brett reported the picker showed Fable 5 but not Fable 5.1, and asked that
+future Claude and GPT models (e.g. Astra) be recognised automatically. Root
+cause: live discovery only ran on the manual "Check for new models" click, so
+the persisted cache (`models.discovered`) predated Sep 1. Fix `f8a6507`: run
+discovery on every launch, refresh the curated list, generalise name/provider/
+context-window inference for unknown ids. Built unsigned with `dist:install`
+(hit the Safe Storage keychain prompt — see gotchas above), verified both
+models in the picker. Pushed `main`; no tag, beta.26 still pending Brett's go.
 
 ### May 18, 2026 (morning) — v1.0.0-beta.8 release (voice input)
 

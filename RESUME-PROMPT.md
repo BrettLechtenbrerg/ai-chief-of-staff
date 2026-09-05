@@ -1,24 +1,37 @@
 # AI Chief of Staff — Resume Prompt (current)
 
-> Updated Sep 4, 2026. `RECOVERY.md` remains the canonical, full-history
+> Updated Sep 5, 2026. `RECOVERY.md` remains the canonical, full-history
 > source of truth — read it for the build pipeline, the per-release rollback
 > table, and gotchas. This file is the short, current-state bookmark.
 
-## Where things stand (Sep 4, 2026, end of session)
+## Where things stand (Sep 5, 2026, end of session)
 
 - **Public release:** `v1.0.0-beta.25` (Aug 14). Landing page and Vercel
   unchanged — nothing to deploy until beta.26 is cut.
-- **`main`:** pushed to GitHub, worktree clean. Code fixes end at `474a83f`;
-  session docs at `f1b0332`; one `.gitignore` commit after that. Source zip +
-  all-refs git bundle copied to iCloud and the 8 TB drive
-  (`Backups/AI-Chief-of-Staff/`).
-- **Brett's Intel iMac:** runs a signed + notarized local build of `main`
-  (`474a83f`) installed with `npm run install:local -- x64`. Still reports
-  version beta.25, so the updater leaves it alone. Daily briefing verified
-  working with no permission prompts.
+- **`main`:** pushed to GitHub, worktree clean. Code fixes end at `f8a6507`
+  (model picker); session docs commit after that. Source zip + all-refs git
+  bundle in `_backups/` (copy to iCloud + 8 TB drive
+  `Backups/AI-Chief-of-Staff/`).
+- **Brett's Intel iMac:** runs an **unsigned** local x64 build of `main`
+  (`f8a6507`) via `npm run dist:install`. Still reports beta.25, so the
+  updater leaves it alone. Fable 5.1 + GPT-6 Astra confirmed in the picker.
 - **Brett's plan:** use it for a few days, then say "go" → cut beta.26.
 
-### What changed this session (all on `main`)
+### Sep 5 — model picker (`f8a6507`)
+
+- Live model discovery now runs **on every launch** (was: only via the
+  "Check for new models" click, so the cache had gone stale since Sep 1).
+- Curated list adds Fable 5.1, Opus 5, Sonnet 5, GPT-6 Astra, GPT-5.6
+  Sol/Terra/Luna; unknown future `claude-*` / `gpt-*` ids get sane names,
+  provider routing, and 1M context defaults (`providers.ts`, `chat-engine.ts`).
+- Discovered Anthropic names drop the "Claude " prefix to match curated style.
+- **Gotcha:** `dist:install` builds unsigned → macOS re-prompts for the
+  "Safe Storage" keychain item (enter the Mac login password, *Always Allow*).
+  Use `npm run dist:signed:install` next time to avoid it. Also the DMG
+  notarize hook reads `package.json` identity, so even `dist:local` spends
+  ~10 min in `notarytool` (harmless, fails to staple, install proceeds).
+
+### What changed Sep 4 (all on `main`)
 
 1. **Approval prompts** (`d1d81c0`) — only outbound actions ask: send
    email/SMS/Telegram, calendar/docs `*_execute`, GHL/Meta create/update/
@@ -43,7 +56,7 @@ See `RECOVERY.md → Active workstreams → Next session` for the step-by-step
 
 > Resume AI Chief of Staff at `~/dev/ai-chief-of-staff`. Read
 > `RESUME-PROMPT.md` then `RECOVERY.md` → "Next session". Confirm `main` is
-> clean and at/after `474a83f`. Brett has been using the local build; if he
+> clean and at/after `f8a6507`. Brett has been using the local build; if he
 > reports no problems, run the beta.26 release checklist. If he reports an
 > issue, reproduce against the installed app first — do not rebuild until the
 > cause is known.
@@ -60,8 +73,9 @@ desktop AI agent (Electron app, MIT rebrand of KenKaiii/pocket-agent).
   (note: the `Lechtenbrerg` spelling is the REAL handle — not a typo. The
   "corrected" `BrettLechtenberg` 404s. Never auto-fix it.)
 **Latest release:** v1.0.0-beta.25 (public prerelease, Aug 14 2026). `main`
-  is ahead of that tag with the Sep 4 approval/launch fixes (see "Where
-  things stand" above) — installed on Brett's iMac, not yet released.
+  is ahead of that tag with the Sep 4 approval/launch fixes and the Sep 5
+  model-picker fix (see "Where things stand" above) — installed on Brett's
+  iMac, not yet released.
   Landing page serving beta.25 (`TSAI-Site@413ea1d`).
   Everything below this line is historical context from beta.21 and earlier.
 **Landing page:** https://www.totalsuccessai.com/hidden/ai-chief-of-staff-app
