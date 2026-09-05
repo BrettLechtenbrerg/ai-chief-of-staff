@@ -83,8 +83,11 @@ async function discoverAnthropic(): Promise<DiscoveredModel[]> {
     if (!m.id || !m.id.toLowerCase().startsWith('claude-')) continue;
     out.push({
       id: m.id,
-      // Prefer the API's display_name when present, else derive one.
-      name: (m as { display_name?: string }).display_name || friendlyModelName(m.id),
+      // Prefer the API's display_name when present, else derive one. Drop the
+      // "Claude " prefix so it matches the curated "Opus 4.7" style.
+      name:
+        (m as { display_name?: string }).display_name?.replace(/^claude\s+/i, '') ||
+        friendlyModelName(m.id),
       provider: 'anthropic',
     });
   }

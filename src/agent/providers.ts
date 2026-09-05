@@ -58,6 +58,11 @@ export const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
 // Model to provider mapping
 export const MODEL_PROVIDERS: Record<string, ProviderType> = {
   // Anthropic models
+  'claude-fable-5-1': 'anthropic',
+  'claude-fable-5': 'anthropic',
+  'claude-opus-5': 'anthropic',
+  'claude-sonnet-5': 'anthropic',
+  'claude-opus-4-8': 'anthropic',
   'claude-opus-4-7': 'anthropic',
   'claude-opus-4-6': 'anthropic',
   'claude-opus-4-5-20251101': 'anthropic',
@@ -73,6 +78,10 @@ export const MODEL_PROVIDERS: Record<string, ProviderType> = {
   // Xiaomi/MiMo models
   'mimo-v2-pro': 'xiaomi',
   // OpenAI models
+  'gpt-6-astra': 'openai',
+  'gpt-5.6-sol': 'openai',
+  'gpt-5.6-terra': 'openai',
+  'gpt-5.6-luna': 'openai',
   'gpt-5.5': 'openai',
   'gpt-5.5-pro': 'openai',
   'gpt-5.4': 'openai',
@@ -124,7 +133,8 @@ export function friendlyModelName(id: string): string {
   const base = String(id || '').replace(/-\d{8}$/, '');
 
   if (provider === 'anthropic') {
-    const match = base.match(/^claude-(opus|sonnet|haiku)-(.+)$/i);
+    // Any family name (opus / sonnet / haiku / fable / …) so future lines work.
+    const match = base.match(/^claude-([a-z]+)-(.+)$/i);
     if (match) {
       const family = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
       const version = match[2].replace(/-/g, '.');
@@ -134,13 +144,11 @@ export function friendlyModelName(id: string): string {
 
   if (provider === 'openai') {
     if (/^codex/i.test(base)) return base.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    // Every word suffix becomes a capitalised word: gpt-5.4-mini → "GPT-5.4 Mini",
+    // gpt-6-astra → "GPT-6 Astra", gpt-5.1-codex-max → "GPT-5.1 Codex Max".
     return base
       .replace(/^gpt-/i, 'GPT-')
-      .replace(/-mini\b/i, ' Mini')
-      .replace(/-pro\b/i, ' Pro')
-      .replace(/-codex\b/i, ' Codex')
-      .replace(/-turbo\b/i, ' Turbo')
-      .replace(/-highspeed\b/i, ' Highspeed');
+      .replace(/-([a-z]+)\b/g, (_, w: string) => ` ${w.charAt(0).toUpperCase()}${w.slice(1)}`);
   }
 
   return base;

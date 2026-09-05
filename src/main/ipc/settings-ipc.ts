@@ -19,6 +19,9 @@ export function getAvailableModels(): Array<{ id: string; name: string; provider
   const hasAnthropicKey = SettingsManager.get('anthropic.apiKey');
   if (hasOAuth || hasAnthropicKey) {
     models.push(
+      { id: 'claude-fable-5-1', name: 'Fable 5.1', provider: 'anthropic' },
+      { id: 'claude-opus-5', name: 'Opus 5', provider: 'anthropic' },
+      { id: 'claude-sonnet-5', name: 'Sonnet 5', provider: 'anthropic' },
       { id: 'claude-opus-4-7', name: 'Opus 4.7', provider: 'anthropic' },
       { id: 'claude-sonnet-4-6', name: 'Sonnet 4.6', provider: 'anthropic' },
       { id: 'claude-haiku-4-5-20251001', name: 'Haiku 4.5', provider: 'anthropic' }
@@ -45,6 +48,10 @@ export function getAvailableModels(): Array<{ id: string; name: string; provider
   const hasOpenAIOAuth = SettingsManager.get('openai.auth.method') === 'oauth';
   if (hasOpenAIKey || hasOpenAIOAuth) {
     models.push(
+      { id: 'gpt-6-astra', name: 'GPT-6 Astra', provider: 'openai' },
+      { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', provider: 'openai' },
+      { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', provider: 'openai' },
+      { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', provider: 'openai' },
       { id: 'gpt-5.5', name: 'GPT-5.5', provider: 'openai' },
       { id: 'gpt-5.5-pro', name: 'GPT-5.5 Pro', provider: 'openai' },
       { id: 'gpt-5.4', name: 'GPT-5.4', provider: 'openai' },
@@ -166,6 +173,31 @@ export function getDiscoveredModels(): Array<{ id: string; name: string; provide
   } catch {
     return [];
   }
+}
+
+/**
+ * Run live discovery and merge the results into the persisted cache. Used by
+ * the "Check for new models" button AND on every app launch, so a model that
+ * shipped yesterday shows up without anyone remembering to click.
+ */
+export async function refreshDiscoveredModels(): Promise<{ added: number; discovered: number }> {
+  const { discoverModels } = await import('../../agent/model-discovery.js');
+  const found = await discoverModels();
+
+  // Replace results PER PROVIDER rather than accumulating forever: any
+  // provider that returned models has its cached entries fully replaced (so
+  // models that vanish upstream, or that a tightened filter now excludes,
+  // drop out cleanly). Providers that returned nothing this run keep their
+  // previously-discovered entries, so a single timeout never wipes them.
+  const existing = getDiscoveredModels();
+  const refreshedProviders = new Set<string>(found.map((m) => m.provider));
+  const kept = existing.filter((m) => !refreshedProviders.has(m.provider));
+
+  const prevIds = new Set(existing.map((m) => m.id));
+  const added = found.filter((m) => !prevIds.has(m.id)).length;
+
+  SettingsManager.set(DISCOVERED_MODELS_KEY, JSON.stringify([...kept, ...found]));
+  return { added, discovered: found.length };
 }
 
 /**
@@ -473,25 +505,8 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
   // and returns how many new ids were added plus the refreshed model list.
   trustedHandle('settings:discoverModels', async () => {
     try {
-      const { discoverModels } = await import('../../agent/model-discovery.js');
-      const found = await discoverModels();
-
-      // Replace results PER PROVIDER rather than accumulating forever: any
-      // provider that returned models has its cached entries fully replaced (so
-      // models that vanish upstream, or that a tightened filter now excludes,
-      // drop out cleanly). Providers that returned nothing this run keep their
-      // previously-discovered entries, so a single timeout never wipes them.
-      const existing = getDiscoveredModels();
-      const refreshedProviders = new Set<string>(found.map((m) => m.provider));
-      const kept = existing.filter((m) => !refreshedProviders.has(m.provider));
-
-      const prevIds = new Set(existing.map((m) => m.id));
-      const added = found.filter((m) => !prevIds.has(m.id)).length;
-
-      const merged = [...kept, ...found];
-      SettingsManager.set(DISCOVERED_MODELS_KEY, JSON.stringify(merged));
-
-      return { ok: true, added, discovered: found.length, models: getAvailableModels() };
+      const { added, discovered } = await refreshDiscoveredModels();
+      return { ok: true, added, discovered, models: getAvailableModels() };
     } catch (err) {
       console.error('[Settings] discoverModels failed:', err);
       return {

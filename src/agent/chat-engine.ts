@@ -71,6 +71,11 @@ const BASE_CONTEXT_WINDOW = 200_000;
 // Model context window sizes (tokens)
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   // Anthropic models
+  'claude-fable-5-1': 1_000_000,
+  'claude-fable-5': 1_000_000,
+  'claude-opus-5': 1_000_000,
+  'claude-sonnet-5': 1_000_000,
+  'claude-opus-4-8': 1_000_000,
   'claude-opus-4-7': 1_000_000,
   'claude-opus-4-6': 1_000_000,
   'claude-sonnet-4-6': 1_000_000,
@@ -85,6 +90,10 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   // Xiaomi/MiMo models
   'mimo-v2-pro': 1_000_000,
   // OpenAI models
+  'gpt-6-astra': 1_050_000,
+  'gpt-5.6-sol': 1_050_000,
+  'gpt-5.6-terra': 1_050_000,
+  'gpt-5.6-luna': 1_050_000,
   'gpt-5.5': 1_000_000,
   'gpt-5.5-pro': 1_000_000,
   'gpt-5.4': 1_050_000,
@@ -101,7 +110,14 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
 };
 
 function getContextWindow(model: string): number {
-  return MODEL_CONTEXT_WINDOWS[model] ?? 200_000;
+  const known = MODEL_CONTEXT_WINDOWS[model];
+  if (known) return known;
+  // Discovered (uncurated) ids: frontier Claude lines since 4.6 and flagship
+  // GPT tiers since 5.4 ship a ~1M window, so assume that for newer
+  // generations and stay conservative (200K) for anything else.
+  if (/^claude-(?!haiku)[a-z]+-(?:[5-9]|4-[6-9])/i.test(model)) return 1_000_000;
+  if (/^gpt-(?:5\.[4-9]|[6-9])/i.test(model)) return 1_000_000;
+  return 200_000;
 }
 
 /**

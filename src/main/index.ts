@@ -31,6 +31,7 @@ import {
   registerSessionsIPC,
   registerBrandsIPC,
   registerSettingsIPC,
+  refreshDiscoveredModels,
   registerFactsIPC,
   registerCronIPC,
   registerMiscIPC,
@@ -926,6 +927,13 @@ app.whenReady().then(async () => {
     if (!firstRun) {
       console.log('[Main] Initializing agent...');
       await initializeAgent();
+      // Pick up freshly-released models without a manual "Check for new
+      // models" click. Fire and forget; a failure keeps the cached list.
+      refreshDiscoveredModels()
+        .then(({ added }) => {
+          if (added > 0) modelChangedHandler?.(AgentManager.getModel());
+        })
+        .catch((err) => console.warn('[Main] model discovery failed:', (err as Error).message));
     }
 
     // Tray menu is updated event-driven (after messages, cron changes, etc.)
