@@ -20,9 +20,10 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
   newly published public release. Do not hot-patch or replace its signed bundle.
 - The app was quit cleanly for the closing backup. Automatic services must remain
   paused during continued validation. Do not launch it normally from the Dock:
-  first use the existing guarded launch in `scripts/install-local.cjs`
-  (`defaultTransport().launch`) and verify startup health. This validates the
-  personal-build marker and sets `ACOS_INSTALL_VALIDATION=1`; do not bypass it.
+  first validate the installed bundle with `scripts/install-local.cjs`
+  (`validateCandidate`), use its guarded `defaultTransport().launch`, and verify
+  startup health. It checks the validation marker and sets
+  `ACOS_INSTALL_VALIDATION=1`; do not bypass these guards.
 - The working provider is ChatGPT OAuth / GPT-5.6 Sol. No paid API fallback.
 - Synthetic finance, the TSAI SEO report and a synthetic Hook Lab draft are saved
   in the app. Brett confirmed the SEO report looks good.
@@ -54,6 +55,7 @@ The closing app-data checkpoint is
 `~/Library/Application Support/acos-local-improvement-backups/checkpoint-step18-9SP8m2`.
 Main/finance restores, persistent-file restores and the installed-bundle copy were
 verified. Source/GitHub and additional backup locations are recorded separately in
-`docs/SESSION-CLOSEOUT-2026-09-06.md`. Keychain, Chromium cookies/caches, and files
-outside the named backup scope are not magically recoverable from a source archive.
-Reauthentication may be required on another Mac. Never restore over live data.
+`docs/SESSION-CLOSEOUT-2026-09-06.md`. The broader private copy also preserves full
+app-data/browser-storage bytes, shared Flo data, brand profiles and private helper
+markers. Keychain is not exported; another Mac may need normal reauthentication.
+A source-only archive is not an app-data backup. Never restore over live data.

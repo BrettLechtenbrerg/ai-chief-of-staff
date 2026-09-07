@@ -45,7 +45,8 @@ is `checkpoint/2026-09-06-session-closeout`; use its remote tip, not an older `m
 - **RUNTIME:** `vercel inspect https://www.totalsuccessai.com --format=json`
   returned deployment `dpl_CjNkrHixroYLHJGVXscvvBUYQ8Fb`, project `tsai-site`,
   state **READY**. No site edit needed deploying, so no redundant deployment or
-  public promotion of the unfinished private app was performed.
+  public promotion of the unfinished private app was performed. The live landing
+  page was also fetched and still links the existing beta.25 release assets.
 
 ## Backup destinations and limits
 
@@ -78,5 +79,39 @@ continuous protection, and no absolute zero-loss guarantee is possible.
 
 ## Final receipts
 
-GitHub push and additional archive/copy verification are in progress. Do not
-interpret this heading alone as confirmation that off-device copies completed.
+- **RUNTIME:** source checkpoint `5b4c8a9b6e4e09e441a4c2675090c85a613f4bff`
+  was committed and pushed; `git ls-remote` matched the local commit exactly.
+  Later receipt-only commits may advance this same checkpoint branch.
+- **RUNTIME:** official Gitleaks **8.30.1**, downloaded with its release checksum
+  verified, scanned all 485 publishable files (~5.91 MB): no findings. The separate
+  254-commit history scan reported six occurrences of one old browser-side
+  `GGPixel.initPixel` project-key snippet, absent from current files. History was
+  not rewritten, the historical scan was not called clean, no allowlist was added,
+  and no credential values were printed. This is not a whole-project security
+  certification.
+- **RUNTIME:** a broader private copy was completed and matched against its live
+  sources in **252.209 seconds**, with the app stopped:
+  `~/dev/_backups/acos-private-closeout-20260907-fp3_oe9x/payload/`.
+  It contains the full repository (145,030 entries, including `.git`, `.gg`,
+  dependencies and release files), full app data (176 entries), verified data
+  checkpoint/installed bundle (28,489), shared Flo data (6), brand profiles (199)
+  and the home workspace routing file. `payload/verification.json` records
+  per-root digests/counts. Symlinks were preserved without following them.
+- **Private off-device copy pending:** the noninteractive macOS encryption dialog
+  failed with `Inappropriate ioctl for device`; no encrypted image was produced
+  by that attempt. An interactive Terminal recipe was then opened at
+  `payload/finish-private-backup.command` for hidden password entry. Its shell
+  syntax passed. It creates an AES-256 image, verifies encryption and matching
+  external/iCloud-local copies, then asks for the password again to verify all
+  six roots from a read-only external-drive mount. It never records the password.
+  Do not overwrite an existing image or partial copy to retry.
+- **Completion authority:** inspect `private-backup-status.json`,
+  `image-copy-receipt.json` and `external-restore-receipt.json` in that private
+  closeout directory. Only `state: complete` plus the restore receipt establishes
+  this recipe completed. Absence or `incomplete` means it did not. A verified
+  iCloud-local file is not proof of completed server upload.
+
+Keep the encryption password in a password manager, separately from these backup
+folders. The private image's repository snapshot is the initial source checkpoint;
+use the newer checkpoint-branch documents/Git bundle for subsequent receipt-only
+updates. No source, data or installer was deleted to make a backup check pass.
