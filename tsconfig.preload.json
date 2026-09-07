@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
+    "outDir": "./.preload-build",
     "moduleResolution": "Node10",
     "ignoreDeprecations": "6.0"
   },

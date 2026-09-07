@@ -1,8 +1,16 @@
+function chatAttachmentContext() {
+  const chat = document.getElementById('chat-view');
+  return Boolean(chat && !chat.classList.contains('hidden') &&
+    !document.getElementById('budget-view')?.classList.contains('active'));
+}
+
 function triggerAttach() {
+  if (!chatAttachmentContext()) return;
   fileInput.click();
 }
 
 async function handleFileSelect(e) {
+  if (!chatAttachmentContext()) { fileInput.value = ''; return; }
   const files = Array.from(e.target.files);
   if (files.length === 0) return;
 
@@ -23,6 +31,7 @@ async function handleFileSelect(e) {
 
     try {
       const attachment = await readFile(file, ext);
+      if (!chatAttachmentContext()) { fileInput.value = ''; return; }
       const currentAttachments = getPendingAttachments();
       currentAttachments.push(attachment);
       setPendingAttachments(currentAttachments);
@@ -162,6 +171,7 @@ function hideDragOverlay() {
 document.addEventListener('dragenter', (e) => {
   e.preventDefault();
   e.stopPropagation();
+  if (!chatAttachmentContext()) return;
   dragCounter++;
 
   // Only show overlay if dragging files (types may be DOMStringList or Array depending on Electron version)
@@ -174,7 +184,7 @@ document.addEventListener('dragenter', (e) => {
 document.addEventListener('dragleave', (e) => {
   e.preventDefault();
   e.stopPropagation();
-  dragCounter--;
+  dragCounter = Math.max(0, dragCounter - 1);
 
   // Hide overlay when drag leaves the window entirely
   if (dragCounter === 0) {
@@ -192,6 +202,7 @@ document.addEventListener('drop', async (e) => {
   e.stopPropagation();
   dragCounter = 0;
   hideDragOverlay();
+  if (!chatAttachmentContext()) return;
 
   const files = Array.from(e.dataTransfer?.files || []);
   if (files.length === 0) return;
@@ -213,6 +224,7 @@ document.addEventListener('drop', async (e) => {
 
     try {
       const attachment = await readFile(file, ext);
+      if (!chatAttachmentContext()) { fileInput.value = ''; return; }
       const currentAttachments = getPendingAttachments();
       currentAttachments.push(attachment);
       setPendingAttachments(currentAttachments);
@@ -227,6 +239,7 @@ document.addEventListener('drop', async (e) => {
 
 // Paste handler for clipboard images (Cmd+V / Ctrl+V)
 document.addEventListener('paste', async (e) => {
+  if (!chatAttachmentContext()) return;
   const items = Array.from(e.clipboardData?.items || []);
   const imageItems = items.filter(item => item.type.startsWith('image/'));
 
@@ -260,6 +273,7 @@ document.addEventListener('paste', async (e) => {
 
     try {
       const attachment = await readFile(namedFile, ext);
+      if (!chatAttachmentContext()) { fileInput.value = ''; return; }
       const currentAttachments = getPendingAttachments();
       currentAttachments.push(attachment);
       setPendingAttachments(currentAttachments);
@@ -286,7 +300,7 @@ input.addEventListener('scroll', () => {
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   // Cmd/Ctrl + K to clear
-  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+  if (chatAttachmentContext() && (e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault();
     clearChat();
   }

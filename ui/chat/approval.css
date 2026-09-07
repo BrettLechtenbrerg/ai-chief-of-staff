@@ -29,7 +29,14 @@
   letter-spacing: 0.04em;
 }
 
-.approval-summary {
+.approval-details {
+  max-height: 30vh;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.approval-summary,
+.approval-details {
   margin: 0;
   padding: 10px 12px;
   border-radius: var(--radius-sm);

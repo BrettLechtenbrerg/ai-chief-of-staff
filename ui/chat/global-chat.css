@@ -39,19 +39,8 @@
   height: 20px;
 }
 
-/* Hide floating buttons when a panel view is active */
-.main-content:has(.active#settings-view) .floating-fresh-btn,
-.main-content:has(.active#settings-view) .floating-toggle-btn,
-.main-content:has(.active#settings-view) .floating-admin-clear-btn,
-.main-content:has(.active#brain-view) .floating-fresh-btn,
-.main-content:has(.active#brain-view) .floating-toggle-btn,
-.main-content:has(.active#brain-view) .floating-admin-clear-btn,
-.main-content:has(.active#routines-view) .floating-fresh-btn,
-.main-content:has(.active#routines-view) .floating-toggle-btn,
-.main-content:has(.active#routines-view) .floating-admin-clear-btn,
-.main-content:has(.active#personalize-view) .floating-fresh-btn,
-.main-content:has(.active#personalize-view) .floating-toggle-btn,
-.main-content:has(.active#personalize-view) .floating-admin-clear-btn {
+/* Chat-only actions must not cover or clear unrelated panel work. */
+.main-content:has(#chat-view.hidden) :is(.floating-fresh-btn, .floating-toggle-btn, .floating-admin-clear-btn) {
   display: none !important;
 }
 

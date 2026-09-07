@@ -187,6 +187,34 @@ describe('CdpTier', () => {
     });
   });
 
+  describe('local document read boundary', () => {
+    it.each(['screenshot','extract'] as const)('does not expose a local document through %s',async(action)=>{
+      const tier=new CdpTier();await tier.connect();
+      (mockPage.url as Mock).mockReturnValue('file:///tmp/synthetic-finance.html');
+      try {
+        const result=await tier.execute({action});
+        expect(result.success).toBe(false);expect(result.error).toContain('blocked');
+        expect(result).not.toHaveProperty('data');expect(result).not.toHaveProperty('screenshot');
+        expect(mockPage.screenshot).not.toHaveBeenCalled();
+      } finally { tier.disconnect(); }
+    });
+    it('discards a screenshot when the page changes during capture',async()=>{
+      const tier=new CdpTier();await tier.connect();
+      (mockPage.screenshot as Mock).mockImplementation(async()=>{(mockPage.url as Mock).mockReturnValue('file:///tmp/synthetic-finance.html');return 'synthetic-image';});
+      try {const result=await tier.screenshot();expect(result.success).toBe(false);expect(result).not.toHaveProperty('screenshot');}
+      finally {tier.disconnect();}
+    });
+    it('redacts local tab titles and paths while retaining a tab handle',async()=>{
+      const tier=new CdpTier();await tier.connect();
+      (mockPage.url as Mock).mockReturnValue('file:///tmp/synthetic-finance.html');
+      try {
+        const result=await tier.tabsList();
+        expect(result.success).toBe(true);expect(result.tabs?.[0]).toMatchObject({id:'tab-0',url:''});
+        expect(JSON.stringify(result)).not.toContain('synthetic-finance');expect(mockPage.title).not.toHaveBeenCalled();
+      } finally {tier.disconnect();}
+    });
+  });
+
   describe('navigate', () => {
     it('should navigate to URL successfully', async () => {
       const tier = new CdpTier();

@@ -76,10 +76,22 @@ vi.mock('../../src/agent/chat-providers', () => ({
 // ── Now import the module ──────────────────────────────────────────────────
 import { getChatAgentTools, getCoderAgentTools } from '../../src/agent/chat-tools';
 import type { AgentTool, ToolContext } from '@kenkaiiii/gg-agent';
+import { ApprovalManager } from '../../src/security/approval-manager';
+
+beforeEach(() => {
+  // Inert UI fixture: approved commands must still pass the real safety filter.
+  ApprovalManager.setNotifier(request => {
+    ApprovalManager.resolve(request.id, 'approve', 'ui');
+    return true;
+  });
+});
+afterEach(() => ApprovalManager.setNotifier(null));
 
 // Helper: extract the shell_command tool from a fresh call each time
 function getShellTool(): AgentTool {
-  const tools = getChatAgentTools({} as Parameters<typeof getChatAgentTools>[0], '/tmp');
+  const tools = getChatAgentTools({} as Parameters<typeof getChatAgentTools>[0], '/tmp', undefined, {
+    sessionId: 'tool-fixture', channel: 'desktop', cwd: '/tmp', approvedRoots: ['/tmp'],
+  });
   const tool = tools.find((t) => t.name === 'shell_command');
   if (!tool) throw new Error('shell_command tool not found');
   return tool;
@@ -123,7 +135,7 @@ describe('shell_command tool — dangerous commands are blocked', () => {
 });
 
 // ── Safe commands ──────────────────────────────────────────────────────────
-describe('shell_command tool — safe commands pass through', () => {
+describe('shell_command tool — approved safe commands pass through', () => {
   beforeEach(() => {
     mockExecAsync.mockReset();
     mockExecAsync.mockResolvedValue({ stdout: 'ok', stderr: '' });
@@ -132,6 +144,13 @@ describe('shell_command tool — safe commands pass through', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('denies shell execution when the caller omits its execution context', async () => {
+    const tools = getChatAgentTools({} as Parameters<typeof getChatAgentTools>[0], '/tmp');
+    const result = await tools.find(tool => tool.name === 'shell_command')!.execute({ command: 'echo hi' }, ctx);
+    expect(result).toMatch(/requires user approval/);
+    expect(mockExecAsync).not.toHaveBeenCalled();
   });
 
   const safeCases: string[] = ['ls', 'pwd', 'echo hi'];
@@ -206,7 +225,7 @@ describe('write/edit tools — dangerous paths are blocked before delegating', (
   it('allows safe write paths to delegate to the underlying tool', async () => {
     const tool = getTool('write', 'coder');
     const result = await tool.execute(
-      { file_path: '/Users/user/projects/myapp/src/index.ts', content: 'x' },
+      { file_path: '/tmp/acos-synthetic-draft.md', content: 'x' },
       ctx
     );
 

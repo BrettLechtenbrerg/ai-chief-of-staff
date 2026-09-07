@@ -104,6 +104,12 @@ exports.default = async function(context) {
   //    validates the final file set; signing never alters .node contents.
   await require('../scripts/verify-native-modules.cjs').default(context);
 
+  if (context.packager.config.extraMetadata?.acosUpdatePolicy === 'personal-local-v1') {
+    const { verifyPersonalPayload } = require('../scripts/verify-personal-payload.cjs');
+    const result = verifyPersonalPayload(path.dirname(path.dirname(resourcesPath)));
+    console.log(`[afterPack] Personal payload checked: ${result.files} files; no disallowed data files or escaping links`);
+  }
+
   // 5. macOS only: apply a proper ad-hoc codesign if electron-builder skipped
   //    signing (i.e. local unsigned builds). Without this the bundle keeps the
   //    linker's default ad-hoc signature with Identifier=Electron and an

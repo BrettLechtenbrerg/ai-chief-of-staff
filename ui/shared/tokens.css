@@ -167,3 +167,19 @@
   --radius--1-5rem: var(--size--1-5rem);
   --radius--2rem: var(--size--2rem);
 }
+
+:root[data-skin="orbital-command"] {
+  color-scheme: dark;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius--round: 8px;
+  --work-rail: 760px;
+  --work-gutter: clamp(16px, 3vw, 24px);
+  --control-duration: 140ms;
+  --control-easing: ease-out;
+  --text-color--font-family--display: var(--text-color--font-family--body);
+  --text-color--text-tertiary: var(--bg-primary);
+  --link: var(--accent);
+  --link-hover: var(--accent-hover);
+}

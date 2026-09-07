@@ -14,12 +14,14 @@ type CommandHandler = (ctx: MockContext) => Promise<void>;
 type MessageHandler = (ctx: MockContext) => Promise<void>;
 
 interface MockBotApi {
+  config: { use: Mock };
   sendMessage: Mock;
 }
 
 // Store mock state at module level
 const mockState = {
   api: {
+    config: { use: vi.fn() },
     sendMessage: vi.fn().mockResolvedValue(undefined),
   } as MockBotApi,
   middlewares: [] as MiddlewareHandler[],
@@ -75,7 +77,7 @@ vi.mock('grammy', () => {
         mockState.errorHandler = handler;
       }
 
-      start({ onStart }: { onStart?: (botInfo: { username: string }) => void } = {}) {
+      async start({ onStart }: { onStart?: (botInfo: { username: string }) => void } = {}) {
         mockState.onStartCallback = onStart || null;
         if (onStart) {
           onStart({ username: 'test_bot' });

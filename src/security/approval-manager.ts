@@ -9,6 +9,7 @@ export interface ApprovalRequest {
   toolName: string;
   capability: ToolCapability;
   summary: string;
+  details: string;
   sessionId: string;
   channel: string;
   expiresAt: number;
@@ -26,9 +27,14 @@ const APPROVAL_TIMEOUT_MS = 2 * 60 * 1000;
 class ApprovalManagerImpl {
   private pending = new Map<string, PendingApproval>();
   private notifier: ((request: ApprovalRequest) => boolean) | null = null;
+  private telegramDeliveries = new Map<AbortController, string>();
 
   setNotifier(notifier: ((request: ApprovalRequest) => boolean) | null): void {
     this.notifier = notifier;
+    if (!notifier) {
+      for (const controller of this.telegramDeliveries.keys()) controller.abort();
+      for (const pending of this.pending.values()) pending.resolve(false);
+    }
   }
 
   async request(options: {
@@ -41,12 +47,68 @@ class ApprovalManagerImpl {
   }): Promise<boolean> {
     // Scheduled and remote channels cannot present a user-originated confirmation.
     if (options.channel !== 'desktop') return false;
-    if (!this.notifier || options.signal?.aborted) return false;
+    return this.present(options);
+  }
 
+  /** Only Telegram delivery may ask the desktop from a remote/scheduled origin.
+   * This does not grant remote tools permission to execute arbitrary actions. */
+  async requestTelegramDelivery<T>(options: {
+    method: string;
+    payload: unknown;
+    sessionId: string;
+    signal?: AbortSignal;
+    prepare?: (signal: AbortSignal) => Promise<void>;
+  }, executeOnce: (signal: AbortSignal) => Promise<T>): Promise<{ approved: false } | { approved: true; result: T }> {
+    const controller = new AbortController();
+    const onAbort = () => controller.abort();
+    options.signal?.addEventListener('abort', onAbort, { once: true });
+    this.telegramDeliveries.set(controller, options.sessionId);
+    try {
+      if (options.signal?.aborted) controller.abort();
+      if (!this.notifier || controller.signal.aborted) return { approved: false };
+      // Track session/UI cancellation during file capture as well as approval.
+      if (options.prepare) await options.prepare(controller.signal);
+      const approved = await this.present({
+        toolName: `telegram.api.${options.method}`,
+        capability: 'external-write',
+        args: { method: options.method, payload: options.payload },
+        sessionId: options.sessionId,
+        channel: 'desktop',
+        signal: controller.signal,
+      }, true);
+      if (!approved || controller.signal.aborted) return { approved: false };
+      // No reusable grant leaves the manager. Session cancellation still reaches
+      // this execution even if it follows approval in the same event-loop turn.
+      return { approved: true, result: await executeOnce(controller.signal) };
+    } finally {
+      options.signal?.removeEventListener('abort', onAbort);
+      this.telegramDeliveries.delete(controller);
+    }
+  }
+
+  private async present(options: {
+    toolName: string;
+    capability: ToolCapability;
+    args: unknown;
+    sessionId: string;
+    channel: string;
+    signal?: AbortSignal;
+  }, exactDelivery = false): Promise<boolean> {
+    if (!this.notifier || options.signal?.aborted || this.pending.size >= 20) return false;
+
+    let details: string;
+    try {
+      details = JSON.stringify(options.args, (key, value: unknown) =>
+        !exactDelivery && /password|secret|token|authorization|api.?key/i.test(key) ? '[redacted credential]' : value, 2);
+      if (typeof details !== 'string' || details.length > 100_000) return false;
+    } catch {
+      return false;
+    }
     const request: ApprovalRequest = {
       id: randomUUID(),
       toolName: options.toolName,
       capability: options.capability,
+      details,
       summary:
         options.toolName === 'fetch_aeo_visibility'
           ? `Paid batch: up to 75 provider requests; provider charges apply. ${summarizeArguments(options.args)}`
@@ -76,14 +138,22 @@ class ApprovalManagerImpl {
           ? { abortCleanup: () => options.signal?.removeEventListener('abort', onAbort) }
           : {}),
       });
-      if (!this.notifier?.(request)) finish(false);
+      try {
+        if (!this.notifier?.({ ...request }) || options.signal?.aborted) finish(false);
+      } catch {
+        finish(false);
+      }
     });
   }
 
   resolve(id: string, decision: ApprovalDecision, source: ApprovalSource): boolean {
     if (source !== 'ui' && source !== 'voice') return false;
     const pending = this.pending.get(id);
-    if (!pending || pending.request.expiresAt < Date.now()) return false;
+    if (!pending) return false;
+    if (pending.request.expiresAt <= Date.now()) {
+      pending.resolve(false);
+      return false;
+    }
     pending.resolve(decision === 'approve');
     return true;
   }
@@ -96,6 +166,9 @@ class ApprovalManagerImpl {
   }
 
   cancelSession(sessionId: string): void {
+    for (const [controller, deliverySession] of this.telegramDeliveries) {
+      if (deliverySession === sessionId) controller.abort();
+    }
     for (const pending of this.pending.values()) {
       if (pending.request.sessionId === sessionId) pending.resolve(false);
     }

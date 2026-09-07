@@ -53,6 +53,7 @@
   flex-direction: column;
   gap: 16px;
   max-width: 760px;
+  min-height: 0;
   width: 100%;
   margin: 0 auto;
 }
@@ -63,9 +64,11 @@
 
 #video-studio-view .vs-intro {
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 4px;
 }
+
+#video-studio-view .vs-container > * { flex-shrink: 0; }
 
 /* Cards */
 #video-studio-view .vs-card {
@@ -94,6 +97,7 @@
   gap: 10px;
   min-width: 0;
   flex: 1;
+  flex-wrap: wrap;
 }
 
 #video-studio-view .vs-card-title h2 {
@@ -106,7 +110,7 @@
 
 #video-studio-view .vs-card-status {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 #video-studio-view .vs-card-badge {
@@ -117,7 +121,7 @@
   height: 22px;
   border-radius: 50%;
   background: var(--bg-tertiary);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
@@ -147,21 +151,20 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-#video-studio-view .vs-card-toggle:hover {
+#video-studio-view .vs-card-toggle:hover:not(:disabled) {
   background: var(--bg-tertiary);
   border-color: var(--accent);
 }
+#video-studio-view .vs-card-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Collapsible body */
 #video-studio-view .vs-card-body {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.25s ease;
+  display: none;
   padding: 0 16px;
 }
 
 #video-studio-view .vs-card.expanded .vs-card-body {
-  max-height: 1400px;
+  display: block;
   padding: 0 16px 16px;
 }
 
@@ -190,7 +193,7 @@
 
 #video-studio-view .vs-hint {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 12px;
 }
 
@@ -218,9 +221,10 @@
   padding: 8px 10px;
 }
 
-#video-studio-view .vs-form-row input:focus {
-  outline: none;
-  border-color: var(--accent);
+#video-studio-view :is(button, input, select):focus-visible,
+.vs-action-row button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 #video-studio-view .vs-brand-picker {
@@ -235,7 +239,7 @@
   cursor: pointer;
 }
 
-#video-studio-view .vs-brand-picker:focus { outline: none; border-color: var(--accent); }
+#video-studio-view .vs-brand-picker:focus-visible { border-color: var(--accent); }
 #video-studio-view .vs-brand-picker:disabled { opacity: 0.6; cursor: default; }
 
 #video-studio-view .vs-form-actions {
@@ -262,7 +266,7 @@
 
 #video-studio-view .vs-form-message {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 #video-studio-view .vs-form-message.ok { color: var(--accent); }
@@ -277,6 +281,10 @@
 }
 
 #video-studio-view .vs-aspect-option {
+  font: inherit;
+  color: var(--text-primary);
+  text-align: start;
+  box-shadow: none;
   flex: 1 1 0;
   min-width: 150px;
   background: var(--bg-primary);
@@ -340,7 +348,7 @@
 
 #video-studio-view .vs-aspect-text small {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Start-button footer */
@@ -361,7 +369,8 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  min-width: 280px;
+  min-width: min(280px, 100%);
+  max-width: 100%;
   transition: opacity 0.15s ease, transform 0.05s ease;
 }
 
@@ -371,7 +380,7 @@
 
 #video-studio-view .vs-actions-hint {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -381,6 +390,7 @@
 
 .vs-action-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
   padding: 0 16px 16px;
@@ -417,3 +427,8 @@
 }
 
 .vs-action-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  #video-studio-view *, .vs-action-row button { transition: none; }
+  #video-studio-view .vs-start-btn:active:not(:disabled) { transform: none; }
+}

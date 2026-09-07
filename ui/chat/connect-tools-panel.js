@@ -138,6 +138,7 @@ async function _ctMaybePromptMigration() {
 
 function _ctStartPolling() {
   _ctStopPolling();
+  if (!document.getElementById('connect-tools-view')?.classList.contains('active')) return;
   _ctPollTimer = setInterval(() => _ctRefresh(), 5000);
 }
 
@@ -214,13 +215,19 @@ function _ctRenderCard(tool, status) {
     </div>
     <button class="ct-btn-secondary" data-action="toggle">${card.classList.contains('expanded') ? 'Hide' : 'Edit'}</button>
   `;
-  header
-    .querySelector('[data-action="toggle"]')
-    .addEventListener('click', () => card.classList.toggle('expanded'));
+  const toggle = header.querySelector('[data-action="toggle"]');
+  toggle.setAttribute('aria-expanded',String(card.classList.contains('expanded')));
+  toggle.addEventListener('click', () => {
+    const expanded = card.classList.toggle('expanded');
+    toggle.setAttribute('aria-expanded',String(expanded));
+    toggle.textContent = expanded ? 'Hide' : 'Edit';
+  });
   card.appendChild(header);
 
   const body = document.createElement('div');
   body.className = 'ct-card-body';
+  body.id = `ct-body-${tool.id}`;
+  toggle.setAttribute('aria-controls',body.id);
   body.appendChild(_ctRenderDescription(tool));
 
   if (status.externallyManaged) {

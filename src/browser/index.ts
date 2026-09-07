@@ -117,6 +117,17 @@ export class BrowserManager {
    * Execute a browser action
    */
   async execute(action: BrowserAction): Promise<BrowserResult> {
+    // Navigation is an unattended read, not a second route to page-script execution.
+    if (action.action === 'navigate') {
+      try {
+        if (typeof action.url !== 'string') throw new Error('Missing URL');
+        const url = new URL(action.url);
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Non-web URL');
+        action = { ...action, url: url.href };
+      } catch {
+        return { success: false, tier: action.tier === 'cdp' ? 'cdp' : 'electron', error: 'Navigation requires an absolute HTTP(S) URL.' };
+      }
+    }
     const tier = this.selectTier(action);
     this.lastTier = tier;
 

@@ -14,6 +14,7 @@ import { Bot, Context, InputFile } from 'grammy';
 import { BaseChannel } from '../index';
 import { SettingsManager } from '../../settings';
 import fs from 'fs';
+import { telegramDeliveryApproval, TelegramDeliveryDenied } from '../../security/telegram-delivery';
 
 // Types
 import { MessageCallback, SessionLinkCallback, AttachmentType } from './types';
@@ -78,6 +79,8 @@ export class TelegramBot extends BaseChannel {
     }
 
     this.bot = new Bot(botToken);
+    // First/innermost transformer: covers ctx.reply, tools, scheduler and startup.
+    this.bot.api.config.use(telegramDeliveryApproval());
     this.chatTracker = new ChatTracker();
 
     this.setupMiddleware();
@@ -229,6 +232,7 @@ export class TelegramBot extends BaseChannel {
       try {
         await ctx.reply(html, { parse_mode: 'HTML' });
       } catch (error) {
+        if (error instanceof TelegramDeliveryDenied) throw error;
         // Fallback to plain text if HTML parsing fails
         console.error('[Telegram] HTML parse failed, falling back to plain text:', error);
         await ctx.reply(text);
@@ -242,7 +246,8 @@ export class TelegramBot extends BaseChannel {
       const html = markdownToTelegramHtml(prefix + chunks[i]);
       try {
         await ctx.reply(html, { parse_mode: 'HTML' });
-      } catch {
+      } catch (error) {
+        if (error instanceof TelegramDeliveryDenied) throw error;
         // Fallback to plain text if HTML parsing fails
         await ctx.reply(prefix + chunks[i]);
       }
@@ -270,7 +275,8 @@ export class TelegramBot extends BaseChannel {
         const html = markdownToTelegramHtml(text);
         try {
           await this.bot.api.sendMessage(chatId, html, { parse_mode: 'HTML' });
-        } catch {
+        } catch (error) {
+          if (error instanceof TelegramDeliveryDenied) throw error;
           // Fallback to plain text
           await this.bot.api.sendMessage(chatId, text);
         }
@@ -281,7 +287,8 @@ export class TelegramBot extends BaseChannel {
           const html = markdownToTelegramHtml(prefix + chunks[i]);
           try {
             await this.bot.api.sendMessage(chatId, html, { parse_mode: 'HTML' });
-          } catch {
+          } catch (error) {
+            if (error instanceof TelegramDeliveryDenied) throw error;
             await this.bot.api.sendMessage(chatId, prefix + chunks[i]);
           }
           if (i < chunks.length - 1) {
@@ -380,7 +387,7 @@ export class TelegramBot extends BaseChannel {
     }
 
     try {
-      this.bot.start({
+      void this.bot.start({
         onStart: (botInfo) => {
           this.isRunning = true;
           try {
@@ -390,6 +397,9 @@ export class TelegramBot extends BaseChannel {
             // Ignore EPIPE errors from console.log
           }
         },
+      }).catch((error: unknown) => {
+        this.isRunning = false;
+        console.error('[Telegram] Polling stopped (startup mutations also require approval):', error);
       });
     } catch (error) {
       console.error('[Telegram] Failed to start bot:', error);

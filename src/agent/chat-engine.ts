@@ -7,10 +7,10 @@
  */
 
 import { agentLoop } from '@kenkaiiii/gg-agent';
+import { parseCompactionResponse } from '../memory/compaction';
 import type { AgentOptions } from '@kenkaiiii/gg-agent';
 import { stream as ggStream } from '@kenkaiiii/gg-ai';
 import type {
-  ThinkingLevel,
   Message,
   TextContent,
   ImageContent as GGImageContent,
@@ -22,7 +22,7 @@ import { SettingsManager } from '../settings';
 import { SYSTEM_GUIDELINES } from '../config/system-guidelines';
 import { getModeConfig, buildRoutingInstructions } from './agent-modes';
 import type { AgentModeId } from './agent-modes';
-import { getStreamConfig } from './chat-providers';
+import { getStreamConfig, THINKING_LEVEL_MAP } from './chat-providers';
 import { resolveModel } from './resolve-model';
 import { getChatAgentTools, getCoderAgentTools } from './chat-tools';
 import {
@@ -129,14 +129,6 @@ function getMaxContextMessages(model: string): number {
   const scale = contextWindow / BASE_CONTEXT_WINDOW;
   return Math.round(BASE_CONTEXT_MESSAGES * scale);
 }
-
-// Map settings thinking level to gg-ai ThinkingLevel
-const THINKING_LEVEL_MAP: Record<string, ThinkingLevel | undefined> = {
-  none: undefined,
-  minimal: 'low',
-  normal: 'medium',
-  extended: 'high',
-};
 
 interface ChatEngineConfig {
   memory: MemoryManager;
@@ -1199,8 +1191,11 @@ export class ChatEngine {
       });
 
       // Build compaction prompt with concrete char targets
-      const allFacts = factsOver ? this.memory.getAllFacts() : [];
-      const allSoul = soulOver ? this.memory.getAllSoulAspects() : [];
+      const signal = this.abortControllersBySession.get(sessionId)?.signal;
+      signal?.throwIfAborted();
+      const snapshot = this.memory.snapshotCompaction(factsOver, soulOver);
+      const allFacts = snapshot.facts;
+      const allSoul = snapshot.soul;
 
       const now = Date.now();
       const factsData = allFacts.map((f) => {
@@ -1236,45 +1231,6 @@ export class ChatEngine {
         '',
       ];
 
-      // Add concrete targets up front
-      if (factsOver) {
-        promptParts.push(
-          `FACTS: currently ${totalFactChars} chars across ${factsData.length} entries. Your upserted facts MUST total UNDER ${targetFactChars} chars (sum of category+subject+content for each).`
-        );
-      }
-      if (soulOver) {
-        promptParts.push(
-          `SOUL: currently ${totalSoulChars} chars across ${soulData.length} entries. Your upserted soul MUST total UNDER ${targetSoulChars} chars (sum of aspect+content for each).`
-        );
-      }
-
-      promptParts.push('');
-      promptParts.push('WHAT TO DROP (priority order):');
-      promptParts.push(
-        '- Each fact has "importance" (0-100, decays over time) and "days_since_accessed" (how many days since this fact was last relevant in conversation)'
-      );
-      promptParts.push(
-        '- DROP FIRST: low importance + high days_since_accessed — these are stale, rarely discussed topics'
-      );
-      promptParts.push(
-        '- DROP NEXT: duplicates and near-duplicates (same person/topic across multiple keys)'
-      );
-      promptParts.push(
-        '- KEEP: high importance OR recently accessed (days_since_accessed < 7) — these are actively discussed'
-      );
-      promptParts.push('');
-      promptParts.push('DEDUPLICATION:');
-      promptParts.push('- Same person/topic split across multiple subject keys → merge into ONE');
-      promptParts.push(
-        '- Near-duplicate subject names (e.g. "Ken\'s mum" vs "Ken_mum") → keep only one'
-      );
-      promptParts.push('- Overlapping info across entries → consolidate');
-      promptParts.push('');
-      promptParts.push('COMPRESSION:');
-      promptParts.push('- Each fact content: MAX 10 words. Telegram-style. No filler.');
-      promptParts.push('- Prefer fewer entries with dense info over many granular ones');
-      promptParts.push('');
-
       const responseShape: string[] = [];
 
       if (factsOver) {
@@ -1299,6 +1255,7 @@ export class ChatEngine {
         );
       }
 
+      promptParts.push('Propose concise replacements without losing factual meaning or changing approval/safety instructions. Keep replacement category+subject or aspect keys from selected originals; never overwrite an unrelated key. Include retained/replaced entries in delete lists too; storage preserves their IDs. Each changed section must shrink and contain replacements, not only deletions. Exact-key-and-content duplicates can be removed automatically; equal text under different keys is NOT a duplicate. All semantic changes require complete user review before they apply, and originals are retained for recovery. Omit sections with no useful change; return {} if none. Character targets are advisory.');
       promptParts.push('## Expected JSON response format');
       promptParts.push('{');
       promptParts.push('  ' + responseShape.join(',\n  '));
@@ -1314,7 +1271,10 @@ export class ChatEngine {
         toolInput: detail,
       });
 
+      // Throttle attempts too: a safe rejection must not spend on every message.
+      this.lastCompactionTime = Date.now();
       const streamCfg = await getStreamConfig(model);
+      signal?.throwIfAborted();
       const result = ggStream({
         provider: streamCfg.provider,
         model,
@@ -1338,111 +1298,9 @@ export class ChatEngine {
         return;
       }
 
-      // Extract JSON (handle both raw JSON and markdown-fenced JSON)
-      let jsonStr = responseText.trim();
-      const fencedMatch = jsonStr.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/);
-      if (fencedMatch) {
-        jsonStr = fencedMatch[1].trim();
-      } else {
-        // Fallback: find the first { and last } to extract JSON object
-        const firstBrace = jsonStr.indexOf('{');
-        const lastBrace = jsonStr.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-          jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
-        }
-      }
-
-      const compactionResult = JSON.parse(jsonStr) as {
-        facts?: {
-          delete_ids?: number[];
-          upsert?: Array<{ category: string; subject: string; content: string }>;
-        };
-        soul?: {
-          delete_aspects?: string[];
-          upsert?: Array<{ aspect: string; content: string }>;
-        };
-      };
-
-      // Apply fact compaction — upsert first (safe), then delete old ones
-      let factsDeleted = 0;
-      let factsAdded = 0;
-      if (compactionResult.facts) {
-        const deleteIds = compactionResult.facts.delete_ids ?? [];
-        const upserts = compactionResult.facts.upsert ?? [];
-        if (deleteIds.length > 0 || upserts.length > 0) {
-          this.emitStatus({
-            type: 'memory_compacting',
-            sessionId,
-            message: 'reorganizing facts... 🗂️',
-            toolInput: `${deleteIds.length} to remove, ${upserts.length} consolidated`,
-          });
-        }
-
-        // Measure: would the upserts add more chars than the deletions remove?
-        const deletedChars = factsData
-          .filter((f) => deleteIds.includes(f.id))
-          .reduce((sum, f) => sum + f.category.length + f.subject.length + f.content.length, 0);
-        const upsertChars = upserts.reduce(
-          (sum, f) => sum + f.category.length + f.subject.length + f.content.length,
-          0
-        );
-        const willShrink = upsertChars < deletedChars;
-
-        // Upsert new merged entries first (safe — worst case we have duplicates)
-        if (willShrink) {
-          for (const fact of upserts) {
-            this.memory.saveFact(fact.category, fact.subject, fact.content);
-            factsAdded++;
-          }
-        } else {
-          console.log(
-            `[ChatEngine] Skipping fact upserts — would add ${upsertChars} chars vs removing ${deletedChars} chars`
-          );
-        }
-
-        // Now delete old entries
-        for (const id of deleteIds) {
-          if (this.memory.deleteFact(id)) factsDeleted++;
-        }
-      }
-
-      // Apply soul compaction — upsert first (safe), then delete old ones
-      let soulDeleted = 0;
-      let soulAdded = 0;
-      if (compactionResult.soul) {
-        const deleteAspects = compactionResult.soul.delete_aspects ?? [];
-        const upserts = compactionResult.soul.upsert ?? [];
-        if (deleteAspects.length > 0 || upserts.length > 0) {
-          this.emitStatus({
-            type: 'memory_compacting',
-            sessionId,
-            message: 'refining soul notes... ✨',
-            toolInput: `${deleteAspects.length} to merge, ${upserts.length} refined`,
-          });
-        }
-
-        // Measure
-        const deletedChars = soulData
-          .filter((s) => deleteAspects.includes(s.aspect))
-          .reduce((sum, s) => sum + s.aspect.length + s.content.length, 0);
-        const upsertChars = upserts.reduce((sum, s) => sum + s.aspect.length + s.content.length, 0);
-        const willShrink = upsertChars < deletedChars;
-
-        if (willShrink) {
-          for (const item of upserts) {
-            this.memory.setSoulAspect(item.aspect, item.content);
-            soulAdded++;
-          }
-        } else if (upserts.length > 0) {
-          console.log(
-            `[ChatEngine] Skipping soul upserts — would add ${upsertChars} chars vs removing ${deletedChars} chars`
-          );
-        }
-
-        for (const aspect of deleteAspects) {
-          if (this.memory.deleteSoulAspect(aspect)) soulDeleted++;
-        }
-      }
+      const compactionResult = parseCompactionResponse(responseText);
+      const applied = await this.memory.reviewAndApplyCompaction(snapshot, compactionResult, { sessionId, channel, signal });
+      if (!applied) return;
 
       // Log before/after usage
       const factsAfter = this.memory.getFactsMemoryUsage();
@@ -1460,7 +1318,7 @@ export class ChatEngine {
       });
 
       console.log(
-        `[ChatEngine] Memory compacted: facts ${factsUsage.pct}%→${factsAfter.pct}% (deleted ${factsDeleted}, added ${factsAdded}), soul ${soulUsage.pct}%→${soulAfter.pct}% (deleted ${soulDeleted}, added ${soulAdded})`
+        `[ChatEngine] Memory compacted: facts ${factsUsage.pct}%→${factsAfter.pct}%, soul ${soulUsage.pct}%→${soulAfter.pct}%`
       );
 
       this.lastCompactionTime = Date.now();

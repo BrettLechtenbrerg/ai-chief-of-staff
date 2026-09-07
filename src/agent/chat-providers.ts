@@ -7,7 +7,7 @@
  * To add a new provider: add one entry to PROVIDER_STRATEGY below.
  */
 
-import type { Provider, Message } from '@kenkaiiii/gg-ai';
+import type { Provider, Message, ThinkingLevel } from '@kenkaiiii/gg-ai';
 import { providerRegistry, stream } from '@kenkaiiii/gg-ai';
 import { SettingsManager } from '../settings';
 import { getProviderForModel, PROVIDER_CONFIGS } from './providers';
@@ -27,6 +27,10 @@ providerRegistry.register('deepseek', {
 });
 
 export { getProviderForModel };
+
+export const THINKING_LEVEL_MAP: Record<string, ThinkingLevel | undefined> = {
+  none: undefined, minimal: 'low', normal: 'medium', extended: 'high',
+};
 
 export interface StreamConfig {
   provider: Provider;

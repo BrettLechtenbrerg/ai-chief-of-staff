@@ -91,7 +91,7 @@ describe('mode tool enforcement', () => {
 
 describe('tool capability registry', () => {
   it('lets local work run unattended', () => {
-    for (const name of ['read', 'write', 'shell_command', 'subagent', 'remember', 'notify', 'create_routine']) {
+    for (const name of ['read', 'write', 'subagent', 'remember', 'notify', 'create_routine', 'task_output', 'task_stop']) {
       expect(getToolPolicy(name, 'native').confirmationRequired, name).toBe(false);
     }
     expect(getToolPolicy('generate_blog_image', 'custom')).toMatchObject({
@@ -106,19 +106,21 @@ describe('tool capability registry', () => {
     }
   });
 
-  it('classifies MCP tools by name: reads and proposals run, sends and executes confirm', () => {
+  it('allows inspected MCP reads only; staging and unreviewed tools require approval', () => {
     const read = [
       'mcp__flo-gmail__gmail_search_emails',
-      'mcp__flo-gmail__gmail_propose_send',
       'mcp__flo-calendar__calendar_list_events',
       'mcp__flo-calendar__calendar_check_conflicts',
       'mcp__flo-docs__docs_read_content',
       'mcp__flo-ghl__get_contact',
       'mcp__flo-ghl__search_contacts',
-      'mcp__dataforseo-mcp-server__serp_organic_live_advanced',
-      'mcp__firecrawl-mcp__firecrawl_scrape',
     ];
     const write = [
+      'mcp__flo-gmail__gmail_propose_send',
+      'mcp__dataforseo-mcp-server__serp_organic_live_advanced',
+      'mcp__firecrawl-mcp__firecrawl_scrape',
+      'mcp__unknown__get_status',
+      'mcp__unknown__propose_send',
       'mcp__flo-gmail__gmail_send',
       'mcp__flo-gmail__gmail_execute',
       'mcp__flo-gmail__gmail_delete_by_search',

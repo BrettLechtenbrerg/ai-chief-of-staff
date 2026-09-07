@@ -27,6 +27,11 @@ const SUB_AGENT_TIMEOUT_MS = 300_000; // 5 minutes
 
 /** Only these tools are available to sub-agents. Everything else is parent-only. */
 const ALLOWED_SUB_AGENT_TOOLS = new Set([
+  'read',
+  'write',
+  'edit',
+  'browser',
+  'notify',
   'web_fetch',
   'shell_command',
   'mcp__pocket-agent__browser',
@@ -77,13 +82,23 @@ export function createSubAgentTool(
         currentActivity: 'starting',
       });
 
+      const child = new AbortController();
+      const abortChild = (): void => child.abort(new Error('Sub-agent aborted'));
+      context.signal.addEventListener('abort', abortChild, { once: true });
+      if (context.signal.aborted) abortChild();
+      const timer = setTimeout(() => {
+        child.abort(new Error(`Sub-agent timed out after ${SUB_AGENT_TIMEOUT_MS}ms`));
+      }, SUB_AGENT_TIMEOUT_MS);
+      const childContext = { ...context, signal: child.signal };
       try {
+        child.signal.throwIfAborted();
         // Build sub-agent tool set — only explicitly allowed tools
         const subTools = parentTools.filter((t) => ALLOWED_SUB_AGENT_TOOLS.has(t.name));
 
         // Get provider config (same model as parent)
         const model = SettingsManager.get('agent.model') || 'claude-sonnet-4-6';
         const streamConfig = await getStreamConfig(model);
+        child.signal.throwIfAborted();
 
         // Clean agent options — no context, no facts, no memory, no soul
         const agentOptions: AgentOptions = {
@@ -96,17 +111,15 @@ export function createSubAgentTool(
           maxTokens: 8192,
           apiKey: streamConfig.apiKey,
           baseUrl: streamConfig.baseUrl,
-          signal: context.signal,
+          signal: child.signal,
         };
 
         // Fresh messages — just the task, nothing else
         const messages: Message[] = [{ role: 'user', content: task }];
 
-        // Run with timeout
-        const result = await Promise.race([
-          runSubAgent(id, messages, agentOptions, context),
-          timeout(SUB_AGENT_TIMEOUT_MS, context.signal),
-        ]);
+        // Keep ownership until the loop settles; abort the actual child on deadline.
+        const result = await runSubAgent(id, messages, agentOptions, childContext);
+        child.signal.throwIfAborted();
 
         // Truncate output
         const output = truncateOutput(result);
@@ -122,8 +135,11 @@ export function createSubAgentTool(
         }
         return `Sub-agent failed: ${errorMsg}`;
       } finally {
-        // Clean up after a delay to allow status reads
-        setTimeout(() => removeSubAgent(id), 60_000);
+        clearTimeout(timer);
+        context.signal.removeEventListener('abort', abortChild);
+        child.abort();
+        // Clean up after a delay to allow status reads without keeping the process alive.
+        setTimeout(() => removeSubAgent(id), 60_000).unref();
       }
     },
   };
@@ -201,23 +217,4 @@ function truncateOutput(text: string): string {
     text.slice(0, SUB_AGENT_MAX_OUTPUT_CHARS) +
     `\n\n[Output truncated at ${SUB_AGENT_MAX_OUTPUT_CHARS.toLocaleString()} chars]`
   );
-}
-
-/**
- * Create a timeout promise that rejects after the given duration.
- */
-function timeout(ms: number, signal?: AbortSignal): Promise<never> {
-  return new Promise((_, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Sub-agent timed out after ${ms}ms`)), ms);
-
-    // If parent is aborted, clear the timer and reject
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(new Error('Sub-agent aborted'));
-      },
-      { once: true }
-    );
-  });
 }

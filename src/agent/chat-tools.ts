@@ -155,7 +155,7 @@ export function getChatAgentTools(
 
   // Add file tools (read, write, edit) from gg-coder
   const { tools: coderNativeTools } = createCoderTools(cwd, {
-    operations: createRestrictedToolOperations(cwd),
+    operations: createRestrictedToolOperations(cwd, execution?.approvedRoots ?? [cwd]),
   });
   const fileToolNames = new Set(['read', 'write', 'edit']);
   for (const t of coderNativeTools) {
@@ -186,14 +186,13 @@ export function getChatAgentTools(
   if (isToolAllowedForMode('subagent', mode)) {
     allowedTools.push(attachToolPolicy(createSubAgentTool(allowedTools, getStreamConfig), 'custom'));
   }
-  return execution
-    ? allowedTools.map((tool) => {
-        const policyTool = tool as PolicyAwareAgentTool;
-        if (policyTool.policy.source === 'native') guardNativeToolScope(policyTool, execution);
-        guardToolWithApproval(policyTool, execution);
-        return guardToolResult(policyTool);
-      })
-    : allowedTools;
+  const scope = execution ?? { sessionId: '', channel: 'unavailable', cwd, approvedRoots: [cwd] };
+  return allowedTools.map((tool) => {
+    const policyTool = tool as PolicyAwareAgentTool;
+    if (policyTool.policy.source === 'native') guardNativeToolScope(policyTool, scope);
+    guardToolWithApproval(policyTool, scope);
+    return guardToolResult(policyTool);
+  });
 }
 
 /**
@@ -207,7 +206,7 @@ export function getCoderAgentTools(
   execution?: ToolExecutionContext
 ): AgentTool[] {
   const { tools: coderNativeTools } = createCoderTools(cwd, {
-    operations: createRestrictedToolOperations(cwd),
+    operations: createRestrictedToolOperations(cwd, execution?.approvedRoots ?? [cwd]),
   });
   const customTools = getCustomTools(config);
   const customToolNames = new Set(customTools.map((tool) => tool.name));
@@ -246,13 +245,12 @@ export function getCoderAgentTools(
     if ((tool as PolicyAwareAgentTool).policy) return tool as PolicyAwareAgentTool;
     return attachToolPolicy(tool, customToolNames.has(tool.name) ? 'custom' : 'native');
   });
-  return execution
-    ? allowedTools.map((tool) => {
-        if (tool.policy.source === 'native') guardNativeToolScope(tool, execution);
-        guardToolWithApproval(tool, execution);
-        return guardToolResult(tool);
-      })
-    : allowedTools;
+  const scope = execution ?? { sessionId: '', channel: 'unavailable', cwd, approvedRoots: [cwd] };
+  return allowedTools.map((tool) => {
+    if (tool.policy.source === 'native') guardNativeToolScope(tool, scope);
+    guardToolWithApproval(tool, scope);
+    return guardToolResult(tool);
+  });
 }
 
 /**

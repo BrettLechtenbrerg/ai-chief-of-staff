@@ -271,7 +271,7 @@ export function getCustomTools(config: ToolsConfig): Array<{
     name: seoDef.name,
     description: seoDef.description,
     input_schema: seoDef.input_schema as Record<string, unknown>,
-    handler: handleFetchSeoDataTool,
+    handler: (input, context) => handleFetchSeoDataTool(input, { signal: context?.signal }),
   });
 
   // fetch_aeo_visibility — runs the monthly AI-citation measurement (ChatGPT/

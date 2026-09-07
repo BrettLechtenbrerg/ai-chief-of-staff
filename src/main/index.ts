@@ -18,6 +18,7 @@ import {
 } from '../storage/database-backup';
 import { getBrowserManager } from '../browser';
 import { initializeUpdater, setupUpdaterIPC, setSettingsWindow, setChatWindow } from './updater';
+import { getUpdateBlockReason, isInstallValidationStartup } from './update-policy';
 import { createWindow, getWindow } from './windows';
 import { fixPathForPackagedApp } from './node-paths';
 import { setupBirthdayCronJobs } from './birthday';
@@ -41,6 +42,8 @@ import {
   registerGoogleOAuthIPC,
   registerConnectToolsIPC,
   registerRealtimeIPC,
+  registerFinanceIPC,
+  closeFinanceIPC,
 } from './ipc';
 import type { IPCDependencies } from './ipc';
 
@@ -71,7 +74,9 @@ let telegramBot: TelegramBot | null = null;
 // database or an unloadable native module) instead of the misleading
 // "install out of date" toast that fires on missing IPC handlers.
 let startupError: string | null = null;
+const validationStartup = isInstallValidationStartup();
 const startupHealth = {
+  validationStartup,
   version: app.getVersion(),
   startedAt: new Date().toISOString(),
   ipcRegistered: false,
@@ -532,6 +537,7 @@ function setupIPC(): void {
   // the renderer opens a session, which is gated off-by-default by the
   // voice.enabled setting + the Voice button visibility.
   registerRealtimeIPC(deps);
+  registerFinanceIPC(deps);
 }
 
 // ============ Agent Lifecycle ============
@@ -571,7 +577,7 @@ async function initializeAgent(): Promise<void> {
       displaySize: { width: 1920, height: 1080 },
     },
     browser: {
-      enabled: SettingsManager.getBoolean('browser.enabled'),
+      enabled: !validationStartup && SettingsManager.getBoolean('browser.enabled'),
       cdpUrl: SettingsManager.get('browser.cdpUrl') || 'http://localhost:9222',
     },
   };
@@ -582,7 +588,9 @@ async function initializeAgent(): Promise<void> {
   // the model picker see it on the next read. settings:set also calls this
   // whenever a provider credential changes, so `agent.model` stays in sync.
   const configuredModel = SettingsManager.get('agent.model');
-  const model = resolveAndPersistModel();
+  // Verification must not silently change the stored provider/model.
+  const model = validationStartup ? configuredModel : resolveAndPersistModel();
+  if (!model) throw new Error('Install validation requires a configured model');
   if (configuredModel && model !== configuredModel) {
     console.log(
       `[Main] Model/key mismatch: ${configuredModel} has no matching credential, falling back to ${model}`
@@ -604,9 +612,11 @@ async function initializeAgent(): Promise<void> {
   // failure is logged but doesn't block app boot. Tools become available
   // as soon as each child process finishes its MCP handshake; turns started
   // before that finishes simply see fewer tools.
-  getMCPManager()
-    .start(app.getPath('userData'))
-    .catch((err) => console.error('[Main] MCP manager startup failed:', (err as Error).message));
+  if (!validationStartup) {
+    getMCPManager()
+      .start(app.getPath('userData'))
+      .catch((err) => console.error('[Main] MCP manager startup failed:', (err as Error).message));
+  }
 
   // Listen for model changes and broadcast to UI
   // Remove previous listener to prevent stacking on re-init
@@ -634,7 +644,7 @@ async function initializeAgent(): Promise<void> {
   );
 
   // Initialize scheduler
-  if (SettingsManager.getBoolean('scheduler.enabled')) {
+  if (!validationStartup && SettingsManager.getBoolean('scheduler.enabled')) {
     scheduler = createScheduler();
 
     // Set all handlers BEFORE initialize() — jobs can fire during init
@@ -674,8 +684,8 @@ async function initializeAgent(): Promise<void> {
   }
 
   // Initialize Telegram
-  const telegramEnabled = SettingsManager.getBoolean('telegram.enabled');
-  const telegramToken = SettingsManager.get('telegram.botToken');
+  const telegramEnabled = !validationStartup && SettingsManager.getBoolean('telegram.enabled');
+  const telegramToken = telegramEnabled ? SettingsManager.get('telegram.botToken') : undefined;
 
   if (telegramEnabled && telegramToken) {
     try {
@@ -822,6 +832,7 @@ app.whenReady().then(async () => {
     });
 
     powerMonitor.on('resume', () => {
+      if (validationStartup) return;
       console.log('[Power] System resumed from sleep');
       // Force CDP reconnection — WebSocket is dead after sleep
       getBrowserManager()
@@ -837,6 +848,7 @@ app.whenReady().then(async () => {
     });
 
     powerMonitor.on('unlock-screen', () => {
+      if (validationStartup) return;
       console.log('[Power] Screen unlocked');
       // Force CDP reconnection — connection may have gone stale during lock
       getBrowserManager()
@@ -889,8 +901,8 @@ app.whenReady().then(async () => {
     await createTray();
     console.log('[Main] Tray created');
 
-    // Initialize auto-updater (only in packaged app)
-    if (app.isPackaged) {
+    // Personal/invalid build metadata must not initialize updater hooks or timers.
+    if (app.isPackaged && getUpdateBlockReason() === null) {
       initializeUpdater();
       console.log('[Main] Auto-updater initialized');
     }
@@ -929,16 +941,21 @@ app.whenReady().then(async () => {
       await initializeAgent();
       // Pick up freshly-released models without a manual "Check for new
       // models" click. Fire and forget; a failure keeps the cached list.
-      refreshDiscoveredModels()
-        .then(({ added }) => {
-          if (added > 0) modelChangedHandler?.(AgentManager.getModel());
-        })
-        .catch((err) => console.warn('[Main] model discovery failed:', (err as Error).message));
+      if (!validationStartup) {
+        refreshDiscoveredModels()
+          .then(({ added }) => {
+            if (added > 0) modelChangedHandler?.(AgentManager.getModel());
+          })
+          .catch((err) => console.warn('[Main] model discovery failed:', (err as Error).message));
+      }
     }
 
     // Tray menu is updated event-driven (after messages, cron changes, etc.)
     // No polling needed — updateTrayMenu() is called directly by IPC handlers
     writeStartupHealth({ initializationComplete: true, error: null });
+    if (validationStartup) {
+      showNotification('Local verification mode', 'Automatic services are paused for this launch. Quit and reopen normally after verification to resume them.');
+    }
   } catch (error) {
     startupError = error instanceof Error ? error.message : String(error);
     console.error('[Main] FATAL ERROR during initialization:', error);
@@ -961,22 +978,32 @@ app.on('activate', () => {
   openChatWindow();
 });
 
-app.on('before-quit', async () => {
-  if (app.isReady()) {
-    globalShortcut.unregisterAll(); // Clean up global shortcuts
+let shutdownStarted = false;
+let shutdownComplete = false;
+app.on('before-quit', async (event) => {
+  if (shutdownComplete) return;
+  event.preventDefault();
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  try {
+    if (app.isReady()) globalShortcut.unregisterAll();
+    if (modelChangedHandler) {
+      AgentManager.off('model:changed', modelChangedHandler);
+      modelChangedHandler = null;
+    }
+    // Stop new scheduled work before awaiting any connection or backup shutdown.
+    if (scheduler) { scheduler.stopAll(); scheduler = null; }
+    const closed = await Promise.allSettled([closeFinanceIPC(), stopAgent()]);
+    if (closed.some(result => result.status === 'rejected')) console.warn('[Main] A shutdown operation failed; inspect local state on next open.');
+    await getMCPManager().stop().catch(() => console.warn('[Main] MCP shutdown did not finish normally.'));
+    memory?.close();
+    SettingsManager.close();
+  } catch {
+    console.warn('[Main] Local shutdown needs a state check on next open.');
+  } finally {
+    shutdownComplete = true;
+    app.quit();
   }
-  if (modelChangedHandler) {
-    AgentManager.off('model:changed', modelChangedHandler);
-    modelChangedHandler = null;
-  }
-  await stopAgent();
-  await getMCPManager()
-    .stop()
-    .catch((err) => console.warn('[Main] MCP manager stop error:', (err as Error).message));
-  if (memory) {
-    memory.close();
-  }
-  SettingsManager.close();
 });
 
 // Prevent multiple instances

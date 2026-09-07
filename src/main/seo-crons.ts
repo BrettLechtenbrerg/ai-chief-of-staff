@@ -1,6 +1,6 @@
 /**
  * SEO automation cron jobs. Modeled on src/main/birthday.ts: idempotent
- * delete-then-create on every launch so the prompts/schedules stay in sync with
+ * create-missing-only on launch to preserve user-edited prompts/schedules from
  * this code, namespaced `seo_*`, all routed to the `desktop` channel (which also
  * fans out to Telegram when a chat is linked).
  *
@@ -18,22 +18,9 @@
  */
 
 import type { CronScheduler } from '../scheduler';
+import { getSeoReportDefinition } from '../tools/seo-report-definition';
 
-const WEEKLY_REPORT_PROMPT = `It's the weekly SEO review for Brett's three sites (PMMA, TSAI, brettlechtenberg.com).
-
-Call the \`fetch_seo_data\` tool with brandSlug "all" and days 28.
-
-If the tool returns ok:false, do NOT invent data. Relay its \`message\` to Brett plainly — for example, if the Search Console permission hasn't been granted yet, tell him to open Settings → Connections → Google → Reconnect and approve the new "Search Console" permission, and that the report will start working next week once that's done. Then stop.
-
-If the tool returns ok:true, write a tight, plain-English report. For EACH brand:
-- One line on total clicks vs the previous 28 days (use clicksDeltaPct; say "no prior data" if null).
-- The top 2–3 queries actually driving clicks.
-- The top 3 "page-2 opportunities" (queries ranking position 11–20) — these are the best near-wins; for each, suggest the concrete tweak (strengthen the page targeting that query, improve the title/H1, add a section answering it).
-- Surface any per-site \`notes\` (e.g. "no data yet" for a new property) honestly.
-
-Then end with a single prioritized, cross-site TO-DO LIST FOR THIS WEEK — at most 5 items, ordered by impact, each naming the site and the specific action.
-
-Keep it skimmable on a phone. Send the whole thing to Brett with the \`send_telegram_message\` tool.`;
+export const buildSeoWeeklyReportPrompt = () => getSeoReportDefinition().prompt;
 
 const DAILY_REVIEWS_PROMPT = `Quick daily local-SEO nudge for Brett (mainly PMMA).
 
@@ -54,23 +41,22 @@ Send Brett a Telegram message (via \`send_telegram_message\`) with this month's 
 Keep it as a short numbered checklist he can act on in 15 minutes.`;
 
 /**
- * Idempotently (re)seed the three SEO cron jobs. Safe to call on every launch.
+ * Idempotently seed missing SEO cron jobs. Existing legacy routines are preserved.
  */
 export async function setupSeoCronJobs(scheduler: CronScheduler | null): Promise<void> {
   if (!scheduler) return;
 
   const jobs: Array<{ name: string; cron: string; prompt: string }> = [
-    { name: 'seo_weekly_report', cron: '0 8 * * 1', prompt: WEEKLY_REPORT_PROMPT },
+    { name: 'seo_weekly_report', cron: '0 8 * * 1', prompt: buildSeoWeeklyReportPrompt() },
     { name: 'seo_daily_reviews', cron: '0 9 * * *', prompt: DAILY_REVIEWS_PROMPT },
     { name: 'seo_monthly_local', cron: '0 9 1 * *', prompt: MONTHLY_LOCAL_PROMPT },
   ];
 
-  // Delete-then-create so schedules/prompts always match this code.
+  // Names do not prove source ownership. Preserve ALL existing prompts/schedules,
+  // including legacy seeds; refreshing those requires an explicit user decision.
+  const existing = new Set(scheduler.getAllJobs().map(job => job.name));
   for (const job of jobs) {
-    scheduler.deleteJob(job.name);
-  }
-  for (const job of jobs) {
-    await scheduler.createJob(job.name, job.cron, job.prompt, 'desktop');
+    if (!existing.has(job.name)) await scheduler.createJob(job.name, job.cron, job.prompt, 'desktop');
   }
 
   console.log(`[SEO] Scheduled cron jobs: ${jobs.map((j) => j.name).join(', ')}`);

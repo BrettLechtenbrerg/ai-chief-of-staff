@@ -32,6 +32,30 @@ export interface ThemeDefinition {
 }
 
 export const THEMES: Record<string, ThemeDefinition> = {
+  'orbital-command': {
+    id: 'orbital-command',
+    name: 'Orbital Command',
+    palette: {
+      'bg-primary': '#08111f',
+      'bg-secondary': '#101e32',
+      'bg-tertiary': '#192b42',
+      border: '#6a809b',
+      'text-primary': '#edf4ff',
+      'text-secondary': '#c6d3e3',
+      'text-muted': '#a1b3c9',
+      accent: '#5cdeff',
+      'accent-secondary': '#baabff',
+      'accent-hover': '#9eefff',
+      error: '#ff939b',
+      success: '#75dfb1',
+      warning: '#ffd184',
+      orange: '#ffc090',
+      'user-bubble': '#18344e',
+      'user-bubble-solid': '#18344e',
+      'assistant-bubble': '#101e32',
+    },
+  },
+
   // Total Success AI — brand-matched navy + silver dark theme.
   // This is the default skin shipped to AI Chief of Staff clients
   // (see schema.ts defaultValue: 'tsai').

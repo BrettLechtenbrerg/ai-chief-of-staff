@@ -53,7 +53,8 @@ describe('vendored @flo/shared/dist/oauth.js env-var override', () => {
     const src = fs.readFileSync(TRACKED_PROPOSAL_CACHE, 'utf8');
     expect(src).toContain('FLO_PROPOSALS_PATH');
     expect(src).toContain("mode: 0o700");
-    expect(src).toContain('fs.chmodSync(DB_PATH, 0o600)');
+    expect(src).toContain('constructor(dbPath = DB_PATH)');
+    expect(src).toContain('fs.chmodSync(dbPath, 0o600)');
     expect(src).toContain("this.db.pragma('journal_mode = WAL')");
   });
 });

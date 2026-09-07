@@ -18,6 +18,7 @@ function _dismissOtherPanels(keepId) {
     'personalize-view': 'sidebar-personalize-btn',
     'content-writer-view': 'sidebar-content-writer-btn',
     'video-studio-view': 'sidebar-video-studio-btn',
+    'budget-view': 'sidebar-budget-btn',
     'hook-lab-view': 'sidebar-hook-lab-btn',
     'connect-tools-view': 'sidebar-connect-tools-btn',
   };
@@ -25,6 +26,8 @@ function _dismissOtherPanels(keepId) {
     if (viewId === keepId) continue;
     const v = document.getElementById(viewId);
     if (v && v.classList.contains('active')) {
+      if (viewId === 'budget-view' && typeof budgetPanelDismissed === 'function') budgetPanelDismissed();
+      if (viewId === 'connect-tools-view' && typeof _ctStopPolling === 'function') _ctStopPolling();
       v.classList.remove('active');
       const btn = document.getElementById(btnId);
       if (btn) btn.classList.remove('active');

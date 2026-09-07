@@ -2,6 +2,563 @@
 
 This is the canonical session-kickoff document. If you're a fresh Claude session, start here.
 
+## Current handoff — session closeout, September 6 local / September 7 UTC
+
+Brett requested a complete save and a one-sentence resume next session. Start with
+`RESUME-PROMPT.md` and `docs/SESSION-CLOSEOUT-2026-09-06.md`; the latter records
+actual backup/GitHub/Vercel receipts and any incomplete transfers.
+
+The app was quit cleanly for a stopped-state checkpoint at
+`~/Library/Application Support/acos-local-improvement-backups/checkpoint-step18-9SP8m2`.
+Main/finance databases, persistent files and the installed bundle were copied and
+separately restored/verified. Full typecheck, lint and 1,793 tests passed. The
+checkpoint branch is `checkpoint/2026-09-06-session-closeout`; no public release
+or automatic-service resumption is authorized by this save request. Check the
+closeout receipts before asserting a remote push or off-device copy completed.
+
+**Resume safety:** the app is stopped, not running in paused mode. A normal Dock
+launch may start services. Validate the installed private bundle and use the
+existing guarded validation-launch path before further acceptance work. Preserve
+all three consumed AI approvals and Brett's authorized Google configuration.
+
+### Last live-validation state — Google access acknowledged; status reader corrected
+
+Brett confirmed the SEO report looked good, then authorized continuing remaining
+work ("do whaever you need to"). One synthetic Hook Lab Quick Pass was generated
+through the installed UI using the selected ChatGPT subscription and the existing
+Hook Lab brand. One new prompt/response is saved; the original conversation and
+brand were retained. `.gg/hook-live-approval-2026-09-06.consumed` prevents retry.
+Finance and SEO approval markers remain separately consumed. Native result/idle
+inspection, Swift typechecking and the new wrapper's Node syntax check passed.
+
+The Hook draft has exactly five elements and correctly counts 73 spoken words
+(29.2 seconds at the stated 150 words/minute). Its individual scene timings need
+editorial adjustment: the opener and CTA exceed their allocated slots at that
+rate. No video, publication, or saved-library overwrite was performed.
+
+**Google access clarification:** Brett confirmed granting access in the Google
+popup during validation. Preserve that authorized access and the newer `flo-docs`
+configuration; do not reset credentials, restore the old entry, or ask him to
+repeat authorization. Its command/arguments/environment differ from the old
+checkpoint and reference the installed app. A fresh value-free comparison still
+finds only that entry changed, with no servers added/removed. His confirmation
+establishes intended Google access, not the exact writer of each configuration
+field. The old strict byte comparison is still not an exact pass; do not weaken it.
+
+**Status-reader correction:** the earlier eight-card/zero-connected output was
+unreliable: all eight status texts were unreadable to the helper. A failing guard
+reproduced this, then label/nonempty-value/bounded-descendant fallback fixed it.
+The helper now refuses to report counts when any status is unreadable. Re-run:
+eight readable cards, **one connected**, zero connecting/failed/reconnect-needed.
+Do not infer that all eight tools are connected. The panel was closed after each
+inspection; no connect, migration, authorization, or model request was repeated.
+Swift typechecking and the corrected native inspection passed.
+
+Original message/fact contents and the fact count were preserved in the previous
+full check; expected access/activity metadata and window settings differ. The
+latest startup check still shows validation enabled, initialization complete and
+no startup error. Automatic services were not resumed. The last full database
+integrity/foreign-key check passed; it was not rerun for this clarification.
+
+AEO live runs remain excluded because they require paid API calls. Current official
+Claude policy was rechecked: keep the working ChatGPT route; do not spoof native
+Claude Code or reuse its subscription tokens in the custom client. An unmodified
+Claude Code integration is a separately scoped possibility, not implemented here.
+See `COMPLIANCE.md` and the latest review section for limits and evidence.
+
+### Earlier finance/SEO checkpoint (historical evidence)
+
+After Brett quit Windsurf, both app and updater process checks cleared. Guarded
+installation (`edcdd195`) returned `installed-ready`; corrected app launched in
+validation mode. Rollback: `/Applications/.acos-install-0dYpOC/previous.app`.
+Seven installed stream cases and 17 isolated installed workflow checks passed.
+Strict preservation comparison found only the saved chat window's position changed;
+all other original app/finance rows and checked configuration files matched.
+Automatic services remain paused in validation mode. Brett approved creation
+(“yes create”), fake-data population (“yes populate”), and one synthetic
+ChatGPT-subscription finance analysis (“I approve. go”). Those installed-UI steps
+are now complete: one personal “Sample — TEST ONLY” ledger, one fake USD account,
+and two balanced synthetic transactions. No bank connection or real financial
+mutation was made. The single analysis approval is consumed; do not retry it.
+
+**Latest installed validation (2026-09-06):**
+- Native UI and exact native confirmation created `Sample cash — NOT A REAL ACCOUNT`
+  with USD 0.00 opening balance, `TEST ONLY — sample income` +2000.00 (Income),
+  and `TEST ONLY — sample rent` -1200.00 (General expenses). Read-only verification
+  found exactly one account and two balanced transactions: synthetic net USD 800.00.
+  Finance integrity is `ok`, foreign-key issues zero, and all original finance rows
+  match the stopped checkpoint `checkpoint-step18-37gnp0`.
+- The helper's category selection initially failed because Chromium's focused
+  controls/menu can be missing from the native application child tree and option
+  text is exposed in AXValue, not AXTitle. Follow bounded focused ancestors and
+  match exact menu values. The calendar-year control also exposes a numeric value.
+  Income and expense selection/review/confirmation subsequently passed in the app.
+- Invoked Analyze with AI only after population verification. Native accessibility
+  inspection matched the entire redacted aggregate against the expected synthetic
+  report and checked `openai`, `gpt-5.6-sol`, and `https://chatgpt.com`. Read-only
+  settings verification confirmed OAuth, without reading credentials. Pressed
+  **Approve once** after creating the exclusive cross-helper consumption marker
+  `.gg/finance-live-approval-2026-09-06.consumed`; never delete or reuse it to retry.
+- Installed UI reports the interpretation saved, not partial. Read-only app DB
+  verification found exactly one new approved aggregate and one saved complete
+  finance response. It correctly discussed the synthetic USD 2000 income / 1200
+  expense, missing statement/receipt, September-only coverage and accountant review.
+  No raw rows, real financial data, names, identifiers or earlier chats were approved
+  for transmission. One UI analysis invocation is verified; HTTP attempt count was
+  not instrumented (the existing approval notice allows up to three attempts).
+- Original app rows still match except the previously documented `window.chatBounds`
+  difference. Main integrity is `ok`. No signed bundle/product code was modified,
+  no separate Keychain helper was rerun, and no build/lint/typecheck/suite was run.
+  The sample and approved-aggregate chat persist. No cleanup/deletion was performed.
+
+**Resumed after Brett approved the newer checkpoint (2026-09-06):** native UI
+reconfirmed the saved, non-partial finance output. Opened Hook Lab through native
+navigation and inspected enabled idea/brand/mode/duration controls and the disabled
+Build My Hooks button without entering data or generating content. Returned to
+Budget & Books. Its inline result clears on dismissal by design; read-only DB
+verification confirmed the synthetic approved aggregate and complete saved chat
+still exist. Do not resend the consumed request to restore that inline display.
+Strict preservation still returns 2 solely for the known `window.chatBounds` row;
+all other original rows and checked configuration files match. Startup health
+passes, validation mode stays enabled, and automatic services were not resumed.
+
+Non-secret settings still select ChatGPT OAuth / GPT-5.6 Sol. Presence-only checks
+found the legacy Flo Google files and TSAI SEO profile; credential contents and
+live validity were not inspected. The SEO sidebar starts an all-brand AI request,
+so it was not clicked. Brett approved one TSAI-only, 28-day Search Console report
+via ChatGPT subscription, with search metrics/query/page evidence sent to ChatGPT,
+no paid APIs or publishing. Existing Google auth may refresh normally.
+**Completed after additional consent ("yes save it"):** disclosed that normal
+chat includes saved profile/brand context, remembered facts and recent daily-log
+context; Brett authorized proceeding. Used an existing empty, unlinked general
+chat because the app already had 21 sessions and normal creation caps at 20.
+No existing conversation was deleted or renamed. The native helper verified the
+selected chat, exact scoped prompt, no attachments and subscription settings;
+then consumed `.gg/seo-live-approval-2026-09-06.consumed` before pressing Send.
+Do not remove that marker or resend. The separate finance marker stays consumed.
+
+The installed UI rendered "TSAI SEO validation" and returned idle; read-only DB
+verification found one new user prompt and one saved report in that previously
+empty chat. The report states Search Console `available`, no errors, final data,
+a 28-day comparison, coverage, property totals, preserved unknown values and one
+computed action. It is saved in the current chat, not exported or published.
+Exact underlying tool/HTTP attempts and billing records were not instrumented.
+
+Strict preservation still exits 2, not a clean comparison: all original message
+and fact contents remain intact, but 13 facts' `last_accessed_at`, this chat's
+`updated_at`, full-text index storage and the known window setting differ.
+Source confirms normal memory reads update fact-access timestamps. No fact content
+or importance changed; original finance rows and checked Google/MCP files match.
+Main integrity is `ok`, foreign-key issues zero, validation remains enabled and
+services were not resumed. No product/bundle change or build/lint/typecheck/suite.
+See the latest section of `docs/LOCAL-IMPROVEMENT-REVIEW.md` for evidence.
+
+**Still pending:** broader live SEO/AEO, connector/content-quality acceptance and
+Claude compatibility decisions. This success does not complete the full plan.
+Earlier zero-request/unused-approval statements below describe historical checks,
+not the current approval state.
+
+Brett authorized the release/install continuation (“ok so lets go”). Full
+`npm test` passed **101 files / 1,793 tests**, followed by passing lint/typecheck
+(`642f74e2`). Release compilation and private x64 Developer ID signing/Apple
+notarization passed (`cf1fc093`); publishing was explicitly disabled. No Git
+commit/push occurred.
+
+Pre-install candidate: `release/personal/mac/AI Chief of Staff.app`. Guarded source/staged
+signature, Gatekeeper, architecture and manifest validation passed (`12459b72`),
+status **validated-not-installed**. Manifest:
+`3f0e3e4432fd94ca9a194acb52d7216b6449863f735a08768d9c84fd4293a854`.
+Packaged policy, validation mode, app/Flo native SQLite and finance-worker smoke
+passed (`54b52337`). Seven offline finance-AI stream cases passed against the
+**packaged correction** (`.gg/finance-stream-TLnDQU/result.json`) and source
+(`.gg/finance-stream-tVwJ0o/result.json`), with no provider calls.
+
+Fresh checkpoint: `~/Library/Application Support/acos-local-improvement-backups/checkpoint-step18-2eeE6K`.
+Both SQLite snapshots restored into separate sentinel stores with matching data
+fingerprints: main restore/verify 26 ms; finance 15 ms. Nine persistent roots copied
+and restored in 92 ms; old bundle copy/manifest verification took 44,121 ms. Finance
+now exists, so `.gg/step18-checkpoint.cjs` was extended to use `FINANCE_IDENTITY` and
+its separate backup/restore drill; no live database was restored. Same-Mac backup,
+not off-device disaster recovery; running-store copies are not cross-store atomic.
+
+**Earlier action:** Brett confirmed AI Chief of Staff closed; process census verified
+no owned processes. Fresh stopped checkpoint (`e0ff6f1e`):
+`~/Library/Application Support/acos-local-improvement-backups/checkpoint-step18-37gnp0`.
+Main/finance restore checks passed (26 ms / 15 ms); persistent copy/restore 92 ms;
+old bundle copy/verification 36,050 ms. This exercised the new stopped-finance gate.
+
+`node scripts/install-local.cjs --install --launch` (`91da34b4`) then refused:
+`Possible queued updater helper; reconcile before installation, do not bypass`.
+The matching process was Windsurf's ShipIt helper, PID 71307, under
+`/Applications/Windsurf.app/Contents/Frameworks/Squirrel.framework/Resources/ShipIt`.
+Windsurf itself was running. Do not kill it, unload its jobs, or relax the installer
+guard: that would disrupt unrelated work. AI Chief of Staff was not replaced,
+signaled or relaunched; no live provider calls occurred.
+
+**Latest verification:** the revised read-only preservation helper executed
+(`f4d8a7c8`), returning 2 because one settings row differed. All original finance
+rows, messages, other app records, Google/MCP configuration and startup health
+checks passed. A value-free settings comparison isolated `window.chatBounds`
+(value and updated_at only); numeric inspection showed unchanged 1450×1253 size,
+position moved from (1263,30) to (1550,809). The window factory persists geometry on
+move/resize/close. No exact cause of this move is claimed, no settings were reset,
+and no assertion was weakened to manufacture a full preservation pass. Separate
+byte comparisons found all 3 original workspace and 10 attachment files unchanged.
+
+Seven installed finance-AI stream cases passed:
+`.gg/finance-stream-9zSVwr/result.json`. All 17 revised installed workflow checks
+passed (`7679c7ef`): `.gg/installed-workflows-UIOuPY/result.json`. Zero renderer
+errors, unsupported calls, provider fetches or blocked external renderer requests;
+one explicitly blocked local Yoga data-URL fetch. These are synthetic/no-provider
+checks, not live AI quality or connector acceptance. No production code changed.
+
+**Historical separate diagnostic — do not rerun:**
+`node .gg/repair-live-finance.cjs --approved-once` was the earlier proposed invocation;
+its approval has since been consumed through the installed UI. Earlier direct-Electron task
+`2fc60324` exited after timeout; do not reuse its ad-hoc launcher.
+The app name matches installed Electron initialization for safeStorage; no signed
+bundle/client identity was changed. The helper uses a private profile, reads only
+six selected OAuth/model settings from the real DB read-only, refuses API-key or
+plaintext-token fallback and requires a fresh encrypted expiry. The expiry itself
+is encrypted: an initial raw numeric check did NOT establish token expiration.
+Actual expiry remains unknown until decryption is permitted.
+
+It builds the canonical aggregate using installed finance code and only the prior
+synthetic ledger `.gg/installed-workflows-UIOuPY`. Transport checks the exact
+ChatGPT Codex destination, selected model, credentials, one synthetic message,
+system prompt, no tools/storage and redirect refusal. It consumes
+`.gg/finance-live-approval-2026-09-06.consumed` immediately before the sole allowed
+network request; NEVER remove/reuse that marker to retry without new permission.
+No refresh-token operation or real-store write is performed. Syntax passed; the
+live path has not executed successfully or been claimed verified.
+
+**Access blocker:** preflight task `d11f16a9` blocked in SecItemCopyMatching →
+SecKeychainItemCopyContent beyond its JS timer. Read-only sampling showed those
+frames; accessibility inspection confirmed a SecurityAgent window with a password
+field and Deny button, without reading password/text values or pressing anything.
+Stopped the preflight task, then explicitly sent SIGTERM to its still-present
+owned Electron PID 79521. The installed app was not stopped.
+The one-request consumption marker was absent at the last check. The first
+approved task `5967e9a7` was also stopped at its exact owned Electron PID 81046
+before any request. The analysis timer now starts after credential access, so a
+Keychain wait cannot consume the model-response deadline. Syntax passed again;
+task `2fc60324` used that correction. Its outer watchdog fired after 300 seconds,
+but SIGTERM did not end the blocked native call. Exact owned diagnostic PID 82026
+was then terminated with SIGKILL. Task output was collected; both approved tasks
+have exited, and PID checks confirmed 79521/81046/82026 absent. This was only the
+isolated read-only diagnostic, never the installed app. The consumed-approval marker
+is still absent: no live finance request occurred.
+
+**Do not repeat the Keychain-helper loop:** Brett reported repeated unsuccessful
+attempts, then explicitly requested one restart. Supervised task `cee162d8` exited
+1 normally: macOS returned `NSOSStatusErrorDomain Code=-128 userCanceledErr`, followed
+by `Secure storage unavailable`, at read-only OAuth settings access. Evidence:
+`.gg/live-finance-XvWtN2/result.json`. Analysis requests: 0; no provider HTTP status,
+no real-store writes, no running diagnostic. This establishes canceled/denied OS
+access for the helper, NOT that Brett's password or app's ChatGPT login is invalid.
+Do not reset Keychain, extract/export credentials, grant permanent access, or use
+code injection to get around the OS decision.
+
+**Sample creation completed:** Brett replied “yes create” after being told the
+sample would remain in the app and no bank/AI request would occur yet. Used
+`.gg/repair-create-sample-ledger.swift` against verified installed-app PID 77513:
+inspect → prepare → review → confirm. It checks the bundle path, unique labelled
+name field, exact sample name, and native confirmation JSON containing only
+`createEntity`, a UUID, the exact name and personal kind. No raw IPC or SQLite write
+was used. The initial immediate AX read observed stale text; bounded readback
+waiting fixed the diagnostic without removing its exact-name assertion. All three
+mutating UI stages subsequently completed successfully.
+
+Read-only SQLite verification: exactly one “Sample — TEST ONLY” personal entity;
+zero accounts, zero transactions; integrity `ok`, no foreign-key issues. Only this
+explicitly approved sample-ledger creation and its standard initialization occurred.
+No diagnostics remain running, no AI request was consumed, and no product code
+changed. Next obtain permission to populate this sample with fake account/transaction
+data before running the already-approved single subscription-only analysis in-app.
+Do not return to the blocked separate Keychain helper, promise no auth prompts,
+or promise deleting the sample through UI without verifying that capability.
+
+**Supervisor implementation:**
+it starts only the existing local Electron binary, forwards SIGINT/SIGTERM, and
+escalates to SIGKILL after five seconds for its own child if graceful shutdown
+fails. Its total timeout is five minutes. Direct unsupervised Electron invocation
+is refused; consumed approvals are rejected before credential access.
+
+**Subsequent requested verification:** an offline check of the actual supervisor
+first failed: after timeout, a child's graceful exit 0 incorrectly made the parent
+report success. Added explicit stopping state; timeout/cancellation now stay failed.
+`node --check` and 10 offline supervisor checks passed after that fix, covering
+success/failure, spawn errors, escalation, both cancellation signals, argument and
+consumed-approval refusals. Checks evaluated the real script with simulated timers,
+child process and filesystem presence—no real subprocess, Keychain access or provider
+request. Source SHA-256: `1ad19286668077da128fadbd641bcd8b776e8bb335473ed593d0b8cbd5d98fd3`.
+The supervised native child subsequently exited with the access failure described
+above. Forced native cleanup and successful live-provider behavior remain unverified
+for this supervisor. No diagnostic is running; the one-request approval is unused.
+Never request a password in chat or click OS authorization controls for the user.
+Keep automatic services paused. Broader live SEO/AEO, connector/content-quality
+acceptance and Claude compatibility remain pending.
+
+## Active repair — 2026-09-06
+
+Brett reported chat/features not working and explicitly authorized repairs. Do not
+repeat the earlier functional-readiness claim: installation checks were not an
+end-to-end chat test. The new installed bundle is running, not the rollback copy.
+The latest normal launch has validationStartup=false; paused verification services
+do not explain the failure. Native navigation opened Budget & Books successfully.
+The saved theme is tsai. At diagnosis the selected model was claude-fable-5-1;
+Brett subsequently switched to GPT-5.6 Sol and confirmed chat works.
+
+The last two stored assistant responses contain provider invalid_request_error
+failures. Only the structured provider diagnostic was inspected/output, not private
+conversation content: Claude Code 2.1.75 does not support this model; 2.1.251 or newer
+is required. The bundled @kenkaiiii/gg-ai 4.3.151 OAuth transport sends that stale
+identity. The preserved old bundle also has it. No claim about when the provider
+changed its requirement is established.
+
+An offline fake-fetch replay (.gg/repair-auth-transport.cjs) reproduces the OAuth
+rejection with the actual installed SDK; the existing API-key transport completes
+the synthetic response without the Claude Code identity. This is not a live provider
+success. The installed UI/real preload/real trusted-IPC probe also initializes;
+its unimplemented synthetic service stubs are explicitly not full feature tests.
+Per-app AXManualAccessibility was enabled for inspection; system VoiceOver was not
+changed. No real provider test, message, routine, import, credential change, model
+change, paid API switch, dependency upgrade or client-identity spoof was performed.
+
+Settled by Brett: use the existing Claude Max or ChatGPT subscription connection;
+no separately billed API-key route. A read-only presence check confirms both OAuth
+connections, including OpenAI access/refresh/account/expiry fields, exist in both
+the current database and pre-install checkpoint. No token values were printed.
+Choose the existing ChatGPT OAuth route with GPT-5.6 Sol, whose current official
+Codex documentation lists it as the capable GPT-5.6 option for complex work.
+Do not remove either login, purchase credits, or silently fall back to an API key.
+
+Native automation opened the model picker but could not reliably persist Sol.
+Brett then manually selected GPT-5.6 Sol and confirmed: “I switched and it worked
+great.” This user confirmation, not an offline replay, establishes live chat
+acceptance. Keep the existing ChatGPT subscription route. No production auth
+patch or client-identity spoof was applied; Claude's incompatibility remains.
+
+The review tightened diagnostic failure reporting: transport replay rejects unknown
+OAuth identities rather than simulating success, UI entrypoints are required, and
+native action failures return nonzero. Brett subsequently explicitly requested
+verification: both JavaScript syntax checks and all three Swift typechecks passed.
+The isolated installed-UI probe passed its bridge/ready/chat/budget-entrypoint checks
+(with expected unimplemented synthetic service stubs, not full feature coverage).
+The transport replay passed strict assertions for the recorded rejection and for
+an unknown identity failing closed. The latter initially exposed SDK wrapping of
+fetch errors; the diagnostic now retains its own guard reason separately, and the
+strict checks passed after that change. No live provider calls or native UI actions
+were used in that verification. Native model selection remains unreliable despite
+passing typecheck; Brett's subsequent manual selection established live chat acceptance.
+
+### Installed-workflow acceptance — 2026-09-06
+
+The expanded `.gg/repair-installed-ui.cjs` passed 12 scoped offline checks against
+installed HTML/preload and actual finance/approval handlers. Private evidence:
+`.gg/installed-workflows-ioYAsC/result.json` and `last-state.png`.
+
+- Real finance worker: setup, denied/accepted entry, CSV decision/count checks,
+  export destination creation, model/description approval checks, Deny, and reload.
+  This probe does not verify exported contents or committed row identities.
+- Hook Lab: exact save/remove/undo, all three mode kickoffs and video handoff.
+- Video Studio: exact selected elements reach planning; pending draft retained.
+- SEO: kickoff equals the shared backend definition; no live report requested.
+- Every installed theme ID updates the renderer dataset and synthetic setting;
+  this is not a visual check of every theme. Real preferences stay untouched.
+
+No captured console/preload errors, unsupported fixture calls or non-data fetch attempts.
+One blocked local data-URL fetch belongs to Yoga's bundled WASM loader, not a
+provider. Settings/sessions/chat transport were synthetic; finance storage and
+exports were actual operations confined to the private fixture. No live records,
+credentials, schedules, external sends or billed calls were used. No builds,
+typechecks, linters, test suites, installation or product-code changes in this pass.
+These checks do not establish live SEO/AEO, generated-video quality, finance-AI
+responses, connector health or universal feature acceptance.
+
+Code review subsequently corrected claim wording and made the diagnostic
+profile independent of shell location, bounded asynchronous cleanup, and made
+polling exceptions reject promptly. At Brett's subsequent verification request,
+`node --check .gg/repair-installed-ui.cjs` and the revised isolated Electron probe
+both exited 0. All 12 scoped checks passed again; fresh evidence is
+`.gg/installed-workflows-suL2WQ/result.json`. No captured console/preload errors,
+unsupported fixture calls or non-data fetch attempts. Normal cleanup completed;
+forced cleanup timeout and polling-exception branches were not fault-injected.
+
+### Finance output acceptance and subscription stream repair — 2026-09-06
+
+**Installed evidence:** `.gg/installed-workflows-tVlmia/result.json` passed 17
+checks, with zero renderer errors, unsupported bridge calls or provider fetches.
+Real installed UI/preload/finance IPC produced exact refunds/transfers, independent
+monthly/yearly budgets, a reconciled synthetic statement, and a saved three-month
+scenario. Accountant packets passed content, source-row, allocation, SHA-256,
+permissions, HTML-escaping and non-overwrite checks. The actual AI approval preview
+contained exact anonymized aggregates and the ChatGPT subscription destination;
+denial sent nothing. All records were synthetic in a private profile.
+
+**Defect reproduced:** installed gg-ai Codex reports `end_turn` when an SSE stream
+closes without a completion event, causing finance AI to mark an unfinished reply
+`complete:true`. The adapter also ignores CRLF-delimited SSE. No real credentials
+or live provider calls were used in either reproduction.
+
+**Fixed in source, NOT installed:** `src/finance/ai-worker.ts` normalizes Codex SSE
+line endings and requires an explicit successful terminal response before marking
+interpretation complete. Its existing 2 MiB response cap bounds retained completion
+evidence. Routing, billing path, approvals and ledger data are unchanged. Added six
+real-adapter regression cases to `tests/unit/finance-ai.test.ts`.
+
+The narrow reproduction `node --experimental-strip-types .gg/repair-finance-stream.mjs`
+passed all six completion/truncation examples, including fragmented UTF-8 and CRLF.
+Evidence: `.gg/finance-stream-oVTkH6/result.json`. Unit suites, typecheck, lint,
+build, signing and reinstallation were NOT run during this continuation, honoring
+the requested `/commit` check gate. The installed app still has the stream defect.
+
+**Next gate:** authorized `/commit` verification before rebuilding and guarded
+local reinstallation. Do not patch the signed app in place, commit without an
+explicit request, or claim the source correction is installed. Live-service and
+content-quality checks still need specific approval; Claude subscription
+compatibility remains unresolved. No background probe remains running.
+
+**Review follow-up (not rerun):** matched the adapter's whitespace handling for
+`[DONE]` SSE sentinels and added a seventh regression/reproduction case. Export
+verification now requires checksum/size metadata rather than skipping missing
+hashes, compares exact budget/reconciliation CSV values, and records blocked
+external renderer-request counts separately. Existing six-case and 17-workflow
+reports predate these review changes; they do not validate the revised files.
+No build, typecheck, lint, suite or probe ran during review.
+
+**Subsequent requested verification — passed:** Brett explicitly authorized the
+verification gate after review. Direct project Vitest execution passed all 11
+finance-AI tests; `npm run typecheck` passed. The revised offline stream reproduction
+passed all seven cases (`.gg/finance-stream-4xhIFu/result.json`). Installed-UI syntax
+check and all 17 revised Electron workflow checks passed
+(`.gg/installed-workflows-zvldgt/result.json`), with zero renderer errors, unsupported
+calls, provider fetches or blocked external renderer requests. Direct Vitest avoided
+the npm pretest hook's unrelated native-module rebuild. No live data/credentials,
+network calls, commit, lint, build, signing or reinstall. The source correction
+is now narrowly verified, but the installed app still needs the private rebuild and
+guarded reinstall; full-plan/live-provider acceptance is not established.
+
+## Local-only upgrade history — 2026-09-05
+
+Approved plan: `/Users/brettlechtenberg/.gg/plans/local-chief-of-staff-upgrade.md`.
+Steps 1–2 recorded in `docs/LOCAL-IMPROVEMENT-REVIEW.md`: clean baseline,
+1,334 original passing unit tests, private WAL-consistent snapshot and separate
+restore drill, preserved previous app and persistent files. Step 3 is COMPLETE:
+approval/private-path/delegation fixes, strict Telegram delivery boundary, browser
+navigation scheme guard and atomic MCP proposal preview/hash claims. 1,416 unit
+tests passed at step3; step4 is now COMPLETE with 1,466 passing tests plus
+passing typecheck/lint. Intentional uncommitted source work; do not reset.
+Step4 validates and commits fact+soul changes atomically, retains same-key IDs,
+checks concurrency/cancellation, and archives complete originals transactionally.
+Exact duplicate removal is automatic; semantic shortening requires complete
+before/after desktop review through existing approval controls. Missing UI,
+denial or stale snapshots preserve originals. No model-supplied approval flag.
+Step5 is COMPLETE: durable personal-build updater guard, isolated nonpublishing
+packaging config, staged verified installer with rollback and legacy-quiescence
+gates. Latest full check: 1,517 tests, typecheck, lint and installer syntax pass.
+Live app remains running/unmodified; gate refuses it without signaling. Actual
+signature/install/GUI-health checks remain step18. Step6 source/regression checkpoint
+is COMPLETE: separate final property totals, Pacific equal windows, validated/bounded
+detail evidence and returned aggregation metadata. 37 SEO tests, typecheck and lint
+pass; current official Google docs checked. Live-account reconciliation remains
+unverified. Step7 is COMPLETE: bounded global fetching/deadlines/retries/cancellation,
+measured synthetic sequential→parallel improvement, shared backend kickoff and
+max-five evidence-ranked actions. Existing/custom/disabled routines preserved;
+legacy prompts require explicit refresh. Full check1,592 tests/typecheck/lint pass.
+Step8 is COMPLETE: requested/success/failure coverage, per-engine vs observed
+any-engine rates, unknown-outcome bounds, null unavailable results, comparable
+prompt/model metadata, non-overwriting private runs and API-proxy labels. Full
+checkpoint1,600 tests/typecheck/lint passed. No paid providers used. Step9 is
+COMPLETE: Full/Quick/Targeted Hook Lab modes, explained editorial/evidence checks,
+brand-scoped saved selections with recoverable removal, exact local Video Studio
+handoff and accessible/responsive controls. Final checkpoint: 85 files / 1,613
+tests, typecheck/lint and six synthetic Chrome states passed. Added tests did not
+weaken existing assertions; live model quality and full Electron accessibility
+remain unverified. Step10 is COMPLETE: verified preview-bound MP4 jobs, metadata
+checks, cancellation of owned process trees, recoverable unique outputs, exact
+Hook Lab handoff and keyboard/responsive Video Studio controls. Final full inventory:
+90 files / 1,648 tests passed (native process tests separately), plus seven real
+Chrome/render integration cases and six browser states. Typecheck/lint passed.
+Brett confirmed individual operation, one person, no business; the Remotion ownership
+gate is resolved for that scope (COMPLIANCE.md). No new license purchase is needed.
+Native measurements and the upstream ambient Timer declaration defect are recorded
+in docs/LOCAL-IMPROVEMENT-REVIEW.md. Step11 is COMPLETE as a source checkpoint:
+Orbital Command palette/shared styles, real ordered review path, responsive composer
+and amber approvals. Existing defaults/themes remain; activation waits for step18.
+20 targeted tests, typecheck/lint and 18 synthetic before/after browser scenes passed;
+DESIGN.md records scoped 20/24 critique and the separate unverified step16 gates.
+Steps12–13 are COMPLETE as backend checkpoints: private schema/identity-aware backups,
+previewed CSV/manual import, exact money, reviewed duplicates, reversible edits and
+worker-held consent. 53 targeted tests, strict TypeScript emit/lint, and eight native
+50k-row worker cycles passed. RSS retention remains a step17 investigation; no claim
+of memory stability. Step14 is also COMPLETE: deterministic budgets, refunds/transfers, reconciliation,
+recurrence suggestions, scenarios, receipt references and private accountant packets.
+77 targeted tests, typecheck/lint and a native 50k-row report/export passed. Read
+`docs/FINANCE.md` and the review log for conventions/ceilings and measured limitations.
+Step15 is COMPLETE as a source/integration checkpoint: Budget & Books UI, strict
+IPC/native confirmations, mapped-currency checks, private attachment boundaries,
+and approved aggregate-only AI with no tools or prior chat history. 94 targeted
+tests, typecheck/lint and three real-renderer/synthetic-SQLite browser probes passed.
+The current UI/test drafts were explicitly approved for continuation by Brett.
+Native confirmations now show ledger/account/request identity; failed scope loads
+cannot leave old-year totals under a new header. Step16 is COMPLETE as a scoped
+renderer/human checkpoint: corrected approval focus includes its argument preview;
+13 Chrome and 14 isolated Electron cases passed, including native 200% zoom.
+Shared UI (18 scenes), Hook Lab (six scenes), and 133 browser/safety tests passed;
+typecheck/lint passed. Brett confirmed control and denial speech, approval/focus
+checks, and actual table amounts on the final VoiceOver read-aloud pass. Moving
+outlines were continuous reading, not changing checkmarks. VoiceOver is off;
+the owned fixture closed normally (15 final harness cases passed). No blanket
+accessibility conformance or exhaustive per-cell navigation claim. Evidence and
+limitations are in docs/LOCAL-IMPROVEMENT-REVIEW.md and tests/manual/README.md.
+Step17 is COMPLETE: 1,819 sandboxed unit tests plus four native process tests
+passed (one pre-existing Electron-specific skipped case), as did typecheck, lint,
+and diff whitespace checks. Forty-cycle UI checks passed in Chrome/Electron with
+flat DOM/listener counts; 48 synthetic finance worker cycles ended with no worker
+MessagePorts. Native video integration passed seven cases/18 operations with no
+owned survivors. Remaining RSS/provider/full-app limits and future-beta candidates
+are recorded in docs/LOCAL-IMPROVEMENT-REVIEW.md.
+Step18 packaging/install gates passed (machine date 2026-09-06). Chat acceptance
+was initially blocked, then confirmed by Brett using ChatGPT as recorded above.
+Brett approved private Apple notarization and quit the old app. The rebuilt, notarized personal bundle was
+installed using --publish never and the rollback-capable installer, which returned
+installed-ready. No commit, push, public beta release, deployment, paid provider
+run or live routine was used for verification.
+
+A real startup failure exposed preload compilation overwriting shared ESM modules
+with CommonJS. The first attempted installation rolled back correctly. The preload
+now compiles into ignored .preload-build/; only its four output files are staged.
+The new regression failed before the fix and passed afterward. All 84 targeted
+packaging/updater/installer tests, typecheck and lint passed. A clean rebuild,
+repeat notarization, packaged main-import and policy/native/finance smoke passed.
+
+Installed: /Applications/AI Chief of Staff.app (base version 1.0.0-beta.25,
+acosUpdatePolicy=personal-local-v1, acosInstallValidation=1). The installed and
+candidate manifests match:
+d1d211a0ffe7832fa66fd47941239cffe082c0b0ec1cf7967c49509835f51a43.
+Rollback bundle: /Applications/.acos-install-lQ5dIf/previous.app.
+Fresh private checkpoint: ~/Library/Application Support/acos-local-improvement-backups/checkpoint-step18-LQMpoJ.
+Its separate restore passed (19 tables / 614 rows; 25 ms restore verification).
+Post-install read-only checks found no missing/changed original application rows
+or credential/MCP configuration changes. The current model/theme were preserved.
+The running installed process opened the expected database; SQLite, IPC and
+initialization health passed, and the native window was on-screen.
+
+The installation handoff used process-only VERIFICATION MODE. Brett subsequently
+reopened normally; the current health record confirms validationStartup=false.
+Installation health does not establish working chat or live connectors. Do not
+silently alter scheduled services, credentials, billing or the selected model.
+No step19 exists. Preserve the approved plan path and all authorized uncommitted work.
+
+Telegram follows the approved strict rule, with NO self-reply exception: every
+outbound mutation requires exact desktop consent, including replies and startup
+webhook deletion. Missing UI/denial/expiry/cancellation fail closed. Local scheduled
+results are retained. Step16 rendered approval/accessibility verification is
+complete, including Brett's spoken-amount confirmation. The installed personal
+app now contains these changes. Keep fresh backups before future live-data edits;
+these local copies do not protect against loss of this Mac.
+
 ---
 
 ## Standard kickoff prompt

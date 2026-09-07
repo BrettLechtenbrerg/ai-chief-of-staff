@@ -682,9 +682,8 @@ export class CronScheduler {
       ? `done in ${(durationMs / 1000).toFixed(1)}s`
       : `failed: ${result.error ?? 'unknown error'}`;
     const nextStr = nextRunDate ? ` • next: ${nextRunDate.toLocaleString()}` : '';
-    await this.sendHeartbeat(job, `${completionEmoji} ${job.name} ${tail}${nextStr}`);
-
     this.addToHistory(result);
+    await this.sendHeartbeat(job, `${completionEmoji} ${job.name} ${tail}${nextStr}`);
   }
 
   /**
@@ -695,6 +694,9 @@ export class CronScheduler {
    */
   private async sendHeartbeat(job: ScheduledJob, text: string): Promise<void> {
     const channels = this.getChannels();
+    // Keep the local status even when desktop delivery approval is unavailable
+    // or denied. Startup/completion pings use the same Telegram API gate.
+    channels.onNotification?.('AI Chief of Staff', text);
     if (!channels.telegramBot || !channels.memory) return;
     try {
       const sessionId = job.sessionId || 'default';

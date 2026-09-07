@@ -1,10 +1,12 @@
 import electronUpdater from 'electron-updater';
-const { autoUpdater } = electronUpdater;
+// Do not access the lazy autoUpdater getter until the durable policy allows it.
+// On macOS the getter constructs an updater and registers native hooks.
 type UpdateInfo = electronUpdater.UpdateInfo;
 type ProgressInfo = electronUpdater.ProgressInfo;
 import { BrowserWindow, app } from 'electron';
 import { trustedHandle } from './ipc/trusted-ipc.js';
 import { SettingsManager } from '../settings';
+import { getUpdateBlockReason } from './update-policy';
 
 export interface UpdateStatus {
   status:
@@ -30,7 +32,19 @@ let isInitialized = false;
  * Get the current update status
  */
 export function getUpdateStatus(): UpdateStatus {
+  return blockedStatus() ?? currentStatus;
+}
+
+function blockedStatus(): UpdateStatus | null {
+  const reason = getUpdateBlockReason();
+  if (!reason) return null;
+  currentStatus = { status: 'error', error: reason };
   return currentStatus;
+}
+
+function assertUpdatesAllowed(): void {
+  const blocked = blockedStatus();
+  if (blocked) throw new Error(blocked.error);
 }
 
 /**
@@ -49,12 +63,14 @@ function sendStatusToRenderer(): void {
  * Initialize the auto-updater
  */
 export function initializeUpdater(): void {
+  if (blockedStatus()) return;
   if (!app.isPackaged) {
     console.log('[Updater] Skipping initialization in development mode');
     currentStatus = { status: 'dev-mode', error: 'Updates only work in packaged app' };
     return;
   }
 
+  const { autoUpdater } = electronUpdater;
   isInitialized = true;
 
   // Configure updater
@@ -163,6 +179,8 @@ export function initializeUpdater(): void {
  * Check for updates
  */
 export async function checkForUpdates(): Promise<UpdateStatus> {
+  const blocked = blockedStatus();
+  if (blocked) return blocked;
   if (!isInitialized || !app.isPackaged) {
     currentStatus = { status: 'dev-mode', error: 'Updates only work in packaged app' };
     sendStatusToRenderer();
@@ -172,7 +190,7 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
   try {
     currentStatus = { status: 'checking' };
     sendStatusToRenderer();
-    await autoUpdater.checkForUpdates();
+    await electronUpdater.autoUpdater.checkForUpdates();
     return currentStatus;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -186,20 +204,22 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
  * Download the available update
  */
 export async function downloadUpdate(): Promise<void> {
+  assertUpdatesAllowed();
   if (currentStatus.status !== 'available') {
     throw new Error('No update available to download');
   }
-  await autoUpdater.downloadUpdate();
+  await electronUpdater.autoUpdater.downloadUpdate();
 }
 
 /**
  * Install the downloaded update and restart
  */
 export function installUpdate(): void {
+  assertUpdatesAllowed();
   if (currentStatus.status !== 'downloaded') {
     throw new Error('No update downloaded to install');
   }
-  autoUpdater.quitAndInstall(false, true);
+  electronUpdater.autoUpdater.quitAndInstall(false, true);
 }
 
 /**
@@ -243,6 +263,6 @@ export function setupUpdaterIPC(): void {
   });
 
   trustedHandle('updater:getStatus', () => {
-    return currentStatus;
+    return getUpdateStatus();
   });
 }

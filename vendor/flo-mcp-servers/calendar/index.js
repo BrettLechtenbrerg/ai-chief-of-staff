@@ -27,7 +27,8 @@ const ProposeEventSchema = z.object({
     calendar_id: z.string().optional().default('primary'),
 });
 const ExecuteSchema = z.object({
-    proposal_ids: z.array(z.string()),
+    proposal_ids: z.array(z.string()).min(1).max(10),
+    expected_payload_hashes: z.record(z.string().regex(/^[a-f0-9]{64}$/)),
     allow_external_attendees: z.boolean().optional(),
 });
 const ListEventsSchema = z.object({
@@ -146,13 +147,20 @@ class CalendarMCPServer {
                     },
                 },
                 {
+                    name: 'calendar_preview',
+                    description: 'Read-only full stored proposal preview and payload SHA256; no execution or consent.',
+                    annotations: { readOnlyHint: true },
+                    inputSchema: { type: 'object', properties: { proposal_ids: { type: 'array', minItems: 1, maxItems: 10, uniqueItems: true, items: { type: 'string' } } }, required: ['proposal_ids'], additionalProperties: false },
+                },
+                {
                     name: 'calendar_execute',
                     description: 'Execute approved calendar proposals. Creates the events and returns event IDs.',
                     inputSchema: {
                         type: 'object',
                         properties: {
+                            expected_payload_hashes: { type: 'object', additionalProperties: { type: 'string', pattern: '^[a-f0-9]{64}$' }, description: 'Exact ID-to-payload_hash map from calendar_preview, captured by the approval boundary. Not consent.' },
                             proposal_ids: {
-                                type: 'array',
+                                type: 'array', minItems: 1, maxItems: 10, uniqueItems: true,
                                 items: { type: 'string' },
                                 description: 'Array of proposal IDs to execute',
                             },
@@ -161,7 +169,7 @@ class CalendarMCPServer {
                                 description: 'Override safety check for external attendees',
                             },
                         },
-                        required: ['proposal_ids'],
+                        required: ['proposal_ids', 'expected_payload_hashes'],
                     },
                 },
                 {
@@ -394,6 +402,8 @@ class CalendarMCPServer {
             switch (request.params.name) {
                 case 'calendar_propose_event':
                     return this.handleProposeEvent(request.params.arguments);
+                case 'calendar_preview':
+                    return proposalCache.previewTool(request.params.arguments, 'calendar');
                 case 'calendar_execute':
                     return this.handleExecute(request.params.arguments);
                 case 'calendar_list_pending':
@@ -505,19 +515,19 @@ ${violationsText}To create this event, say: "approve ${proposalId}"`,
     }
     async handleExecute(args) {
         const parsed = ExecuteSchema.parse(args);
+        const claimed = proposalCache.claimProposals(parsed.proposal_ids, parsed.expected_payload_hashes, 'calendar');
+        try {
+            return await this.executeClaimed(parsed, claimed);
+        } catch (error) {
+            throw new Error('Execution interrupted. Claim retained; reconcile before resubmission.', { cause: error });
+        }
+    }
+    async executeClaimed(parsed, claimed) {
         await this.initializeCalendar();
         const results = [];
-        for (const proposalId of parsed.proposal_ids) {
+        for (const proposal of claimed) {
+            const proposalId = proposal.id;
             try {
-                const proposal = proposalCache.getProposal(proposalId);
-                if (!proposal) {
-                    results.push(`❌ ${proposalId}: Proposal not found`);
-                    continue;
-                }
-                if (proposal.executed) {
-                    results.push(`⚠️ ${proposalId}: Already executed`);
-                    continue;
-                }
                 // Check safety violations
                 if (proposal.violations.length > 0 && !parsed.allow_external_attendees) {
                     if (proposal.violations.some(v => v.includes('external_attendees_blocked'))) {
@@ -625,14 +635,14 @@ ${violationsText}To create this event, say: "approve ${proposalId}"`,
                 }
             }
             catch (error) {
-                results.push(`❌ ${proposalId}: Error - ${error.message}`);
+                results.push(`❌ ${proposalId}: Error - ${error.message}. Claim retained; reconcile before resubmission.`);
             }
         }
         return {
             content: [
                 {
                     type: 'text',
-                    text: `📅 Execution Results\n\n${results.join('\n\n')}`,
+                    text: `📅 Execution Results\n\n${results.join('\n\n')}\n\nAll claims retained. For any unsuccessful or ambiguous outcome, reconcile before resubmission.`,
                 },
             ],
         };

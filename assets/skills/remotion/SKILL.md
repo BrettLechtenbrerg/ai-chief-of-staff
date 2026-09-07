@@ -7,6 +7,48 @@ description: Best practices for writing programmatic video components using Remo
 
 Use this skill when creating, modifying, or debugging Remotion compositions and components.
 
+## Personal Mac Video Studio workflow
+
+These local integration rules take precedence over generic CLI examples below.
+
+1. Preserve the existing workspace, compositions and assets. Do not repeatedly
+   scaffold or reinstall packages. The adapter uses installed Remotion 4.0.484;
+   another version needs compatibility review, not an automatic download.
+2. Review the storyboard first. Keep all five selected Hook Lab fields verbatim
+   as input data; never recreate, silently shorten, or fabricate supporting evidence.
+3. Use `render_video` without `previewJobId` to create three preview frames. Inspect
+   actual composition dimensions/duration, captions, 10% safe margins, long text,
+   brand colors and missing visual/audio assets. Show the returned frames and notes.
+4. Stop for explicit preview review. Only then call `render_video` with the returned
+   `previewJobId` and identical composition ID, props, slug and aspect. The bundle
+   hash and exact inputs must still match. Every execution remains approval-gated.
+5. Never bypass this checkpoint with shell rendering. Cancellation belongs to the
+   current job; never use broad process kills or remove recoverable artifacts.
+6. MP4, captions and summaries are local drafts, never publication permission.
+   Requests to post, send, upload or share still require separate exact approval.
+
+`ACOS-Storyboard` is a bundled silent typography preset: pass `elements`
+(`verbal`, `text`, `visual`, `audio`, `caption` — the existing Hook Lab fields), `durationSeconds` (1–180),
+optional `brandName`, `cta`, and six-digit hex `background`/`foreground`/`accent` in
+`propsJson`. Subtitles/SRT derive from `verbal`; the Hook Lab `caption` is post copy,
+not a video subtitle, and remains original review data alongside visual/audio notes.
+It does **not** pretend to realize visual or sonic directions automatically; these
+remain original review notes. Use a custom composition when typography is not an
+honest fit. Overlong text, excessive estimated speech rate and low contrast must
+be reviewed instead of automatically rewritten. Brand-aware colors must keep
+text contrast at least 4.5:1. Platform overlays still need human preview review.
+
+Browser requests are limited to local HTTP asset reads by a job-owned proxy;
+place approved assets locally first. The Mac launcher preserves native Chrome
+sandbox/site-isolation protections that the installed renderer disables by
+standard flags. This is **not** an OS sandbox for arbitrary workspace code; do not
+label custom composition execution local-only or exempt it from tool approval.
+
+Limits: two active jobs, at most 100 retained jobs, 20-minute job deadlines,
+1 GiB/10,000-entry bundles, 2 GiB encoded files, 180-second compositions and disk
+reserve checks. No automatic cleanup: archive reviewed artifacts deliberately.
+The summary distinguishes counted video duration from AAC-padded container time.
+
 ## Core Rules & Constraints
 
 ### 1. Frame-Based Animation Is Mandatory

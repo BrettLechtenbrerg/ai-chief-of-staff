@@ -43,6 +43,8 @@ describe('interactive approval manager', () => {
     expect(request).toBeDefined();
     expect(request?.summary).not.toContain('/private/example');
     expect(request?.summary).not.toContain('private content');
+    expect(request?.details).toContain('/private/example');
+    expect(request?.details).toContain('private content');
     expect(ApprovalManager.resolve(request!.id, 'approve', 'ui')).toBe(true);
     await expect(pending).resolves.toBe(true);
     expect(ApprovalManager.resolve(request!.id, 'approve', 'ui')).toBe(false);
@@ -64,6 +66,35 @@ describe('interactive approval manager', () => {
     expect(request?.summary).toContain('up to 75 provider requests');
     ApprovalManager.resolve(request!.id, 'deny', 'ui');
     await expect(pending).resolves.toBe(false);
+  });
+
+  it('denies failed or disconnected approval UI and cleans pending requests', async () => {
+    const options = { toolName: 'shell_command', capability: 'local-execute' as const,
+      args: { command: 'echo fixture' }, sessionId: 'ui-fixture', channel: 'desktop' };
+    ApprovalManager.setNotifier(() => { throw new Error('synthetic UI failure'); });
+    await expect(ApprovalManager.request(options)).resolves.toBe(false);
+    expect(ApprovalManager.getPending()).toEqual([]);
+    ApprovalManager.setNotifier(() => true);
+    const pending = ApprovalManager.request(options);
+    ApprovalManager.setNotifier(null);
+    await expect(pending).resolves.toBe(false);
+    expect(ApprovalManager.getPending()).toEqual([]);
+  });
+
+  it('cancels only the requested session and redacts credential fields in previews', async () => {
+    const requests: ApprovalRequest[] = [];
+    ApprovalManager.setNotifier(request => { requests.push(request); return true; });
+    const options = { toolName: 'shell_command', capability: 'local-execute' as const,
+      args: { command: 'echo fixture', apiKey: 'synthetic-not-a-secret' }, channel: 'desktop' };
+    const first = ApprovalManager.request({ ...options, sessionId: 'first' });
+    const second = ApprovalManager.request({ ...options, sessionId: 'second' });
+    expect(requests[0].details).toContain('echo fixture');
+    expect(requests[0].details).not.toContain('synthetic-not-a-secret');
+    ApprovalManager.cancelSession('first');
+    await expect(first).resolves.toBe(false);
+    expect(ApprovalManager.resolve(requests[0].id, 'approve', 'ui')).toBe(false);
+    expect(ApprovalManager.resolve(requests[1].id, 'approve', 'ui')).toBe(true);
+    await expect(second).resolves.toBe(true);
   });
 
   it('denies aborted and expired approvals', async () => {
@@ -113,6 +144,58 @@ describe('approval tool guard', () => {
     });
 
     await expect(tool.execute({}, context)).resolves.toMatch(/requires user approval/i);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it.each(['shell_command', 'bash', 'mcp__unreviewed__lookup', 'unreviewed_tool', 'render_video', 'scaffold_video_project', 'set_project'])(
+    'blocks unreviewed execution of %s without a user', async (name) => {
+      const execute = vi.fn(async () => 'executed');
+      const tool = guardToolWithApproval(attachToolPolicy(
+        { name, description: '', parameters: z.object({}), execute } as AgentTool,
+        name.startsWith('mcp__') ? 'mcp' : 'native'
+      ), { sessionId: 'background', channel: 'cron:daily', cwd: '/workspace', approvedRoots: ['/workspace'] });
+      await expect(tool.execute({}, context)).resolves.toMatch(/requires user approval/i);
+      expect(execute).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['evaluate', 'upload', 'unknown-action', undefined])('denies unreviewed browser action %s', async (action) => {
+    const execute = vi.fn(async () => 'executed');
+    const tool = guardToolWithApproval(attachToolPolicy(
+      { name: 'browser', description: '', parameters: z.object({}), execute } as AgentTool, 'custom'
+    ), { sessionId: 'background', channel: 'cron:daily', cwd: '/workspace', approvedRoots: ['/workspace'] });
+    await expect(tool.execute({ action }, context)).resolves.toMatch(/requires user approval/i);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('binds approval to immutable arguments and destination', async () => {
+    const execute = vi.fn(async () => 'executed');
+    const tool = guardToolWithApproval(attachToolPolicy(
+      { name: 'send_telegram_message', description: '', parameters: z.object({}), execute } as AgentTool, 'custom'
+    ), { sessionId: 'desktop', channel: 'desktop', cwd: '/workspace', approvedRoots: ['/workspace'] });
+    let request: ApprovalRequest | undefined;
+    ApprovalManager.setNotifier(next => { request = next; return true; });
+    const args = { chat_id: 'synthetic-destination', message: 'reviewed draft' };
+    const result = tool.execute(args, context);
+    args.chat_id = 'changed-destination';
+    args.message = 'changed draft';
+    ApprovalManager.resolve(request!.id, 'approve', 'ui');
+    await expect(result).resolves.toBe('executed');
+    expect(execute).toHaveBeenCalledWith({ chat_id: 'synthetic-destination', message: 'reviewed draft' }, context);
+  });
+
+  it('does not execute when canceled immediately after approval', async () => {
+    const execute = vi.fn(async () => 'executed');
+    const controller = new AbortController();
+    const tool = guardToolWithApproval(attachToolPolicy(
+      { name: 'send_telegram_message', description: '', parameters: z.object({}), execute } as AgentTool, 'custom'
+    ), { sessionId: 'desktop', channel: 'desktop', cwd: '/workspace', approvedRoots: ['/workspace'] });
+    let request: ApprovalRequest | undefined;
+    ApprovalManager.setNotifier(next => { request = next; return true; });
+    const result = tool.execute({}, { ...context, signal: controller.signal });
+    ApprovalManager.resolve(request!.id, 'approve', 'ui');
+    controller.abort();
+    await result;
     expect(execute).not.toHaveBeenCalled();
   });
 

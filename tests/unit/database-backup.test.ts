@@ -82,6 +82,34 @@ describe('permission-safe rotating SQLite backups', () => {
     expect(fs.existsSync(result.emergencyBackup!)).toBe(true);
   });
 
+  it('rejects a different store identity without replacing application data', async () => {
+    const { root, databasePath, database } = createFixture();
+    database.prepare('INSERT INTO messages (content) VALUES (?)').run('must survive');
+    database.close();
+    const foreignPath = path.join(root, 'foreign.db');
+    const foreign = new Database(foreignPath);
+    foreign.pragma('application_id = 1094927945');
+    foreign.exec('CREATE TABLE finance_meta (id INTEGER PRIMARY KEY)');
+    foreign.close();
+    fs.mkdirSync(path.join(root, 'backups'));
+    const name = 'ai-chief-of-staff-20260905T000000000Z.db';
+    fs.copyFileSync(foreignPath, path.join(root, 'backups', name));
+    await expect(restoreDatabaseBackup(databasePath, root, name)).rejects.toThrow(/identity/);
+    const remaining = new Database(databasePath, { readonly: true });
+    expect(remaining.prepare('SELECT content FROM messages').pluck().get()).toBe('must survive');
+    remaining.close();
+  });
+
+  it('preserves interrupted restore artifacts instead of deleting them', async () => {
+    const { root, databasePath, database } = createFixture();
+    const backup = await createRotatingDatabaseBackup(databasePath, root, { minimumIntervalMs: 0 });
+    database.close();
+    const artifact = `${databasePath}.restore-old`;
+    fs.writeFileSync(artifact, 'recoverable original');
+    await expect(restoreDatabaseBackup(databasePath, root, path.basename(backup))).rejects.toThrow(/restore artifacts/);
+    expect(fs.readFileSync(artifact, 'utf8')).toBe('recoverable original');
+  });
+
   it('rejects traversal and malformed backup names', async () => {
     const { root, databasePath, database } = createFixture();
     database.close();

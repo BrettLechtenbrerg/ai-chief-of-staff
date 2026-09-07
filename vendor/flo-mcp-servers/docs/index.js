@@ -62,7 +62,8 @@ const ProposeApplyFormattingSchema = z.object({
     reason: z.string().optional(),
 });
 const ExecuteSchema = z.object({
-    proposal_ids: z.array(z.string()),
+    proposal_ids: z.array(z.string()).min(1).max(10),
+    expected_payload_hashes: z.record(z.string().regex(/^[a-f0-9]{64}$/)),
 });
 class DocsMCPServer {
     server;
@@ -111,18 +112,25 @@ class DocsMCPServer {
                     },
                 },
                 {
+                    name: 'docs_preview',
+                    description: 'Read-only full stored proposal preview and payload SHA256; includes Drive proposals, no execution or consent.',
+                    annotations: { readOnlyHint: true },
+                    inputSchema: { type: 'object', properties: { proposal_ids: { type: 'array', minItems: 1, maxItems: 10, uniqueItems: true, items: { type: 'string' } } }, required: ['proposal_ids'], additionalProperties: false },
+                },
+                {
                     name: 'docs_execute',
                     description: 'Execute approved doc/file proposals.',
                     inputSchema: {
                         type: 'object',
                         properties: {
+                            expected_payload_hashes: { type: 'object', additionalProperties: { type: 'string', pattern: '^[a-f0-9]{64}$' }, description: 'Exact ID-to-payload_hash map from docs_preview, captured by the approval boundary. Not consent.' },
                             proposal_ids: {
-                                type: 'array',
+                                type: 'array', minItems: 1, maxItems: 10, uniqueItems: true,
                                 items: { type: 'string' },
                                 description: 'Proposal IDs to execute',
                             },
                         },
-                        required: ['proposal_ids'],
+                        required: ['proposal_ids', 'expected_payload_hashes'],
                     },
                 },
                 {
@@ -329,6 +337,8 @@ class DocsMCPServer {
                         return await this.handleProposeInsertAtPosition(request.params.arguments);
                     case 'docs_propose_apply_formatting':
                         return await this.handleProposeApplyFormatting(request.params.arguments);
+                    case 'docs_preview':
+                        return proposalCache.previewTool(request.params.arguments, 'docs');
                     case 'docs_execute':
                         return await this.handleExecute(request.params.arguments);
                     case 'docs_read_content':
@@ -795,22 +805,22 @@ class DocsMCPServer {
     }
     async handleExecute(args) {
         const parsed = ExecuteSchema.parse(args);
+        const claimed = proposalCache.claimProposals(parsed.proposal_ids, parsed.expected_payload_hashes, 'docs');
+        try {
+            return await this.executeClaimed(parsed, claimed);
+        } catch (error) {
+            throw new Error('Execution interrupted. Claim retained; reconcile before resubmission.', { cause: error });
+        }
+    }
+    async executeClaimed(parsed, claimed) {
         if (!this.docs || !this.drive) {
             const auth = oauthManager.getClient();
             this.docs = google.docs({ version: 'v1', auth });
             this.drive = google.drive({ version: 'v3', auth });
         }
         const results = [];
-        for (const proposalId of parsed.proposal_ids) {
-            const proposal = proposalCache.getProposal(proposalId);
-            if (!proposal) {
-                results.push(`❌ ${proposalId}: Not found`);
-                continue;
-            }
-            if (proposal.executed) {
-                results.push(`⚠️ ${proposalId}: Already executed`);
-                continue;
-            }
+        for (const proposal of claimed) {
+            const proposalId = proposal.id;
             try {
                 if (proposal.type === 'docs.create') {
                     const result = await this.executeCreateDoc(proposal);
@@ -854,13 +864,13 @@ class DocsMCPServer {
                 }
             }
             catch (error) {
-                results.push(`❌ ${proposalId}: ${error.message}`);
+                results.push(`❌ ${proposalId}: ${error.message}. Claim retained; reconcile before resubmission.`);
             }
         }
         return {
             content: [{
                     type: 'text',
-                    text: `📊 Execution Results\n\n${results.join('\n\n')}`,
+                    text: `📊 Execution Results\n\n${results.join('\n\n')}\n\nAll claims retained. For any unsuccessful or ambiguous outcome, reconcile before resubmission.`,
                 }],
         };
     }

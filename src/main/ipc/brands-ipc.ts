@@ -1,3 +1,5 @@
+import { getSeoReportDefinition } from '../../tools/seo-report-definition';
+import type { FetchSeoDataInput } from '../../tools/seo-report';
 import { trustedHandle } from './trusted-ipc.js';
 import type { IPCDependencies } from './types';
 import type { BrandInput, BrandUpdate } from '../../memory';
@@ -10,6 +12,8 @@ import { listPublishProfiles } from '../brand-profiles';
  */
 export function registerBrandsIPC(deps: IPCDependencies): void {
   const { getMemory } = deps;
+
+  trustedHandle('seoReport:getDefinition', (_, input: FetchSeoDataInput = {}) => getSeoReportDefinition(input));
 
   trustedHandle('brands:list', async () => {
     return getMemory()?.listBrands() || [];

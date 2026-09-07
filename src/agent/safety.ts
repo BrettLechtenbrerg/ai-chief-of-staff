@@ -68,13 +68,21 @@ export function validateWritePath(filePath: string): ValidationResult {
  * Validate a browser URL
  */
 export function validateBrowserUrl(url: string): ValidationResult {
+  if (typeof url !== 'string' || url.length > 8192) return { allowed: false, reason: 'Invalid browser URL' };
+  let parsed: URL;
+  try { parsed = new URL(url); }
+  catch { return { allowed: false, reason: 'Invalid browser URL' }; }
+  // Match the browser's URL normalization; file:/ and leading whitespace are not web reads.
   for (const { pattern, reason } of DANGEROUS_BROWSER_PATTERNS) {
-    if (pattern.test(url)) {
+    if (pattern.test(parsed.href)) {
       console.warn(`[Safety] BLOCKED browser URL: ${reason}`);
       return { allowed: false, reason };
     }
   }
 
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return { allowed: false, reason: 'Only HTTP(S) browser navigation is allowed' };
+  }
   return { allowed: true };
 }
 

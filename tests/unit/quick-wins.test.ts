@@ -34,7 +34,7 @@ vi.mock('@kenkaiiii/gg-agent', () => ({
   agentLoop: () => mockAgentLoop(),
 }));
 
-vi.mock('@kenkaiiii/gg-ai', () => ({ stream: vi.fn() }));
+vi.mock('@kenkaiiii/gg-ai', () => ({ stream: vi.fn(), providerRegistry: { register: vi.fn() } }));
 
 vi.mock('../../src/settings', () => ({
   SettingsManager: {
@@ -52,7 +52,8 @@ vi.mock('../../src/settings', () => ({
 vi.mock('../../src/memory', () => ({ MemoryManager: vi.fn() }));
 vi.mock('../../src/config/system-guidelines', () => ({ SYSTEM_GUIDELINES: 'Test guidelines' }));
 
-vi.mock('../../src/agent/chat-providers', () => ({
+vi.mock('../../src/agent/chat-providers', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../src/agent/chat-providers')>(),
   getStreamConfig: vi.fn(async () => ({ provider: 'anthropic', apiKey: 'test-key' })),
   getProviderForModel: vi.fn(() => 'anthropic'),
 }));

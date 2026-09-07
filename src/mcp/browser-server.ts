@@ -10,6 +10,7 @@ import { createInterface } from 'readline';
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 import { spawn } from 'child_process';
 import { validateBrowserUrl } from '../agent/safety';
+import { readWebPage } from '../browser/web-read.js';
 
 const DEFAULT_CDP_URL = 'http://localhost:9222';
 
@@ -150,15 +151,15 @@ export async function handleBrowser(args: Record<string, unknown>): Promise<stri
         const url = args.url as string;
         await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
         if (args.wait_for) await new Promise((r) => setTimeout(r, args.wait_for as number));
-        return JSON.stringify({
+        return await readWebPage(() => p.url(), async () => JSON.stringify({
           success: true,
           url: p.url(),
           title: await p.title(),
-        });
+        }));
       }
 
       case 'screenshot': {
-        const screenshot = await p.screenshot({ encoding: 'base64' });
+        const screenshot = await readWebPage(() => p.url(), () => p.screenshot({ encoding: 'base64' }));
         return JSON.stringify({
           success: true,
           screenshot: `[base64 image, ${(screenshot as string).length} chars]`,
@@ -194,32 +195,32 @@ export async function handleBrowser(args: Record<string, unknown>): Promise<stri
 
       case 'extract': {
         const extractType = (args.extract_type as string) || 'text';
-        let data: unknown;
-
-        switch (extractType) {
-          case 'text':
-            data = await p.evaluate(() => document.body.innerText.slice(0, 10000));
-            break;
-          case 'html':
-            data = await p.evaluate(() => document.body.innerHTML.slice(0, 10000));
-            break;
-          case 'links':
-            data = await p.evaluate(() =>
-              Array.from(document.querySelectorAll('a[href]'))
-                .slice(0, 50)
-                .map((a) => ({ text: a.textContent?.trim(), href: (a as HTMLAnchorElement).href }))
-            );
-            break;
-          case 'tables':
-            data = await p.evaluate(() =>
-              Array.from(document.querySelectorAll('table'))
-                .slice(0, 5)
-                .map((t) => t.outerHTML.slice(0, 2000))
-            );
-            break;
-        }
-
-        return JSON.stringify({ success: true, type: extractType, data });
+        return await readWebPage(() => p.url(), async () => {
+          let data: unknown;
+          switch (extractType) {
+            case 'text':
+              data = await p.evaluate(() => document.body.innerText.slice(0, 10000));
+              break;
+            case 'html':
+              data = await p.evaluate(() => document.body.innerHTML.slice(0, 10000));
+              break;
+            case 'links':
+              data = await p.evaluate(() =>
+                Array.from(document.querySelectorAll('a[href]'))
+                  .slice(0, 50)
+                  .map((a) => ({ text: a.textContent?.trim(), href: (a as HTMLAnchorElement).href }))
+              );
+              break;
+            case 'tables':
+              data = await p.evaluate(() =>
+                Array.from(document.querySelectorAll('table'))
+                  .slice(0, 5)
+                  .map((t) => t.outerHTML.slice(0, 2000))
+              );
+              break;
+          }
+          return JSON.stringify({ success: true, type: extractType, data });
+        });
       }
 
       case 'scroll': {

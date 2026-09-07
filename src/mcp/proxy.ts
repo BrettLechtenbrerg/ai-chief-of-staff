@@ -11,6 +11,7 @@ import { z } from 'zod';
 import type { AgentTool, ToolContext } from '@kenkaiiii/gg-agent';
 import { attachToolPolicy } from '../agent/tool-policy.js';
 import { getMCPManager } from './manager';
+import { proposalApprovalPreparer } from './proposal-approval.js';
 
 /**
  * Build the agent-facing AgentTool array for every ready MCP server.
@@ -24,7 +25,7 @@ export function buildMCPAgentTools(): AgentTool[] {
 
   const tools: AgentTool[] = [];
   for (const d of descriptors) {
-    tools.push(attachToolPolicy({
+    const tool = attachToolPolicy({
       name: d.agentToolName,
       description: d.description,
       // gg-agent requires a parameters Zod schema, but when rawInputSchema
@@ -36,15 +37,23 @@ export function buildMCPAgentTools(): AgentTool[] {
       execute: async (args: unknown, _context: ToolContext) => {
         try {
           const safeArgs = (args && typeof args === 'object' ? args : {}) as Record<string, unknown>;
-          return await manager.callTool(d.agentToolName, safeArgs);
+          const result = await manager.callTool(d.agentToolName, safeArgs);
+          if (tool.prepareApproval && result.startsWith('Tool error:')) {
+            return `MCP tool error (${d.agentToolName}): proposal execution failed; review before trying again.`;
+          }
+          return result;
         } catch (err) {
           // Tool errors are returned to the agent as text — letting it see
           // the failure and decide how to recover — rather than throwing,
           // which would abort the whole turn.
+          if (tool.prepareApproval) return `MCP tool error (${d.agentToolName}): proposal execution failed; review before trying again.`;
           return `MCP tool error (${d.agentToolName}): ${(err as Error).message}`;
         }
       },
-    } as AgentTool, 'mcp', d.annotations));
+    } as AgentTool, 'mcp', d.annotations);
+    const prepare = proposalApprovalPreparer(d.agentToolName, (name, args) => manager.callTool(name, args));
+    if (prepare) tool.prepareApproval = prepare;
+    tools.push(tool);
   }
   return tools;
 }

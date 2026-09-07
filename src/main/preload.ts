@@ -2,6 +2,14 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // Expose API to renderer process — organized by domain
 contextBridge.exposeInMainWorld('pocketAgent', {
+  finance: {
+    request: (command: unknown) => ipcRenderer.invoke('finance:request', command),
+    selectCsv: (delimiter: ',' | ';' | '\t') => ipcRenderer.invoke('finance:selectCsv', delimiter),
+    selectReceipt: (record: unknown) => ipcRenderer.invoke('finance:selectReceipt', record),
+    export: (period: unknown) => ipcRenderer.invoke('finance:export', period),
+    analyze: (period: unknown) => ipcRenderer.invoke('finance:analyze', period),
+    cancel: () => ipcRenderer.invoke('finance:cancel'),
+  },
   // ─── Agent ───────────────────────────────────────────────────────────
   agent: {
     send: (
@@ -60,6 +68,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
         toolName: string;
         capability: string;
         summary: string;
+        details: string;
         sessionId: string;
         expiresAt: number;
       }) => void
@@ -102,6 +111,9 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   },
 
   // ─── Brands (multi-brand books) ─────────────────────────────────────
+  seoReport: {
+    getDefinition: (input: import('../tools/seo-report').FetchSeoDataInput = {}) => ipcRenderer.invoke('seoReport:getDefinition', input),
+  },
   brands: {
     list: () => ipcRenderer.invoke('brands:list'),
     create: (input: BrandInput) => ipcRenderer.invoke('brands:create', input),
@@ -631,6 +643,7 @@ declare global {
             toolName: string;
             capability: string;
             summary: string;
+            details: string;
             sessionId: string;
             expiresAt: number;
           }) => void
@@ -687,6 +700,9 @@ declare global {
         onCleared: (callback: (sessionId: string) => void) => () => void;
       };
 
+      seoReport: {
+        getDefinition: (input?: import('../tools/seo-report').FetchSeoDataInput) => Promise<ReturnType<typeof import('../tools/seo-report-definition').getSeoReportDefinition>>;
+      };
       brands: {
         list: () => Promise<Brand[]>;
         create: (input: BrandInput) => Promise<{ success: boolean; brand?: Brand; error?: string }>;

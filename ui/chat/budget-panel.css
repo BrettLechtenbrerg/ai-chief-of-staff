@@ -1,0 +1,44 @@
+/* Native controls and ledger tables share the existing work rail and theme. */
+#budget-view { display: none; flex: 1; min-width: 0; min-height: 0; overflow: auto; color: var(--text-primary); background: var(--bg-primary); }
+#budget-view.active { display: block; }
+#budget-view .budget-rail { width: 100%; max-width: 1200px; margin-inline: auto; padding: 20px 24px 40px; box-sizing: border-box; }
+#budget-view .budget-header, #budget-view .budget-actions, #budget-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+#budget-view .budget-header { justify-content: space-between; border-bottom: 1px solid var(--border); background: transparent; padding: 0 0 16px; margin-bottom: 16px; }
+#budget-view h1 { font-family: 'Cal Sans', sans-serif; font-size: 22px; margin: 0; }
+#budget-view h2 { font-size: 18px; margin-block: 20px 12px; }
+#budget-view p, #budget-view small { line-height: 1.6; overflow-wrap: anywhere; }
+#budget-view p { margin-block: 12px; }
+#budget-view small { display: block; color: var(--text-secondary); font-size: 13px; }
+#budget-view .budget-scope, #budget-view .budget-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px,100%),1fr)); gap: 16px; margin-block: 16px; }
+#budget-view .budget-field { min-width: 0; }
+#budget-view label { display: block; font-size: 14px; margin-bottom: 6px; }
+#budget-view input, #budget-view select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; font: inherit; color: var(--text-primary); background-color: var(--bg-secondary); border: 1px solid var(--text-secondary); border-radius: var(--radius-sm); padding: 8px 10px; }
+#budget-view select { appearance: auto; padding-inline-end: 24px; }
+#budget-view input[readonly] { border-style: dashed; }
+#budget-view input::placeholder { color: var(--text-secondary); opacity: 1; }
+#budget-view button { min-height: 36px; max-width: 100%; padding: 8px 12px; color: var(--text-primary); background: var(--bg-secondary); border: 1px solid var(--text-secondary); border-radius: var(--radius-sm); font: inherit; line-height: 1.4; cursor: pointer; transition: border-color var(--control-duration, 150ms) var(--control-easing, ease), background-color var(--control-duration, 150ms) var(--control-easing, ease); }
+#budget-view button:hover:not(:disabled) { border-color: var(--accent); }
+#budget-view button:active:not(:disabled) { background: var(--bg-tertiary); }
+#budget-view button.budget-primary { color: var(--text-color--text-tertiary); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+#budget-view button:disabled { opacity: .55; cursor: not-allowed; }
+#budget-view :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+#budget-view :focus:not(:focus-visible) { outline: none; }
+#budget-nav { margin-block: 16px; }
+#budget-nav button[aria-pressed="true"] { border-bottom: 3px solid var(--accent); font-weight: 700; }
+#budget-view details { border-top: 1px solid var(--border); padding-block: 14px; }
+#budget-view summary { cursor: pointer; font-weight: 600; min-height: 28px; line-height: 1.6; }
+#budget-view .budget-form-actions { margin-block: 12px; }
+#budget-view .budget-table-scroll { max-width: 100%; overflow: auto; margin-block: 16px; }
+#budget-view table { width: 100%; border-collapse: collapse; font-size: 14px; }
+#budget-view caption { text-align: start; font-weight: 600; padding-block: 8px; }
+#budget-view th, #budget-view td { text-align: start; vertical-align: top; border-bottom: 1px solid var(--border); padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 90px; max-width: 360px; font-variant-numeric: tabular-nums; }
+#budget-view th { color: var(--text-secondary); }
+#budget-view .budget-notice, #budget-warning, #budget-error { border-inline-start: 3px solid var(--warning, #fbbf24); padding: 12px; background: var(--bg-secondary); }
+#budget-error { border-color: var(--error, #f87171); }
+#budget-view [hidden] { display: none !important; }
+#budget-view .budget-stages { display: flex; flex-wrap: wrap; gap: 12px 30px; padding-inline-start: 22px; }
+#budget-view .budget-stages [aria-current] { font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
+#budget-ai-result pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; }
+@media (max-width: 600px) { #budget-view .budget-rail { padding: 16px 12px 28px; } #budget-view .budget-scope, #budget-view .budget-form { grid-template-columns: minmax(0,1fr); } }
+@media (prefers-reduced-motion: reduce) { #budget-view button { transition: none; } }
+@media (forced-colors: active) { #budget-view :focus-visible { outline-color: Highlight; } #budget-nav button[aria-pressed="true"] { border-bottom-color: Highlight; } }

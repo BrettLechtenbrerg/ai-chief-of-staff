@@ -1,4 +1,4 @@
-import type { AgentTool } from '@kenkaiiii/gg-agent';
+import type { AgentTool, ToolContext } from '@kenkaiiii/gg-agent';
 import type { AgentMode } from './agent-modes.js';
 import type { MCPToolAnnotations } from '../mcp/types.js';
 import { ApprovalManager } from '../security/approval-manager.js';
@@ -24,7 +24,14 @@ export interface ToolPolicy {
   annotations?: MCPToolAnnotations;
 }
 
-export type PolicyAwareAgentTool = AgentTool & { policy: ToolPolicy };
+export type PolicyAwareAgentTool = AgentTool & {
+  policy: ToolPolicy;
+  /** Trusted adapter hook, never supplied by tool arguments or MCP metadata. */
+  prepareApproval?: (args: unknown, context: ToolContext) => Promise<{
+    executeArgs: unknown;
+    preview: unknown;
+  }>;
+};
 
 export interface ToolExecutionContext {
   sessionId: string;
@@ -43,8 +50,8 @@ const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
   tasks: 'local-write',
   bash: 'local-execute',
   shell_command: 'local-execute',
-  task_output: 'local-execute',
-  task_stop: 'local-execute',
+  task_output: 'local-read',
+  task_stop: 'safe-local',
   subagent: 'delegation',
   web_fetch: 'web-read',
   web_search: 'web-read',
@@ -85,44 +92,34 @@ const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
   trim_video_silence: 'local-execute',
 };
 
-// Only actions that leave the machine (send/post/modify external systems) or
-// bill a batch of provider calls need a human. Local file/shell/memory work,
-// reads of connected services, and single paid image renders run unattended.
-const CONFIRMATION_CAPABILITIES = new Set<ToolCapability>(['external-write']);
-const CONFIRMATION_TOOLS = new Set<string>(['fetch_aeo_visibility']);
+// Free-form execution is not local-only: programs can use network and credentials.
+// Constrained file/memory operations remain unattended; unknown execution does not.
+const CONFIRMATION_CAPABILITIES = new Set<ToolCapability>(['external-write', 'local-execute', 'unknown']);
+// Choosing a project expands subsequent file access; it is an authority change.
+const CONFIRMATION_TOOLS = new Set<string>(['fetch_aeo_visibility', 'set_project']);
 
-// Per-call gate for tools whose side effects depend on arguments.
-const BROWSER_ACTING_ACTIONS = new Set(['click', 'type', 'evaluate', 'upload']);
+const BROWSER_READ_ACTIONS = new Set(['navigate', 'extract', 'screenshot', 'tabs_list']);
 const ARG_CONFIRMATION: Readonly<Record<string, (args: unknown) => boolean>> = {
   browser: (args) =>
-    BROWSER_ACTING_ACTIONS.has(String((args as { action?: unknown } | null)?.action ?? '')),
+    !BROWSER_READ_ACTIONS.has(String((args as { action?: unknown } | null)?.action ?? '')),
 };
 
-// MCP tool-name heuristics. Flo servers stage changes with `*_propose_*` and
-// commit them with `*_execute`; GHL/Meta use verb_noun names. We inspect the
-// first two words so `gmail_send` and `send_message` both classify as writes.
-const READ_VERBS = new Set([
-  'get', 'list', 'search', 'read', 'find', 'fetch', 'check', 'lookup', 'query',
-  'describe', 'verify', 'debug', 'scrape', 'crawl', 'map', 'extract', 'propose',
+// Exact capabilities inspected in bundled Flo handlers. Unknown servers/tools
+// require confirmation. Proposal handlers can load attachments; a staging verb
+// alone cannot establish safety. Add reads here only after inspecting the sink.
+const KNOWN_MCP_READS = new Set([
+  'mcp__flo-gmail__gmail_search_emails',
+  'mcp__flo-gmail__gmail_preview',
+  'mcp__flo-calendar__calendar_preview',
+  'mcp__flo-docs__docs_preview',
+  'mcp__flo-calendar__calendar_list_events',
+  'mcp__flo-calendar__calendar_check_conflicts',
+  'mcp__flo-docs__docs_read_content',
+  'mcp__flo-ghl__get_contact',
+  'mcp__flo-ghl__search_contacts',
+  'mcp__flo-ghl-brett__get_contact',
+  'mcp__flo-ghl-brett__search_contacts',
 ]);
-const WRITE_VERBS = new Set([
-  'send', 'create', 'update', 'delete', 'remove', 'add', 'execute', 'schedule',
-  'publish', 'post', 'insert', 'patch', 'put', 'void', 'record', 'move', 'upload',
-  'block', 'sync', 'modify', 'cancel', 'reply', 'forward', 'archive', 'trash',
-  'empty', 'pay', 'charge', 'enroll', 'assign', 'invite', 'share', 'grant',
-  'revoke', 'rename', 'write', 'append', 'apply', 'replace', 'submit', 'trigger',
-  'book', 'reschedule', 'merge', 'import', 'clear', 'reset', 'restore',
-  'launch', 'start', 'stop', 'pause', 'resume', 'activate', 'deactivate',
-  'enable', 'disable', 'set', 'mark', 'toggle', 'run', 'edit', 'purge', 'drop',
-]);
-
-function classifyMcpToolByName(toolName: string): ToolCapability {
-  const bare = toolName.replace(/^mcp__.+?__/, '');
-  const words = bare.toLowerCase().split(/[_-]+/).slice(0, 2);
-  if (words.includes('propose')) return 'external-read';
-  if (READ_VERBS.has(words[0] ?? '')) return 'external-read';
-  return words.some((w) => WRITE_VERBS.has(w)) ? 'external-write' : 'external-read';
-}
 
 function isExternalMcpTool(name: string): boolean {
   return name.startsWith('mcp__') &&
@@ -140,10 +137,10 @@ export function getToolPolicy(
   source: ToolPolicy['source'],
   annotations?: MCPToolAnnotations
 ): ToolPolicy {
-  let capability = TOOL_CAPABILITIES[toolName];
+  let capability = Object.hasOwn(TOOL_CAPABILITIES, toolName) ? TOOL_CAPABILITIES[toolName] : undefined;
   if (!capability && source === 'mcp') {
     // Annotations are hints only; a destructive hint can escalate, never downgrade.
-    capability = classifyMcpToolByName(toolName);
+    capability = KNOWN_MCP_READS.has(toolName) ? 'external-read' : 'external-write';
     if (annotations?.destructiveHint === true) capability = 'external-write';
   }
   capability ||= 'unknown';
@@ -152,7 +149,7 @@ export function getToolPolicy(
     capability,
     confirmationRequired:
       CONFIRMATION_TOOLS.has(toolName) ||
-      toolName in ARG_CONFIRMATION ||
+      Object.hasOwn(ARG_CONFIRMATION, toolName) ||
       CONFIRMATION_CAPABILITIES.has(capability),
     source,
     ...(annotations ? { annotations: { ...annotations } } : {}),
@@ -175,21 +172,48 @@ export function guardToolWithApproval(
   tool: PolicyAwareAgentTool,
   execution: ToolExecutionContext
 ): PolicyAwareAgentTool {
-  if (!tool.policy.confirmationRequired) return tool;
   const originalExecute = tool.execute.bind(tool);
-  const needsApproval = ARG_CONFIRMATION[tool.name] ?? (() => true);
+  const needsApproval = Object.hasOwn(ARG_CONFIRMATION, tool.name) ? ARG_CONFIRMATION[tool.name] : () => true;
+  const { sessionId, channel } = execution;
   tool.execute = async (args, context) => {
-    if (!needsApproval(args)) return originalExecute(args, context);
+    if (context.signal?.aborted) return 'Tool blocked: execution canceled.';
+    if (!tool.policy.confirmationRequired || !needsApproval(args)) return originalExecute(args, context);
+    // Capture before yielding: execute the reviewed destination/body, not a
+    // caller-owned reference that can change while approval is pending.
+    let approvedArgs: typeof args;
+    try {
+      approvedArgs = globalThis.structuredClone(args);
+    } catch {
+      return 'Tool blocked: arguments could not be captured for approval.';
+    }
+    let approvalDetails: unknown = approvedArgs;
+    if (tool.prepareApproval) {
+      // Remote/scheduled origins must not even read the proposal snapshot.
+      if (channel !== 'desktop' || context.signal?.aborted) return 'Tool blocked: desktop approval required.';
+      try {
+        const prepared = await tool.prepareApproval(approvedArgs, context);
+        if (context.signal?.aborted) return 'Tool blocked: execution canceled.';
+        approvedArgs = globalThis.structuredClone(prepared.executeArgs);
+        approvalDetails = { arguments: approvedArgs, proposals: globalThis.structuredClone(prepared.preview) };
+        // The complete review must fit the UI. Never truncate a destination/body.
+        if (JSON.stringify(approvalDetails, null, 2).length > 100_000) {
+          return 'Tool blocked: complete proposal approval exceeds display limit.';
+        }
+      } catch {
+        // Do not echo provider errors, proposal contents, or credentials.
+        return 'Tool blocked: complete proposal preview unavailable or invalid.';
+      }
+    }
     const approved = await ApprovalManager.request({
       toolName: tool.name,
       capability: tool.policy.capability,
-      args,
-      sessionId: execution.sessionId,
-      channel: execution.channel,
+      args: approvalDetails,
+      sessionId,
+      channel,
       signal: context.signal,
     });
-    if (!approved) return `Tool blocked: ${tool.name} requires user approval.`;
-    return originalExecute(args, context);
+    if (!approved || context.signal?.aborted) return `Tool blocked: ${tool.name} requires user approval.`;
+    return originalExecute(approvedArgs, context);
   };
   return tool;
 }

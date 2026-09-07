@@ -23,6 +23,7 @@
  * None of these throw; the cron still delivers something useful.
  */
 
+import { computeSeoReportActions, SEO_REPORT_VERSION, type SeoReportAction } from './seo-report-definition';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -50,7 +51,9 @@ const BRAND_SLUG_TO_FOLDER: Record<string, string> = {
 const ALL_BRAND_SLUGS = ['pmma', 'tsai', 'brett'] as const;
 
 const DEFAULT_DAYS = 28;
-const ROW_LIMIT = 25;
+const ROW_LIMIT = 250;
+const MAX_DETAIL_ROWS = 1000;
+const MAX_RESPONSE_BYTES = 2_000_000;
 /** Search Console data lags ~2–3 days; offset the window end so we don't query
  * a tail of guaranteed-empty days. */
 const DATA_LAG_DAYS = 3;
@@ -74,10 +77,10 @@ interface BrandSite {
 /** A single row as returned by searchAnalytics/query. */
 interface SearchAnalyticsRow {
   keys?: string[];
-  clicks?: number;
-  impressions?: number;
-  ctr?: number;
-  position?: number;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
 }
 
 interface QueryStat {
@@ -104,14 +107,22 @@ interface BrandReport {
   totals: {
     clicks: number;
     impressions: number;
-    clicksPrev: number;
+    clicksPrev: number | null;
     clicksDeltaPct: number | null;
+    ctr: number;
+    position: number;
+    impressionsPrev: number | null;
   } | null;
   topQueries: QueryStat[];
   topPages: PageStat[];
   /** Queries ranking on page 2 (position 11–20), sorted by impressions desc. */
   page2Opportunities: QueryStat[];
   notes: string[];
+  status: 'available' | 'no_data' | 'unavailable' | 'partial';
+  errors: Array<{ source: string; kind: string; status: number }>;
+  coverage: Record<string, { rows: number; truncated: boolean; complete: boolean }>;
+  aggregationTypes: Record<string, string>;
+  changes: Record<string, Array<{ key: string; clicks: number; clicksPrev: number; clicksDelta: number }>>;
 }
 
 export interface FetchSeoDataInput {
@@ -122,12 +133,71 @@ export interface FetchSeoDataInput {
 export interface FetchSeoDataResult {
   ok: boolean;
   /** Present when the whole call short-circuits (auth/scope/config). */
-  status?: 'not_connected' | 'missing_scope' | 'no_brands' | 'error';
+  status?: 'not_connected' | 'missing_scope' | 'no_brands' | 'error' | 'timed_out' | 'canceled' | 'partial' | 'all_failed';
   /** Human-readable summary the agent can relay verbatim if it wants. */
   message?: string;
   /** ISO dates describing the window actually queried. */
-  window?: { startDate: string; endDate: string; days: number };
+  window?: { startDate: string; endDate: string; prevStartDate: string; prevEndDate: string; days: number; timeZone: string; dataState: string; cutoffDays: number };
   brands?: BrandReport[];
+  definitionVersion?: string;
+  actions?: SeoReportAction[];
+}
+
+/** Internal execution controls, never part of the model schema. */
+export interface SeoFetchOptions { signal?: AbortSignal; requestTimeoutMs?: number; runTimeoutMs?: number }
+class SeoRun {
+  readonly controller = new AbortController();
+  readonly signal = this.controller.signal;
+  readonly requestTimeout: number;
+  readonly end: number;
+  private active = 0;
+  private requests = 0;
+  private rows = 0;
+  private queue: Array<() => void> = [];
+  private timer: ReturnType<typeof setTimeout>;
+  private external?: AbortSignal;
+  private cancel = () => this.controller.abort('canceled');
+  constructor(options: SeoFetchOptions) {
+    this.requestTimeout = Math.max(1, Math.min(options.requestTimeoutMs ?? 15_000, 15_000));
+    const duration = Math.max(1, Math.min(options.runTimeoutMs ?? 90_000, 90_000));
+    this.end = Date.now() + duration;
+    this.external = options.signal;
+    this.timer = setTimeout(() => this.controller.abort('timed_out'), duration);
+    this.external?.addEventListener('abort', this.cancel, { once: true });
+    if (this.external?.aborted) this.cancel();
+    this.signal.addEventListener('abort', () => { for (const resume of this.queue.splice(0)) resume(); }, { once: true });
+  }
+  check() { if (this.signal.aborted) throw new Error(String(this.signal.reason)); }
+  async slot<T>(work: () => Promise<T>): Promise<T> {
+    this.check();
+    if (this.active >= 4) await new Promise<void>(resolve => this.queue.push(resolve));
+    this.check();
+    this.active++;
+    try { return await work(); }
+    finally { this.active--; this.queue.shift()?.(); }
+  }
+  request() { this.check(); if (++this.requests > 90) throw new Error('budget_exhausted'); }
+  acceptRows(count: number) { this.check(); if (this.rows + count > 12_006) throw new Error('budget_exhausted'); this.rows += count; }
+  async token(work: () => Promise<string | null>) {
+    const timer = setTimeout(() => this.controller.abort('timed_out'), this.requestTimeout);
+    try { this.check(); return await abortable(work(), this.signal); }
+    finally { clearTimeout(timer); }
+  }
+  dispose() { clearTimeout(this.timer); this.external?.removeEventListener('abort', this.cancel); }
+}
+/** Race even transports/token refresh APIs that ignore AbortSignal. Late values are discarded. */
+function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const abort = () => { signal.removeEventListener('abort', abort); reject(new Error(String(signal.reason))); };
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) abort();
+    promise.then(value => { signal.removeEventListener('abort', abort); if (!signal.aborted) resolve(value); }, error => { signal.removeEventListener('abort', abort); reject(error); });
+  });
+}
+async function delay(ms: number, signal: AbortSignal) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try { await abortable(new Promise<void>(resolve => { timer = setTimeout(resolve, ms); }), signal); }
+  finally { clearTimeout(timer); }
 }
 
 /** YYYY-MM-DD in UTC for a Date. */
@@ -185,10 +255,13 @@ function readBrandSite(slug: string): BrandSite | null {
     };
     const url = parsed.site?.url;
     if (!url || typeof url !== 'string') return null;
+    if (url.length > 2048) return null;
+    const property = new URL(url);
+    if (!['https:', 'http:'].includes(property.protocol) || property.username || property.password || property.search || property.hash) return null;
     const candidates = siteUrlCandidates(url);
     return {
       slug,
-      shortName: parsed.shortName || slug.toUpperCase(),
+      shortName: typeof parsed.shortName === 'string' ? parsed.shortName.slice(0, 100) : slug.toUpperCase(),
       siteUrl: candidates[0],
       siteUrlCandidates: candidates,
     };
@@ -201,39 +274,112 @@ function readBrandSite(slug: string): BrandSite | null {
  * POST one searchAnalytics/query call. Returns rows, or a structured failure
  * the caller turns into a per-site note (e.g. 403 → account mismatch).
  */
-async function querySearchAnalytics(
+async function querySearchAnalyticsOnce(
   accessToken: string,
   siteUrl: string,
   body: Record<string, unknown>,
-): Promise<{ rows: SearchAnalyticsRow[] } | { error: string; status: number }> {
+  signal: AbortSignal,
+): Promise<{ rows: SearchAnalyticsRow[]; aggregationType: string } | { error: string; status: number; retryAfter?: number }> {
   const endpoint = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
     siteUrl,
   )}/searchAnalytics/query`;
   let resp: Response;
   try {
-    resp = await fetch(endpoint, {
+    resp = await abortable(fetch(endpoint, {
+      signal,
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
-    });
-  } catch (e) {
-    return { error: `network error: ${(e as Error).message}`, status: 0 };
+    }).then(response => { if (signal.aborted) { void response.body?.cancel().catch(() => undefined); throw new Error('canceled'); } return response; }), signal);
+  } catch (error) {
+    const code = (error as { cause?: { code?: string }; code?: string })?.cause?.code ?? (error as { code?: string })?.code;
+    return { error: signal.aborted ? String(signal.reason) : ['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN'].includes(code ?? '') ? 'transient_network' : 'network', status: 0 };
   }
   if (!resp.ok) {
-    // Read a little of the body for context but never log it.
-    let detail = '';
-    try {
-      detail = (await resp.text()).slice(0, 200);
-    } catch {
-      // ignore
-    }
-    return { error: detail || resp.statusText, status: resp.status };
+    void resp.body?.cancel().catch(() => undefined);
+    const retry = resp.headers.get('retry-after');
+    const retryAfter = retry === null ? undefined : /^\d+(\.\d+)?$/.test(retry) ? Number(retry) * 1000 : Math.max(0, Date.parse(retry) - Date.now());
+    return { retryAfter, error: resp.status === 403 || resp.status === 401 ? 'permission' : resp.status === 404 ? 'missing_property' : 'http', status: resp.status };
   }
-  const data = (await resp.json()) as { rows?: SearchAnalyticsRow[] };
-  return { rows: data.rows ?? [] };
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  let complete = false;
+  try {
+    // Bound the actual stream, not just Content-Length or the parsed row count.
+    reader = resp.body?.getReader();
+    if (!reader) throw new Error('empty body');
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    while (true) {
+      const part = await abortable(reader.read(), signal);
+      if (part.done) break;
+      size += part.value.byteLength;
+      if (size > MAX_RESPONSE_BYTES) { throw new Error('oversize'); }
+      chunks.push(part.value);
+    }
+    const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    const dimensions = body.dimensions as string[];
+    const allowedAggregation = body.aggregationType === 'auto' ? ['auto', 'byPage'] : [body.aggregationType];
+    if (!data || typeof data !== 'object' || Array.isArray(data) || !allowedAggregation.includes(data.responseAggregationType)) throw new Error('aggregation');
+    if (data.metadata != null && (typeof data.metadata !== 'object' || Array.isArray(data.metadata) ||
+      Object.hasOwn(data.metadata, 'first_incomplete_date') || Object.hasOwn(data.metadata, 'first_incomplete_hour'))) throw new Error('incomplete final data');
+    const rows = data.rows === undefined ? [] : data.rows;
+    if (!Array.isArray(rows) || rows.length > Number(body.rowLimit)) throw new Error('rows');
+    const seen = new Set<string>();
+    for (const row of rows) {
+      if (!row || typeof row !== 'object') throw new Error('row');
+      const keys = row.keys === undefined ? [] : row.keys;
+      if (!Array.isArray(keys) || keys.length !== dimensions.length || keys.some((key: unknown) => typeof key !== 'string' || !key.length || key.length > 8192)) throw new Error('keys');
+      if (dimensions[0] === 'page') {
+        const page = new URL(keys[0]);
+        if (!['http:', 'https:'].includes(page.protocol) || page.username || page.password) throw new Error('page');
+      }
+      const identity = JSON.stringify(keys);
+      if (seen.has(identity)) throw new Error('duplicate');
+      seen.add(identity);
+      if (![row.clicks, row.impressions].every(n => Number.isSafeInteger(n) && n >= 0) || row.clicks > row.impressions) throw new Error('counts');
+      if (!Number.isFinite(row.ctr) || row.ctr < 0 || row.ctr > 1 || Math.abs(row.ctr - (row.impressions ? row.clicks / row.impressions : 0)) > 0.00001) throw new Error('ctr');
+      if (!Number.isFinite(row.position) || row.position < (row.impressions ? 1 : 0) || row.position > 1_000_000) throw new Error('position');
+    }
+    if (signal.aborted) throw new Error('canceled');
+    complete = true;
+    return { rows, aggregationType: data.responseAggregationType };
+  } catch {
+    return { error: signal.aborted ? String(signal.reason) : 'invalid_response', status: 502 };
+  } finally {
+    if (!complete) void reader?.cancel().catch(() => undefined);
+    reader?.releaseLock();
+  }
+}
+
+
+async function querySearchAnalytics(token: string, siteUrl: string, body: Record<string, unknown>, run: SeoRun) {
+  try {
+    return await run.slot(async () => {
+      for (let attempt = 0; ; attempt++) {
+        run.request();
+        const controller = new AbortController();
+        const abort = () => controller.abort(run.signal.reason);
+        run.signal.addEventListener('abort', abort, { once: true });
+        const timer = setTimeout(() => controller.abort('timed_out'), run.requestTimeout);
+        let result;
+        try { result = await querySearchAnalyticsOnce(token, siteUrl, body, controller.signal); }
+        finally { clearTimeout(timer); run.signal.removeEventListener('abort', abort); }
+        run.check();
+        if (!('error' in result)) { run.acceptRows(result.rows.length); return result; }
+        const retryable = result.error === 'transient_network' || result.error === 'http' && (result.status === 429 || result.status >= 500);
+        if (!retryable || attempt >= 2) return result;
+        const wait = Math.max(500 * 2 ** attempt, result.retryAfter !== undefined && !Number.isNaN(result.retryAfter) ? result.retryAfter : 0);
+        if (Date.now() + wait >= run.end) return { error: 'timed_out', status: 0 };
+        await delay(wait, run.signal);
+      }
+    });
+  } catch (error) {
+    const kind = error instanceof Error && ['canceled', 'timed_out', 'budget_exhausted'].includes(error.message) ? error.message : 'network';
+    return { error: kind, status: 0 };
+  }
 }
 
 function toQueryStat(row: SearchAnalyticsRow): QueryStat {
@@ -254,14 +400,6 @@ function toPageStat(row: SearchAnalyticsRow): PageStat {
     ctr: Number(((row.ctr ?? 0) * 100).toFixed(2)),
     position: Number((row.position ?? 0).toFixed(1)),
   };
-}
-
-function sumClicks(rows: SearchAnalyticsRow[]): number {
-  return rows.reduce((acc, r) => acc + (r.clicks ?? 0), 0);
-}
-
-function sumImpressions(rows: SearchAnalyticsRow[]): number {
-  return rows.reduce((acc, r) => acc + (r.impressions ?? 0), 0);
 }
 
 /** Map a non-OK API result into a friendly per-site note. */
@@ -288,8 +426,9 @@ async function resolveWorkingProperty(
   accessToken: string,
   site: BrandSite,
   window: { startDate: string; endDate: string },
+  run: SeoRun,
 ): Promise<
-  | { siteUrl: string; rows: SearchAnalyticsRow[] }
+  | { siteUrl: string; rows: SearchAnalyticsRow[]; aggregationType: string }
   | { error: string; status: number }
 > {
   let lastError: { error: string; status: number } = {
@@ -300,11 +439,13 @@ async function resolveWorkingProperty(
     const res = await querySearchAnalytics(accessToken, candidate, {
       startDate: window.startDate,
       endDate: window.endDate,
-      dimensions: ['query'],
-      rowLimit: ROW_LIMIT,
-    });
+      dimensions: [],
+      aggregationType: 'byProperty',
+      dataState: 'final',
+      rowLimit: 1,
+    }, run);
     if (!('error' in res)) {
-      return { siteUrl: candidate, rows: res.rows };
+      return { siteUrl: candidate, rows: res.rows, aggregationType: res.aggregationType };
     }
     lastError = res;
     // 403 (no access) / 404 (not found) → try the other variant. Any other
@@ -314,95 +455,124 @@ async function resolveWorkingProperty(
   return lastError;
 }
 
-/** Build the full report for one site. */
+/** Detail rows are bounded evidence, never additive property totals. */
+async function queryDetails(token: string, siteUrl: string, dates: { startDate: string; endDate: string }, dimension: 'query' | 'page', run: SeoRun) {
+  const rows: SearchAnalyticsRow[] = [];
+  const seen = new Set<string>();
+  let aggregationType: string | null = null;
+  for (let startRow = 0; startRow < MAX_DETAIL_ROWS; startRow += ROW_LIMIT) {
+    const result = await querySearchAnalytics(token, siteUrl, {
+      startDate: dates.startDate, endDate: dates.endDate,
+      dimensions: [dimension], aggregationType: dimension === 'page' ? 'auto' : 'byProperty',
+      dataState: 'final', rowLimit: ROW_LIMIT, startRow,
+    }, run);
+    if ('error' in result) return { rows, truncated: false, aggregationType, error: result };
+    if (aggregationType !== null && aggregationType !== result.aggregationType) return { rows, truncated: false, aggregationType, error: { error: 'aggregation_changed', status: 502 } };
+    aggregationType = result.aggregationType;
+    for (const row of result.rows) {
+      const key = row.keys![0];
+      if (seen.has(key)) return { rows, truncated: false, aggregationType, error: { error: 'invalid_response', status: 502 } };
+      seen.add(key);
+      rows.push(row);
+    }
+    if (result.rows.length < ROW_LIMIT) return { rows, truncated: false, aggregationType };
+  }
+  return { rows, truncated: true, aggregationType };
+}
+
+function emptyReport(slug: string, shortName = slug.toUpperCase(), siteUrl = ''): BrandReport {
+  return { slug, shortName, siteUrl, totals: null, topQueries: [], topPages: [], page2Opportunities: [],
+    notes: [], status: 'unavailable', errors: [], coverage: {}, aggregationTypes: {}, changes: {} };
+}
+
+/** Resolve candidates sequentially, then fetch independent sources concurrently. */
 async function buildBrandReport(
   accessToken: string,
   site: BrandSite,
   window: { startDate: string; endDate: string; prevStartDate: string; prevEndDate: string },
+  run: SeoRun,
 ): Promise<BrandReport> {
-  const report: BrandReport = {
-    slug: site.slug,
-    shortName: site.shortName,
-    siteUrl: site.siteUrl,
-    totals: null,
-    topQueries: [],
-    topPages: [],
-    page2Opportunities: [],
-    notes: [],
+  const report = emptyReport(site.slug, site.shortName, site.siteUrl);
+  const fail = (source: string, error: { error: string; status: number }) => {
+    report.errors.push({ source, kind: error.error, status: error.status });
+    report.notes.push(noteForApiError(site.shortName, error.status, error.error));
   };
-
-  // Resolve which property variant works, and reuse it for all later queries.
-  const resolved = await resolveWorkingProperty(accessToken, site, window);
-  if ('error' in resolved) {
-    report.notes.push(noteForApiError(site.shortName, resolved.status, resolved.error));
-    return report;
-  }
-  const resolvedUrl = resolved.siteUrl;
-  report.siteUrl = resolvedUrl;
-  const queryRes = { rows: resolved.rows };
-
-  // Previous-window queries (for week-over-week click delta).
-  const prevRes = await querySearchAnalytics(accessToken, resolvedUrl, {
-    startDate: window.prevStartDate,
-    endDate: window.prevEndDate,
-    dimensions: ['query'],
-    rowLimit: ROW_LIMIT,
-  });
-
-  // Current-window pages.
-  const pageRes = await querySearchAnalytics(accessToken, resolvedUrl, {
-    startDate: window.startDate,
-    endDate: window.endDate,
-    dimensions: ['page'],
-    rowLimit: ROW_LIMIT,
-  });
-
-  const queryRows = queryRes.rows;
-  if (queryRows.length === 0) {
-    report.notes.push(
-      `${site.shortName}: no Search Console data yet for ${window.startDate}–${window.endDate} (property may be new — check back in a couple of weeks).`,
-    );
+  const current = await resolveWorkingProperty(accessToken, site, window, run);
+  if ('error' in current) { fail('totals.current', current); return report; }
+  report.siteUrl = current.siteUrl;
+  report.aggregationTypes['totals.current'] = current.aggregationType;
+  const previousDates = { startDate: window.prevStartDate, endDate: window.prevEndDate };
+  const previousWork = querySearchAnalytics(accessToken, report.siteUrl, {
+    ...previousDates, dimensions: [], aggregationType: 'byProperty', dataState: 'final', rowLimit: 1,
+  }, run);
+  const detailWork = (['query', 'page'] as const).map(dimension => Promise.all([
+    queryDetails(accessToken, report.siteUrl, window, dimension, run),
+    queryDetails(accessToken, report.siteUrl, previousDates, dimension, run),
+  ]));
+  const previous = await previousWork;
+  if ('error' in previous) fail('totals.previous', previous);
+  else report.aggregationTypes['totals.previous'] = previous.aggregationType;
+  const total = current.rows[0];
+  const prior = 'error' in previous ? undefined : previous.rows[0];
+  report.status = total ? 'available' : 'no_data';
+  if (total) {
     report.totals = {
-      clicks: 0,
-      impressions: 0,
-      clicksPrev: 'error' in prevRes ? 0 : Math.round(sumClicks(prevRes.rows)),
-      clicksDeltaPct: null,
+      clicks: total.clicks, impressions: total.impressions, ctr: total.ctr * 100, position: total.position,
+      clicksPrev: prior?.clicks ?? null, impressionsPrev: prior?.impressions ?? null,
+      clicksDeltaPct: prior && prior.clicks > 0 ? Number(((total.clicks - prior.clicks) / prior.clicks * 100).toFixed(1)) : null,
     };
-    return report;
+  } else report.notes.push('No finalized property data for the current period; this is not an observed zero.');
+  if (!prior && !('error' in previous)) report.notes.push('No finalized property data for the previous period.');
+  report.notes.push('Query and page rows are separate top-row evidence, not additive property totals. Coverage.complete means pagination finished, not exhaustive search coverage. At most 1000 rows per dimension/period are fetched; displayed lists are top subsets. Omitted/anonymized rows cannot be recovered by pagination. Changes compare only keys observed in both exact periods, not missing keys as zero. No query-to-page mapping is measured.');
+  for (const dimension of ['query', 'page'] as const) {
+    const [now, before] = await detailWork[dimension === 'query' ? 0 : 1];
+    for (const [period, result] of [['current', now], ['previous', before]] as const) {
+      const source = `${dimension}.${period}`;
+      report.coverage[source] = { rows: result.rows.length, truncated: result.truncated, complete: !result.error && !result.truncated };
+      if (result.aggregationType !== null) report.aggregationTypes[source] = result.aggregationType;
+      if (result.error) fail(source, result.error);
+    }
+    const sorted = [...now.rows].sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions || (a.keys![0] < b.keys![0] ? -1 : 1));
+    if (dimension === 'query') {
+      report.topQueries = sorted.slice(0, 5).map(toQueryStat);
+      report.page2Opportunities = sorted.filter(r => r.position >= 11 && r.position <= 20)
+        .sort((a, b) => b.impressions - a.impressions || b.clicks - a.clicks || (a.keys![0] < b.keys![0] ? -1 : 1)).slice(0, 10).map(toQueryStat);
+    } else report.topPages = sorted.slice(0, 5).map(toPageStat);
+    // Missing detail keys are unknown, NOT zero: compare only observed pairs.
+    const priorByKey = new Map(before.rows.map(r => [r.keys![0], r]));
+    const changes = now.rows.flatMap(r => {
+      const p = priorByKey.get(r.keys![0]);
+      return p ? [{ key: r.keys![0], clicks: r.clicks, clicksPrev: p.clicks, clicksDelta: r.clicks - p.clicks }] : [];
+    });
+    for (const direction of ['rising', 'falling'] as const) {
+      report.changes[`${dimension}.${direction}`] = changes.filter(r => direction === 'rising' ? r.clicksDelta > 0 : r.clicksDelta < 0)
+        .sort((a, b) => (direction === 'rising' ? b.clicksDelta - a.clicksDelta : a.clicksDelta - b.clicksDelta) || (a.key < b.key ? -1 : 1)).slice(0, 5);
+    }
   }
-
-  const clicks = Math.round(sumClicks(queryRows));
-  const impressions = Math.round(sumImpressions(queryRows));
-  const clicksPrev = 'error' in prevRes ? 0 : Math.round(sumClicks(prevRes.rows));
-  const clicksDeltaPct =
-    clicksPrev > 0 ? Number((((clicks - clicksPrev) / clicksPrev) * 100).toFixed(1)) : null;
-
-  report.totals = { clicks, impressions, clicksPrev, clicksDeltaPct };
-  report.topQueries = queryRows.slice(0, 5).map(toQueryStat);
-
-  // Page-2 opportunities: position 11–20, sorted by impressions desc (highest
-  // potential to pull onto page 1 with a small content/title tweak).
-  report.page2Opportunities = queryRows
-    .map(toQueryStat)
-    .filter((q) => q.position >= 11 && q.position <= 20)
-    .sort((a, b) => b.impressions - a.impressions)
-    .slice(0, 10);
-
-  if ('error' in pageRes) {
-    report.notes.push(
-      `${site.shortName}: top-pages query failed (${pageRes.status}); query data is still above.`,
-    );
-  } else {
-    report.topPages = pageRes.rows.slice(0, 5).map(toPageStat);
-  }
-
+  if (report.errors.length) report.status = 'partial';
   return report;
 }
 
-export async function fetchSeoData(input: FetchSeoDataInput): Promise<FetchSeoDataResult> {
-  const days = Number.isFinite(input?.days) && (input?.days as number) > 0
-    ? Math.floor(input!.days as number)
-    : DEFAULT_DAYS;
+export async function fetchSeoData(input: FetchSeoDataInput, options: SeoFetchOptions = {}): Promise<FetchSeoDataResult> {
+  const run = new SeoRun(options);
+  try {
+    run.check();
+    const result = await fetchSeoDataRun(input, run);
+    // Cancellation can arrive between the inner result and this continuation.
+    const finalized = run.signal.aborted ? { ...result, ok: false, status: run.signal.reason } : result;
+    return { ...finalized, definitionVersion: SEO_REPORT_VERSION, actions: computeSeoReportActions(finalized) };
+  }
+  catch { return { ok: false, status: run.signal.aborted ? run.signal.reason : 'error', message: 'SEO fetch did not complete.' }; }
+  finally { run.dispose(); }
+}
+async function fetchSeoDataRun(input: FetchSeoDataInput, run: SeoRun): Promise<FetchSeoDataResult> {
+  if (!input || typeof input !== 'object' || Array.isArray(input) ||
+      Object.keys(input).some(key => !['brandSlug', 'days'].includes(key)) ||
+      (input.brandSlug !== undefined && !['all', ...ALL_BRAND_SLUGS].includes(input.brandSlug)) ||
+      (input.days !== undefined && (!Number.isInteger(input.days) || input.days < 1 || input.days > 365))) {
+    return { ok: false, status: 'error', message: 'Invalid input: use a known brand and an integer days value from 1 to 365.' };
+  }
+  const days = input.days ?? DEFAULT_DAYS;
 
   // Resolve which brands to report on.
   const requested =
@@ -412,11 +582,16 @@ export async function fetchSeoData(input: FetchSeoDataInput): Promise<FetchSeoDa
 
   const sites: BrandSite[] = [];
   const skippedNotes: string[] = [];
+  const missing: BrandReport[] = [];
   for (const slug of requested) {
     const site = readBrandSite(slug);
     if (site) {
       sites.push(site);
     } else {
+      const report = emptyReport(slug);
+      report.errors.push({ source: 'profile', kind: 'missing_or_invalid_property', status: 0 });
+      report.notes.push('Profile missing or invalid; property data unavailable.');
+      missing.push(report);
       skippedNotes.push(`Could not read a site URL for brand "${slug}" — profile missing or malformed.`);
     }
   }
@@ -425,6 +600,7 @@ export async function fetchSeoData(input: FetchSeoDataInput): Promise<FetchSeoDa
     return {
       ok: false,
       status: 'no_brands',
+      brands: missing,
       message:
         'No brand sites could be resolved. ' + skippedNotes.join(' '),
     };
@@ -442,9 +618,9 @@ export async function fetchSeoData(input: FetchSeoDataInput): Promise<FetchSeoDa
 
   let accessToken: string | null = null;
   if (acosHasScope) {
-    accessToken = await GoogleOAuth.getAccessToken();
+    accessToken = await run.token(() => GoogleOAuth.getAccessToken());
   } else if (floTokenExists() && floHasSearchConsoleScope()) {
-    accessToken = await getFloAccessToken();
+    accessToken = await run.token(() => getFloAccessToken());
   }
 
   if (!accessToken) {
@@ -473,7 +649,10 @@ export async function fetchSeoData(input: FetchSeoDataInput): Promise<FetchSeoDa
   // Compute the two comparison windows. Search Console lags a few days, so the
   // window ends DATA_LAG_DAYS ago. The previous window is the equally-sized
   // block immediately before it (week-over-week / period-over-period).
-  const end = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const part = (name: string) => parts.find(p => p.type === name)!.value;
+  // Calendar arithmetic on a UTC surrogate avoids both local-zone and DST drift.
+  const end = new Date(`${part('year')}-${part('month')}-${part('day')}T00:00:00Z`);
   end.setUTCDate(end.getUTCDate() - DATA_LAG_DAYS);
   const start = new Date(end);
   start.setUTCDate(start.getUTCDate() - (days - 1));
@@ -489,20 +668,19 @@ export async function fetchSeoData(input: FetchSeoDataInput): Promise<FetchSeoDa
     prevEndDate: isoDate(prevEnd),
   };
 
-  const brands: BrandReport[] = [];
-  for (const site of sites) {
-    const report = await buildBrandReport(accessToken, site, window);
-    brands.push(report);
-  }
+  const brands: BrandReport[] = [...missing, ...await Promise.all(sites.map(site => buildBrandReport(accessToken, site, window, run)))];
 
   // Attach any profile-resolution notes to the first brand so nothing is lost.
   if (skippedNotes.length > 0 && brands.length > 0) {
     brands[0].notes.push(...skippedNotes);
   }
 
+  brands.sort((a, b) => requested.indexOf(a.slug as typeof requested[number]) - requested.indexOf(b.slug as typeof requested[number]));
   return {
-    ok: true,
-    window: { startDate: window.startDate, endDate: window.endDate, days },
+    ok: !run.signal.aborted && brands.some(b => b.status !== 'unavailable'),
+    status: run.signal.aborted ? run.signal.reason : brands.every(b => b.status === 'unavailable') ? (brands.some(b => b.errors.some(e => e.kind === 'timed_out')) ? 'timed_out' : 'all_failed') : brands.some(b => b.status === 'partial' || b.status === 'unavailable') ? 'partial' : undefined,
+    message: brands.every(b => b.status === 'unavailable') ? 'SEO data unavailable for every requested property.' : undefined,
+    window: { ...window, days, timeZone: 'America/Los_Angeles', dataState: 'final', cutoffDays: DATA_LAG_DAYS },
     brands,
   };
 }
@@ -514,6 +692,7 @@ export function getFetchSeoDataToolDefinition() {
       "Pull real Google Search Console search-analytics data (read-only) for Brett's brand sites — PMMA, TSAI, and brettlechtenberg.com — and return clean JSON: total clicks & impressions with week-over-week delta, top queries, top pages, and page-2 opportunities (queries ranking position 11–20, the best near-wins). Use this to write the weekly SEO report. It NEVER changes Google or the live sites. If Google isn't connected or the Search Console permission hasn't been granted, it returns ok:false with a `status` and a `message` you should relay to Brett (tell him to approve the permission in Settings → Connections). New properties may legitimately have no data yet — surfaced per-site in `notes`. After calling, summarize each site in plain English and end with a prioritized cross-site to-do list.",
     input_schema: {
       type: 'object' as const,
+      additionalProperties: false,
       properties: {
         brandSlug: {
           type: 'string',
@@ -522,7 +701,9 @@ export function getFetchSeoDataToolDefinition() {
             "Which brand to pull. 'pmma' = Personal Mastery Martial Arts, 'tsai' = Total Success AI, 'brett' = brettlechtenberg.com, 'all' = all three (default).",
         },
         days: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
+          maximum: 365,
           description:
             'Size of the reporting window in days (default 28). The previous equally-sized window is used for the week-over-week delta.',
         },
@@ -532,7 +713,7 @@ export function getFetchSeoDataToolDefinition() {
   };
 }
 
-export async function handleFetchSeoDataTool(input: unknown): Promise<string> {
-  const result = await fetchSeoData((input as FetchSeoDataInput) ?? {});
+export async function handleFetchSeoDataTool(input: unknown, options: SeoFetchOptions = {}): Promise<string> {
+  const result = await fetchSeoData((input as FetchSeoDataInput) ?? {}, options);
   return JSON.stringify(result);
 }

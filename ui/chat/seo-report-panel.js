@@ -10,34 +10,15 @@
  * message when something isn't connected, so there's nothing for a checklist to
  * babysit. This keeps the button dead simple.
  *
- * The kickoff prompt is kept in sync with the weekly cron prompt in
- * src/main/seo-crons.ts (WEEKLY_REPORT_PROMPT) so the manual button and the
- * Monday automation produce the same report.
+ * Trusted read-only IPC loads the same versioned backend kickoff used by new
+ * scheduled reports. Reports stay in chat; site changes remain local drafts.
  */
 
 // ---- Module state ----
 
 let _seoNotyf = null;
 
-// ---- The kickoff prompt — mirrors src/main/seo-crons.ts WEEKLY_REPORT_PROMPT ----
-
-const _SEO_KICKOFF_PROMPT = [
-  "It's the weekly SEO review for my three sites (PMMA, TSAI, brettlechtenberg.com).",
-  '',
-  'Call the `fetch_seo_data` tool with brandSlug "all" and days 28.',
-  '',
-  'If the tool returns ok:false, do NOT invent data. Relay its `message` to me plainly — for example, if Google or the Search Console permission isn\u2019t connected yet, tell me exactly what to do to fix it. Then stop.',
-  '',
-  'If the tool returns ok:true, write a tight, plain-English report. For EACH brand:',
-  '- One line on total clicks vs the previous 28 days (use clicksDeltaPct; say "no prior data" if null).',
-  '- The top 2\u20133 queries actually driving clicks.',
-  '- The top 3 "page-2 opportunities" (queries ranking position 11\u201320) \u2014 these are the best near-wins; for each, suggest the concrete tweak (strengthen the page targeting that query, improve the title/H1, add a section answering it).',
-  '- Surface any per-site `notes` (e.g. "no data yet" for a new property) honestly.',
-  '',
-  'Then end with a single prioritized, cross-site TO-DO LIST FOR THIS WEEK \u2014 at most 5 items, ordered by impact, each naming the site and the specific action.',
-  '',
-  'Keep it skimmable on a phone.',
-].join('\n');
+// The backend owns the kickoff definition; no renderer prompt copy.
 
 // ---- Toast ----
 
@@ -79,6 +60,8 @@ async function startSeoReport() {
   if (window._sidebarExitPanelMode) window._sidebarExitPanelMode();
 
   try {
+    const definition = await window.pocketAgent.seoReport.getDefinition({ brandSlug: 'all', days: 28 });
+    if (!definition?.prompt || !definition?.version) throw new Error('SEO report definition unavailable. Please restart the app.');
     // Find or create the "SEO Report" session.
     let sessionId = null;
     try {
@@ -116,7 +99,7 @@ async function startSeoReport() {
     await new Promise((resolve) => setTimeout(resolve, 0));
     const messageInput = document.getElementById('message-input');
     if (messageInput) {
-      messageInput.value = _SEO_KICKOFF_PROMPT;
+      messageInput.value = definition.prompt;
     }
     if (typeof sendMessage === 'function') {
       await sendMessage();

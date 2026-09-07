@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="chat/routines-panel.css">
   <link rel="stylesheet" href="chat/content-writer-panel.css">
   <link rel="stylesheet" href="chat/video-studio-panel.css">
+  <link rel="stylesheet" href="chat/budget-panel.css">
   <link rel="stylesheet" href="chat/hook-lab-panel.css">
   <link rel="stylesheet" href="chat/connect-tools-panel.css">
   <link rel="stylesheet" href="chat/personalize-panel.css">
@@ -108,6 +109,10 @@
         <!-- Fishhook — represents scroll-stopping hooks. -->
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 4v7a5 5 0 0 1-10 0V9"/><circle cx="17" cy="3" r="1"/><path d="M5 9l2-2 2 2"/></svg>
         <span class="sidebar-btn-label">Hook Lab</span>
+      </button>
+      <button class="sidebar-btn" id="sidebar-budget-btn" title="Budget &amp; Books">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2m4 0h2M8 15h2m4 0h2M8 18h8"/></svg>
+        <span class="sidebar-btn-label">Budget &amp; Books</span>
       </button>
       <button class="sidebar-btn" id="sidebar-connect-tools-btn" title="Connect Tools">
         <!-- Plug/socket icon — represents wiring up integrations. -->
@@ -1477,6 +1482,43 @@
   </div><!-- #content-writer-view -->
 
   <!-- Video Studio View -->
+  <section id="budget-view" aria-labelledby="budget-title">
+    <div class="budget-rail">
+      <header class="budget-header">
+        <h1 id="budget-title" tabindex="-1">Budget &amp; Books</h1>
+        <div class="budget-actions">
+          <button class="budget-button" id="budget-refresh" type="button">Refresh / retry</button>
+          <button class="budget-button" id="budget-stop" type="button" data-budget-cancel>Cancel pending action</button>
+          <button class="budget-button" id="budget-back" type="button" data-budget-cancel>Back to chat</button>
+        </div>
+      </header>
+      <p>Local accounting preparation, not audited statements or tax advice. No bank login or money movement.</p>
+      <div class="budget-scope">
+        <div><label for="budget-entity">Ledger / entity</label><select id="budget-entity"></select></div>
+        <div><label for="budget-currency">Currency (never combined)</label><select id="budget-currency"></select></div>
+        <div><label for="budget-year">Calendar year</label><input id="budget-year" type="number" min="1900" max="2200" step="1"></div>
+      </div>
+      <nav id="budget-nav" aria-label="Budget sections">
+        <button class="budget-button" type="button" data-budget-tab="overview" aria-pressed="true">Overview</button>
+        <button class="budget-button" type="button" data-budget-tab="transactions" aria-pressed="false">Transactions</button>
+        <button class="budget-primary" type="button" data-budget-tab="import" aria-pressed="false">Import CSV</button>
+        <button class="budget-button" type="button" data-budget-tab="plan" aria-pressed="false">Plan &amp; setup</button>
+      </nav>
+      <p id="budget-status" role="status">Local ledger. Nothing is sent automatically.</p>
+      <p id="budget-error" role="alert" hidden></p>
+      <p id="budget-warning" role="alert" hidden></p>
+      <p id="budget-notice" role="status"></p>
+      <div id="budget-body"></div>
+      <div class="budget-actions">
+        <button class="budget-button" id="budget-backup" type="button">Create local backup</button>
+        <button class="budget-button" id="budget-export" type="button" disabled>Export accountant packet</button>
+        <button class="budget-button" id="budget-analyze" type="button" disabled>Analyze with AI (review aggregate first)</button>
+      </div>
+      <p>AI is optional: only an explicitly approved redacted aggregate goes to the selected provider. Charges and provider retention apply. Raw transactions, receipts and identifiers stay out of that request.</p>
+      <div id="budget-ai-result"></div>
+    </div>
+  </section>
+
   <div id="video-studio-view">
     <div class="vs-header">
       <h1><span>Video Studio</span></h1>
@@ -1485,13 +1527,16 @@
       </div>
     </div>
     <div class="vs-container">
-      <p class="vs-intro">Design, build, and render a branded video — then I drop the MP4 on your Desktop.</p>
+      <p class="vs-intro">Plan a branded video, review its preview, then render a local draft.</p>
+      <ol class="workflow-orbit" role="list" aria-label="Video review sequence">
+        <li>1. Plan</li><li>2. Preview</li><li>3. Local render</li>
+      </ol>
 
       <!-- Card 1: Workspace -->
       <section class="vs-card" data-card="workspace">
         <header class="vs-card-header">
           <div class="vs-card-title">
-            <span class="vs-card-badge" id="vs-badge-workspace">⋯</span>
+            <span class="vs-card-badge" id="vs-badge-workspace" aria-hidden="true">...</span>
             <h2>Video workspace</h2>
             <span class="vs-card-status" id="vs-status-workspace">Prepared automatically on first run</span>
           </div>
@@ -1505,7 +1550,7 @@
       <section class="vs-card" data-card="brand">
         <header class="vs-card-header">
           <div class="vs-card-title">
-            <span class="vs-card-badge" id="vs-badge-brand">⚠</span>
+            <span class="vs-card-badge" id="vs-badge-brand" aria-hidden="true">!</span>
             <h2>Brand</h2>
             <span class="vs-card-status" id="vs-status-brand">Which brand is this video for?</span>
           </div>
@@ -1523,25 +1568,25 @@
       <section class="vs-card" data-card="aspect" data-state="ok">
         <header class="vs-card-header">
           <div class="vs-card-title">
-            <span class="vs-card-badge" id="vs-badge-aspect">✓</span>
+            <span class="vs-card-badge" id="vs-badge-aspect" aria-hidden="true">OK</span>
             <h2>Aspect ratio</h2>
             <span class="vs-card-status">Where will you post it?</span>
           </div>
         </header>
         <div class="vs-card-body" id="vs-body-aspect">
-          <div class="vs-aspect-group" id="vs-aspect-group">
-            <div class="vs-aspect-option" data-aspect="9:16" onclick="playNormalClick(); _vsPickAspect('9:16')">
-              <span class="vs-aspect-thumb"><i class="r916"></i></span>
+          <div class="vs-aspect-group" id="vs-aspect-group" role="group" aria-label="Video aspect ratio">
+            <button type="button" class="vs-aspect-option" data-aspect="9:16" aria-pressed="true" onclick="playNormalClick(); _vsPickAspect('9:16')">
+              <span class="vs-aspect-thumb" aria-hidden="true"><i class="r916"></i></span>
               <span class="vs-aspect-text"><strong>9:16</strong><small>Reels / TikTok / Shorts · 1080×1920</small></span>
-            </div>
-            <div class="vs-aspect-option" data-aspect="16:9" onclick="playNormalClick(); _vsPickAspect('16:9')">
-              <span class="vs-aspect-thumb"><i class="r169"></i></span>
+            </button>
+            <button type="button" class="vs-aspect-option" data-aspect="16:9" aria-pressed="false" onclick="playNormalClick(); _vsPickAspect('16:9')">
+              <span class="vs-aspect-thumb" aria-hidden="true"><i class="r169"></i></span>
               <span class="vs-aspect-text"><strong>16:9</strong><small>YouTube / web · 1920×1080</small></span>
-            </div>
-            <div class="vs-aspect-option" data-aspect="1:1" onclick="playNormalClick(); _vsPickAspect('1:1')">
-              <span class="vs-aspect-thumb"><i class="r11"></i></span>
+            </button>
+            <button type="button" class="vs-aspect-option" data-aspect="1:1" aria-pressed="false" onclick="playNormalClick(); _vsPickAspect('1:1')">
+              <span class="vs-aspect-thumb" aria-hidden="true"><i class="r11"></i></span>
               <span class="vs-aspect-text"><strong>1:1</strong><small>Feed posts · 1080×1080</small></span>
-            </div>
+            </button>
           </div>
         </div>
       </section>
@@ -1550,11 +1595,11 @@
       <section class="vs-card" data-card="openai">
         <header class="vs-card-header">
           <div class="vs-card-title">
-            <span class="vs-card-badge" id="vs-badge-openai">⚠</span>
+            <span class="vs-card-badge" id="vs-badge-openai" aria-hidden="true">!</span>
             <h2>OpenAI key <small style="font-weight:400;color:var(--text-muted)">(optional)</small></h2>
             <span class="vs-card-status" id="vs-status-openai">Enables AI background/still images</span>
           </div>
-          <button class="vs-card-toggle" id="vs-toggle-openai" onclick="playNormalClick(); _vsToggleOpenAI()">Add key →</button>
+          <button class="vs-card-toggle" id="vs-toggle-openai" aria-expanded="false" aria-controls="vs-body-openai" onclick="playNormalClick(); _vsToggleOpenAI()">Add key →</button>
         </header>
         <div class="vs-card-body" id="vs-body-openai">
           <ol class="vs-steps">
@@ -1569,14 +1614,15 @@
           </div>
           <div class="vs-form-actions">
             <button class="vs-primary-btn" id="vs-save-openai" onclick="playNormalClick(); _vsSaveOpenAI()">Save &amp; Test</button>
-            <span class="vs-form-message" id="vs-msg-openai"></span>
+            <span class="vs-form-message" id="vs-msg-openai" role="status"></span>
           </div>
         </div>
       </section>
 
+      <section class="vs-card"><header class="vs-card-header"><div class="vs-card-title"><h2>Hook Lab selection review</h2></div></header><div class="vs-card-body"><pre id="vs-hook-review" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><p class="vs-hint">Local draft only. This handoff starts no storyboard or render and grants no publication approval.</p><button class="vs-card-toggle" id="vs-clear-hook" onclick="_vsClearHookDraft()" disabled>Clear pending Hook Lab draft</button></div></section>
       <div class="vs-actions">
-        <button class="vs-start-btn" id="vs-start-btn" onclick="playNormalClick(); startVideoStudio()" disabled>▶ Create a Video</button>
-        <p class="vs-actions-hint" id="vs-actions-hint">Pick a brand to unlock.</p>
+        <button class="vs-start-btn" id="vs-start-btn" onclick="playNormalClick(); startVideoStudio()" disabled>Plan a Video</button>
+        <p class="vs-actions-hint" id="vs-actions-hint" role="status">Pick a brand to unlock.</p>
       </div>
     </div>
   </div><!-- #video-studio-view -->
@@ -1590,41 +1636,36 @@
       </div>
     </div>
     <div class="hl-container">
-      <p class="hl-intro">Turn any video idea into a complete hook system — best format, 5 options for every hook element, a score, a 15–30s script, and CTAs.</p>
+      <p class="hl-intro">Build a five-element hook with Full Lab, Quick Pass or a targeted rewrite. Review editorial guidance before saving your draft.</p>
 
       <!-- Card 1: Your idea -->
       <section class="hl-card" data-card="idea">
         <header class="hl-card-header">
           <div class="hl-card-title">
-            <h2>What’s your video about?</h2>
+            <h2 id="hl-idea-title">What’s your video about?</h2>
             <span class="hl-card-status">Idea, offer, topic, event — or paste an existing hook to rewrite</span>
           </div>
         </header>
         <div class="hl-card-body">
           <div class="hl-form-row">
-            <textarea id="hl-idea-input" placeholder="e.g. Promote my free 30-min AI workshop for local business owners&#10;— or —&#10;Rewrite this hook: 'Today I want to talk about AI'" oninput="_hlOnIdeaInput()"></textarea>
+            <textarea id="hl-idea-input" aria-labelledby="hl-idea-title" maxlength="4000" placeholder="e.g. Promote my free 30-min AI workshop for local business owners&#10;— or —&#10;Rewrite this hook: 'Today I want to talk about AI'" oninput="_hlOnIdeaInput()"></textarea>
           </div>
         </div>
       </section>
 
       <!-- Card 2: Goal (optional) -->
-      <section class="hl-card" data-card="goal">
-        <header class="hl-card-header">
-          <div class="hl-card-title">
-            <h2>Goal <small style="font-weight:400;color:var(--text-muted)">(optional)</small></h2>
-            <span class="hl-card-status">Pick one to steer the format — or let me infer it</span>
-          </div>
-        </header>
+      <details class="hl-card" data-card="goal">
+        <summary class="hl-card-header">Goal (optional): <span id="hl-goal-summary">Let Hook Lab infer</span></summary>
         <div class="hl-card-body">
           <div class="hl-chips" id="hl-goal-chips"></div>
         </div>
-      </section>
+      </details>
 
       <!-- Card 3: Brand (optional) -->
       <section class="hl-card" data-card="brand">
         <header class="hl-card-header">
           <div class="hl-card-title">
-            <h2>Brand voice <small style="font-weight:400;color:var(--text-muted)">(optional)</small></h2>
+            <h2>Brand voice <small style="font-weight:400;color:var(--text-secondary)">(optional)</small></h2>
             <span class="hl-card-status">Tailor hooks to a brand’s voice + audience</span>
           </div>
         </header>
@@ -1637,10 +1678,46 @@
         </div>
       </section>
 
+      <section class="hl-card">
+        <header class="hl-card-header"><div class="hl-card-title"><h2>Build mode</h2></div></header>
+        <div class="hl-card-body">
+          <div class="hl-form-row"><label for="hl-mode">Mode</label><select id="hl-mode" class="hl-brand-picker" onchange="_hlOnModeChange()"><option value="full">Full Lab: 5 options × 5 elements (default)</option><option value="quick">Quick Pass: one complete combination</option><option value="rewrite">Targeted rewrite: one element only</option></select></div>
+          <div class="hl-form-row"><label for="hl-duration">Duration (seconds, 1–180)</label><input id="hl-duration" class="hl-brand-picker" type="number" min="1" max="180" step="1" value="30"></div>
+          <details>
+            <summary>Optional audience, offer and evidence</summary>
+            <div class="hl-form-row"><label for="hl-platform">Platform</label><input id="hl-platform" class="hl-brand-picker" maxlength="100"></div>
+            <div class="hl-form-row"><label for="hl-audience">Audience</label><textarea id="hl-audience" rows="2" maxlength="500"></textarea></div>
+            <div class="hl-form-row"><label for="hl-offer">Offer</label><textarea id="hl-offer" rows="2" maxlength="1000"></textarea></div>
+            <div class="hl-form-row"><label for="hl-evidence">Brand evidence / source links (not fetched automatically)</label><textarea id="hl-evidence" rows="3" maxlength="4000"></textarea></div>
+            <label><input type="checkbox" id="hl-ab"> Optional A/B suggestion labels (not performance predictions)</label>
+          </details>
+        </div>
+      </section>
       <div class="hl-actions">
-        <button class="hl-start-btn" id="hl-start-btn" onclick="playNormalClick(); startHookLab()" disabled>▶ Build My Hooks</button>
+        <button class="hl-start-btn" id="hl-start-btn" onclick="playNormalClick(); startHookLab()" disabled>Build My Hooks</button>
         <p class="hl-actions-hint" id="hl-actions-hint">Describe your video, offer, or topic to begin.</p>
       </div>
+      <details class="hl-card" id="hl-selection-details">
+        <summary class="hl-card-header">Review, rewrite and save a chosen combination</summary>
+        <div class="hl-card-body">
+          <p class="hl-hint">Paste/edit your actual chosen five elements below. Freeform chat is not automatically selected. Saving stays local; it does not publish or add your library to model context.</p>
+          <div class="hl-form-row"><label for="hl-rewrite-target">Element to rewrite (targeted mode only)</label><select id="hl-rewrite-target" class="hl-brand-picker"><option value="verbal">Verbal</option><option value="text">Text overlay</option><option value="visual">Visual</option><option value="audio">Audio</option><option value="caption">Caption</option></select></div>
+<div class="hl-form-row"><label for="hl-selected-verbal">Selected Verbal</label><textarea id="hl-selected-verbal" maxlength="2000"></textarea></div>
+<div class="hl-form-row"><label for="hl-selected-text">Selected Text overlay</label><textarea id="hl-selected-text" maxlength="2000"></textarea></div>
+<div class="hl-form-row"><label for="hl-selected-visual">Selected Visual</label><textarea id="hl-selected-visual" maxlength="2000"></textarea></div>
+<div class="hl-form-row"><label for="hl-selected-audio">Selected Audio</label><textarea id="hl-selected-audio" maxlength="2000"></textarea></div>
+<div class="hl-form-row"><label for="hl-selected-caption">Selected Caption</label><textarea id="hl-selected-caption" maxlength="2000"></textarea></div>
+<div class="hl-form-row"><label for="hl-save-name">Selection name</label><input id="hl-save-name" maxlength="100" class="hl-brand-picker" placeholder="Untitled"></div>
+<button class="hl-chip" onclick="_hlSaveCurrent()">Save current combination</button>
+<button class="hl-chip" onclick="_hlCheckSelection()">Check selected combination</button>
+<p id="hl-selection-advisory" class="hl-hint" role="status"></p>
+<button class="hl-chip" onclick="_hlHandoff()">Use current combination in Video Studio</button>
+<button id="hl-undo-removal" class="hl-chip" onclick="_hlUndoRemoval()" disabled>Undo last removal</button>
+<button id="hl-discard-undo" class="hl-chip" onclick="_hlDiscardUndo()" disabled>Discard removal undo</button>
+<p class="hl-hint">Saved selections stay local. Remove frees space; one undo is kept until this window closes or another removal replaces it.</p>
+<p id="hl-selection-status" class="hl-hint" role="status"></p><div id="hl-saved" class="hl-chips"></div>
+        </div>
+      </details>
     </div>
   </div><!-- #hook-lab-view -->
 
@@ -1719,6 +1796,8 @@
         <p class="approval-tool" id="approval-tool-name"></p>
         <span class="approval-capability" id="approval-capability"></span>
         <p class="approval-summary" id="approval-summary"></p>
+        <p>Review the exact arguments and destination before approving:</p>
+        <pre class="approval-details" id="approval-details" tabindex="0"></pre>
         <p class="approval-note">Only you can approve this request. Scheduled and remote runs are denied automatically.</p>
         <div class="approval-actions">
           <button class="approval-deny" id="approval-deny-btn" onclick="playNormalClick(); resolveToolApproval('deny')">Deny</button>
@@ -1752,6 +1831,7 @@
   <script src="chat/routines-panel.js"></script>
   <script src="chat/content-writer-panel.js"></script>
   <script src="chat/video-studio-panel.js"></script>
+  <script src="chat/budget-panel.js"></script>
   <script src="chat/hook-lab-panel.js"></script>
   <script src="chat/seo-report-panel.js"></script>
   <script src="chat/meta-ads-panel.js"></script>

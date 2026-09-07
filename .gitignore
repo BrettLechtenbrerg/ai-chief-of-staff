@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.preload-build/
 !vendor/flo-mcp-servers/shared/dist/
 !vendor/flo-mcp-servers/shared/dist/*.js
 *.js.map
@@ -9,6 +10,8 @@ dist/
 .env.production
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 .DS_Store
 
 # Config with secrets

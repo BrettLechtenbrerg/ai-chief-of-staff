@@ -6,7 +6,7 @@ import type { Buffer as NodeBuffer } from 'node:buffer';
 import { spawn } from 'child_process';
 import type { Dirent, ReadStream, Stats } from 'fs';
 import type { AgentTool } from '@kenkaiiii/gg-agent';
-import { isPathWithin, resolveExistingPathWithin } from '../utils/safe-path.js';
+import { isPathWithin } from '../utils/safe-path.js';
 import type { PolicyAwareAgentTool, ToolExecutionContext } from './tool-policy.js';
 
 const MAX_TOOL_RESULT_CHARACTERS = 50_000;
@@ -24,6 +24,7 @@ const SENSITIVE_PATH_PARTS = [
   '/library/keychains/', '/library/application support/google/chrome/',
   '/library/application support/brave/', '/library/application support/firefox/',
   '/appdata/roaming/mozilla/', '/appdata/local/google/chrome/', '/windows/system32/config/',
+  '/finance/', '/acos-local-improvement-backups/',
 ];
 const SENSITIVE_FILE_NAMES = new Set([
   '.env', '.npmrc', '.pypirc', '.netrc', 'credentials', 'credentials.json',
@@ -37,11 +38,32 @@ function expandPath(candidate: string, cwd: string): string {
 
 export function isSensitivePrivatePath(candidate: string): boolean {
   const normalized = candidate.replaceAll('\\', '/').toLowerCase();
-  const withSlashes = normalized.startsWith('/') ? normalized : `/${normalized}`;
+  const withSlashes = `/${normalized.replace(/^\/+|\/+$/g, '')}/`;
   const fileName = path.basename(normalized);
-  return SENSITIVE_PATH_PARTS.some((part) => withSlashes.includes(part)) ||
+  const appState = /\/(?:library\/application support|appdata\/roaming|\.config)\/ai-chief-of-staff\/(.*)$/.exec(withSlashes);
+  const privateAppState = appState && !/^(?:workspace|attachments)\//.test(appState[1]);
+  const financePacket = /(?:^|\/)books-\d{4}-[0-9a-f-]{36}(?:\/|$)/.test(withSlashes);
+  return Boolean(privateAppState) || financePacket || SENSITIVE_PATH_PARTS.some((part) => withSlashes.includes(part)) ||
     SENSITIVE_FILE_NAMES.has(fileName) ||
     fileName.startsWith('.env.');
+}
+
+// Resolve missing leaves through their nearest existing ancestor. lstat distinguishes
+// dangling links from absent paths; broken links and other resolution failures fail closed.
+function canonicalFilePath(candidate: string): string {
+  try {
+    fs.lstatSync(candidate);
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'ENOENT') throw error;
+    const parent = path.dirname(candidate);
+    if (parent === candidate) throw error;
+    return path.join(canonicalFilePath(parent), path.basename(candidate));
+  }
+  return fs.realpathSync(candidate);
+}
+
+function isAppDraftPath(candidate: string): boolean {
+  return /\/(?:library\/application support|appdata\/roaming|\.config)\/ai-chief-of-staff\/(?:workspace|attachments)(?:\/|$)/i.test(candidate.replaceAll('\\', '/'));
 }
 
 export function validateAgentFilePath(
@@ -55,13 +77,18 @@ export function validateAgentFilePath(
   const resolved = expandPath(candidate, cwd);
   if (isSensitivePrivatePath(resolved)) return { allowed: false, reason: 'Private credential path' };
 
-  for (const root of approvedRoots) {
-    try {
-      if (fs.existsSync(resolved) && resolveExistingPathWithin(root, resolved)) return { allowed: true };
-    } catch {
-      // Try the next approved root.
+  try {
+    const canonical = canonicalFilePath(resolved);
+    if (isSensitivePrivatePath(canonical)) return { allowed: false, reason: 'Private credential path' };
+    for (const root of approvedRoots) {
+      const approved = expandPath(root, cwd);
+      const canonicalRoot = canonicalFilePath(approved);
+      // A broad home/userData grant must not implicitly grant app draft directories.
+      if (isAppDraftPath(canonical) && !isAppDraftPath(canonicalRoot)) continue;
+      if (isPathWithin(canonicalRoot, canonical)) return { allowed: true };
     }
-    if (!fs.existsSync(resolved) && isPathWithin(root, resolved)) return { allowed: true };
+  } catch {
+    return { allowed: false, reason: 'Cannot safely resolve file path' };
   }
   return { allowed: false, reason: 'Path is outside approved workspaces and attachments' };
 }
@@ -94,13 +121,26 @@ export function guardNativeToolScope(
   tool.execute = async (args, context) => {
     const record = (args && typeof args === 'object' ? args : {}) as Record<string, unknown>;
     const pathKey = FILE_ARGUMENTS[tool.name];
-    if (pathKey && record[pathKey] !== undefined) {
+    if (pathKey) {
       const validation = validateAgentFilePath(
-        String(record[pathKey]),
+        String(record[pathKey] ?? execution.cwd),
         execution.cwd,
         execution.approvedRoots
       );
       if (!validation.allowed) return `Tool blocked: ${validation.reason}.`;
+    }
+    if (tool.name === 'find' || tool.name === 'grep') {
+      // Installed ggcoder uses fast-glob directly, bypassing operations for traversal.
+      // Fail closed before it enumerates a tree containing private/out-of-scope entries.
+      const pattern = record[tool.name === 'find' ? 'pattern' : 'include'];
+      if (typeof pattern === 'string' && (pattern.includes('..') || pattern.includes(':') || pattern.includes('\\') || /(?:^|[{},(|!])\//.test(pattern) || path.isAbsolute(pattern))) {
+        return 'Tool blocked: Search patterns must stay within the search directory.';
+      }
+      try {
+        await assertSafeSearchTree(expandPath(String(record.path ?? execution.cwd), execution.cwd), execution);
+      } catch {
+        return 'Tool blocked: Search tree contains private, linked, or inaccessible paths. Choose a narrower draft directory.';
+      }
     }
     if ((tool.name === 'bash' || tool.name === 'shell_command') && record.command !== undefined) {
       const validation = validateShellCommandScope(
@@ -113,6 +153,20 @@ export function guardNativeToolScope(
     return originalExecute(args, context);
   };
   return tool;
+}
+
+// simplification: reject mixed/private or >10k-entry trees; a policy-aware glob
+// walker can later skip unsafe entries without rejecting the whole search.
+async function assertSafeSearchTree(directory: string, execution: ToolExecutionContext, budget = { remaining: 10_000 }): Promise<void> {
+  if (--budget.remaining < 0) throw new Error('Search tree too large to validate');
+  if (!validateAgentFilePath(directory, execution.cwd, execution.approvedRoots).allowed) throw new Error('Private path');
+  const stat = await fs.promises.lstat(directory);
+  if (stat.isSymbolicLink()) throw new Error('Linked search path');
+  if (!stat.isDirectory()) return;
+  for (const entry of await fs.promises.readdir(directory, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === '.git') continue;
+    await assertSafeSearchTree(path.join(directory, entry.name), execution, budget);
+  }
 }
 
 export interface RestrictedToolOperations {
@@ -131,19 +185,31 @@ export interface RestrictedToolOperations {
   }): ChildProcess;
 }
 
-export function createRestrictedToolOperations(cwd: string): RestrictedToolOperations {
+export function createRestrictedToolOperations(
+  cwd: string,
+  approvedRoots: readonly string[] = [cwd]
+): RestrictedToolOperations {
+  const checked = (candidate: string): string => {
+    const validation = validateAgentFilePath(candidate, cwd, approvedRoots);
+    if (!validation.allowed) throw new Error(`Tool blocked: ${validation.reason}`);
+    return canonicalFilePath(expandPath(candidate, cwd));
+  };
   return {
-    readFile: (filePath) => fs.promises.readFile(filePath, 'utf8'),
+    readFile: async (filePath) => fs.promises.readFile(checked(filePath), 'utf8'),
     async writeFile(filePath, content) {
-      await fs.promises.writeFile(filePath, content, 'utf8');
+      await fs.promises.writeFile(checked(filePath), content, 'utf8');
     },
-    stat: (filePath) => fs.promises.stat(filePath),
-    lstat: (filePath) => fs.promises.lstat(filePath),
-    readdir: (directory, options) => fs.promises.readdir(directory, options),
+    stat: async (filePath) => fs.promises.stat(checked(filePath)),
+    lstat: async (filePath) => fs.promises.lstat(checked(filePath)),
+    async readdir(directory, options) {
+      const canonical = checked(directory);
+      const entries = await fs.promises.readdir(canonical, options);
+      return entries.filter((entry) => validateAgentFilePath(path.join(canonical, entry.name), cwd, approvedRoots).allowed);
+    },
     async mkdir(directory) {
-      await fs.promises.mkdir(directory, { recursive: true });
+      await fs.promises.mkdir(checked(directory), { recursive: true });
     },
-    createReadStream: (filePath, encoding) => fs.createReadStream(filePath, { encoding }),
+    createReadStream: (filePath, encoding) => fs.createReadStream(checked(filePath), { encoding }),
     spawn(command, args, options) {
       return spawn(command, args, {
         ...options,

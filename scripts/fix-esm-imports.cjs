@@ -7,6 +7,11 @@ const fs = require('fs');
 const path = require('path');
 
 const distDir = path.resolve(__dirname, '..', 'dist');
+// Type-only preload imports still emit their dependencies. Stage only the preload
+// so the CommonJS compiler cannot overwrite shared main-process ESM modules.
+for (const suffix of ['.js', '.js.map', '.d.ts', '.d.ts.map']) {
+  fs.copyFileSync(path.resolve(__dirname, '..', '.preload-build/main/preload' + suffix), path.join(distDir, 'main/preload' + suffix));
+}
 
 function walk(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });

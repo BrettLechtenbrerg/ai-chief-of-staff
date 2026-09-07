@@ -1,6 +1,8 @@
 # AI Chief of Staff
 
-> **Starting a fresh session?** Use [`RECOVERY.md`](RECOVERY.md) — it's the canonical kickoff prompt with current tags, upstream pointer, and active workstreams.
+Read CONTEXT.md before naming anything.
+
+> **Starting a fresh session?** Read [`RESUME-PROMPT.md`](RESUME-PROMPT.md), then the current handoff at the top of [`RECOVERY.md`](RECOVERY.md). Closing verification and backup receipts are in [`docs/SESSION-CLOSEOUT-2026-09-06.md`](docs/SESSION-CLOSEOUT-2026-09-06.md). Historical release instructions are not permission to publish or relaunch services.
 >
 > **Upstream's developer notes** (file/dir layout, lint rules) are preserved in [`UPSTREAM_CLAUDE.md`](UPSTREAM_CLAUDE.md).
 

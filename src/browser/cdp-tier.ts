@@ -7,6 +7,7 @@
 
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 import { BrowserAction, BrowserResult } from './types';
+import { readWebPage } from './web-read.js';
 import { getExtractionScript, getScrollScript, getVisibleTextScript } from './extract-scripts';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -335,8 +336,9 @@ export class CdpTier {
         }
       }
 
-      const title = await page.title();
-      const text = await this.getVisibleText();
+      const { title, text } = await readWebPage(() => page.url(), async () => ({
+        title: await page.title(), text: await this.getVisibleText(),
+      }));
 
       return {
         success: true,
@@ -361,10 +363,10 @@ export class CdpTier {
     try {
       const page = await this.ensurePage();
 
-      const buffer = await page.screenshot({
+      const buffer = await readWebPage(() => page.url(), () => page.screenshot({
         encoding: 'base64',
         type: 'png',
-      });
+      }));
 
       return {
         success: true,
@@ -503,7 +505,7 @@ export class CdpTier {
       const selector = action.extractSelector || 'body';
       const extractType = action.extractType || 'structured';
 
-      const result = await page.evaluate(getExtractionScript(extractType, selector));
+      const result = await readWebPage(() => page.url(), () => page.evaluate(getExtractionScript(extractType, selector)));
 
       return {
         success: true,
@@ -760,8 +762,10 @@ export class CdpTier {
       const pages = await this.browser!.pages();
       const tabs = await Promise.all(
         pages.map(async (page, index) => {
-          const url = page.url();
-          const title = await page.title().catch(() => '');
+          let metadata = { url: '', title: 'Content not exposed' };
+          try {
+            metadata = await readWebPage(() => page.url(), async () => ({ url: page.url(), title: await page.title().catch(() => '') }));
+          } catch { /* Local, changing or unavailable tabs keep only an opaque handle. */ }
           const id = `tab-${index}`;
 
           // Track pages
@@ -769,8 +773,7 @@ export class CdpTier {
 
           return {
             id,
-            url,
-            title,
+            ...metadata,
             active: page === this.page,
           };
         })
@@ -780,7 +783,7 @@ export class CdpTier {
         success: true,
         tier: 'cdp',
         tabs,
-        url: this.currentUrl,
+        url: tabs.find(tab => tab.active)?.url || undefined,
       };
     } catch (error) {
       return {

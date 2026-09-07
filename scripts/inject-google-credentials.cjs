@@ -18,8 +18,7 @@
  *     the script logs a warning and leaves the placeholders in place so the
  *     dev build still compiles. The UI's `isUsingPlaceholderCredentials()`
  *     helper will show the "setup pending" notice.
- *   - Never logs the secret. Logs only the client_id (which is non-sensitive
- *     and visible in every OAuth URL anyway) and the prefix of the secret.
+ *   - Logs completion only, never credential values or fragments.
  */
 
 'use strict';
@@ -29,9 +28,6 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const TARGET = path.join(ROOT, 'dist', 'auth', 'google-credentials.js');
-
-const PLACEHOLDER_ID = 'PLACEHOLDER_CLIENT_ID';
-const PLACEHOLDER_SECRET = 'PLACEHOLDER_CLIENT_SECRET';
 
 function loadDotenv(file) {
   if (!fs.existsSync(file)) return {};
@@ -75,12 +71,6 @@ function resolveCredentials() {
   return { id, secret };
 }
 
-function maskSecret(s) {
-  if (!s) return '(empty)';
-  if (s.length < 8) return s[0] + '…';
-  return s.slice(0, 8) + '…' + s.slice(-4);
-}
-
 function main() {
   if (!fs.existsSync(TARGET)) {
     console.error(`[inject-google-credentials] ${TARGET} not found. Did you run \`tsc\` first?`);
@@ -102,7 +92,7 @@ function main() {
   }
 
   if (!id.endsWith('.apps.googleusercontent.com')) {
-    console.error(`[inject-google-credentials] ACOS_GOOGLE_CLIENT_ID does not look like a Google client_id: ${id}`);
+    console.error('[inject-google-credentials] ACOS_GOOGLE_CLIENT_ID does not look like a Google client_id.');
     process.exit(3);
   }
   if (!secret.startsWith('GOCSPX-')) {
@@ -112,9 +102,9 @@ function main() {
 
   let js = fs.readFileSync(TARGET, 'utf8');
 
-  // The compiled `process.env.X || 'PLACEHOLDER'` reduces to a known literal
-  // pair in the JS output. Replace BOTH placeholder string literals.
-  if (!js.includes(PLACEHOLDER_ID) || !js.includes(PLACEHOLDER_SECRET)) {
+  const idLiteral = /(['"])PLACEHOLDER_CLIENT_ID\1/g;
+  const secretLiteral = /(['"])PLACEHOLDER_CLIENT_SECRET\1/g;
+  if (js.match(idLiteral)?.length !== 1 || js.match(secretLiteral)?.length !== 1) {
     console.error(
       `[inject-google-credentials] Expected placeholder literals not found in ${TARGET}. ` +
       `Either credentials were already injected, or the source was modified — aborting to avoid double-injection.`,
@@ -122,12 +112,12 @@ function main() {
     process.exit(5);
   }
 
-  js = js.split(PLACEHOLDER_ID).join(id);
-  js = js.split(PLACEHOLDER_SECRET).join(secret);
+  js = js.replace(idLiteral, () => JSON.stringify(id));
+  js = js.replace(secretLiteral, () => JSON.stringify(secret));
 
   fs.writeFileSync(TARGET, js);
 
-  console.log(`[inject-google-credentials] Injected client_id=${id} secret=${maskSecret(secret)} into dist/auth/google-credentials.js`);
+  console.log('[inject-google-credentials] OAuth credentials injected into compiled output; values omitted.');
 }
 
 main();

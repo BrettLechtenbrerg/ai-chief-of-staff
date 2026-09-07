@@ -53,6 +53,17 @@ describe('BrowserManager', () => {
     manager = new BrowserManager();
   });
 
+  it.each(['javascript:', 'JaVaScRiPt:', 'java\nscript:', 'data:', 'file:///synthetic', 'about:blank', '/relative', 'not-a-url'])(
+    'rejects non-web navigation before either tier: %s', async (url) => {
+      for (const tier of ['electron', 'cdp'] as const) {
+        const result = await manager.execute({ action: 'navigate', url, tier });
+        expect(result.success).toBe(false);
+        expect(mockElectronExecute).not.toHaveBeenCalled();
+        expect(mockCdpExecute).not.toHaveBeenCalled();
+      }
+    }
+  );
+
   describe('selectTier (via execute)', () => {
     it('defaults to electron tier when no preferences set', async () => {
       await manager.execute({ action: 'navigate', url: 'https://example.com' });
@@ -128,7 +139,7 @@ describe('BrowserManager', () => {
       expect(mockElectronExecute).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'navigate',
-          url: 'https://example.com',
+          url: 'https://example.com/',
           requiresAuth: false,
           tier: 'electron',
           waitFor: '.content',

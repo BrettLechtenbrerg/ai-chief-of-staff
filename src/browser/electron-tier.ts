@@ -7,6 +7,7 @@
 
 import { BrowserWindow, WebContents, app } from 'electron';
 import { BrowserAction, BrowserResult } from './types';
+import { readWebPage } from './web-read.js';
 import {
   getExtractionScript,
   getScrollScript,
@@ -145,12 +146,10 @@ export class ElectronTier {
         });
       }
 
-      const title = await withTimeout(
-        webContents.executeJavaScript('document.title'),
-        5000,
-        'get title'
-      );
-      const text = await withTimeout(this.getVisibleText(), 5000, 'get visible text');
+      const { title, text } = await readWebPage(() => webContents.getURL(), async () => ({
+        title: await withTimeout(webContents.executeJavaScript('document.title'), 5000, 'get title'),
+        text: await withTimeout(this.getVisibleText(), 5000, 'get visible text'),
+      }));
 
       const duration = Date.now() - startTime;
       logBrowser('navigate END', { url, duration: `${duration}ms` });
@@ -194,7 +193,7 @@ export class ElectronTier {
         };
       }
 
-      const image = await withTimeout(webContents.capturePage(), 10000, 'capturePage');
+      const image = await readWebPage(() => webContents.getURL(), () => withTimeout(webContents.capturePage(), 10000, 'capturePage'));
       const base64 = image.toPNG().toString('base64');
 
       const duration = Date.now() - startTime;
@@ -334,9 +333,9 @@ export class ElectronTier {
       const selector = action.extractSelector || 'body';
       const extractType = action.extractType || 'structured';
 
-      const result = await webContents.executeJavaScript(
+      const result = await readWebPage(() => webContents.getURL(), () => webContents.executeJavaScript(
         getExtractionScript(extractType, selector)
-      );
+      ));
 
       return {
         success: true,

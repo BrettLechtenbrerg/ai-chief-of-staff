@@ -122,6 +122,7 @@ vi.mock('@kenkaiiii/gg-agent', () => ({
 
 vi.mock('@kenkaiiii/gg-ai', () => ({
   stream: vi.fn(),
+  providerRegistry: { register: vi.fn() },
 }));
 
 vi.mock('../../src/settings', () => ({
@@ -145,7 +146,8 @@ vi.mock('../../src/config/system-guidelines', () => ({
   SYSTEM_GUIDELINES: 'Test system guidelines',
 }));
 
-vi.mock('../../src/agent/chat-providers', () => ({
+vi.mock('../../src/agent/chat-providers', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../src/agent/chat-providers')>(),
   getStreamConfig: vi.fn(async () => ({
     provider: 'anthropic',
     apiKey: 'test-key',

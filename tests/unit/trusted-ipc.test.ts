@@ -91,6 +91,9 @@ describe('trusted IPC sender validation', () => {
 
 describe('IPC page/channel policy', () => {
   it('allows only the channels each secondary page uses', () => {
+    expect(isChannelAllowedForPage('chat.html', 'seoReport:getDefinition')).toBe(true);
+    expect(isChannelAllowedForPage('cron.html', 'seoReport:getDefinition')).toBe(false);
+    expect(isChannelAllowedForPage('chat.html', 'seoReport:write')).toBe(false);
     expect(isChannelAllowedForPage('cron.html', 'cron:create')).toBe(true);
     expect(isChannelAllowedForPage('cron.html', 'settings:getAll')).toBe(false);
     expect(isChannelAllowedForPage('customize.html', 'settings:set')).toBe(true);

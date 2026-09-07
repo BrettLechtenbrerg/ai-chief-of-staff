@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { snapshotCompaction, applyCompaction, reviewAndApplyCompaction, getCompactionHistory, type CompactionSnapshot, type CompactionReviewOptions } from './compaction';
 import { hardenPrivateDatabaseFiles } from '../storage/database-backup';
 import type { AgentModeId } from '../agent/agent-modes';
 import {
@@ -897,6 +898,30 @@ export class MemoryManager {
     return _getSmartContext(this.db, sessionId, options, {
       summarizer: this.summarizer,
     });
+  }
+
+  snapshotCompaction(facts: boolean, soul: boolean): CompactionSnapshot {
+    return snapshotCompaction(this.db, facts, soul);
+  }
+
+  applyCompaction(snapshot: CompactionSnapshot, output: unknown, signal?: AbortSignal): void {
+    applyCompaction(this.db, snapshot, output, signal);
+    this.factsCache.contextCacheValid = false;
+    this.soulCache.soulContextCacheValid = false;
+  }
+
+  async reviewAndApplyCompaction(snapshot: CompactionSnapshot, output: unknown, options: CompactionReviewOptions): Promise<boolean> {
+    const applied = await reviewAndApplyCompaction(this.db, snapshot, output, options);
+    if (applied) {
+      this.factsCache.contextCacheValid = false;
+      this.soulCache.soulContextCacheValid = false;
+    }
+    return applied;
+  }
+
+  /** Private recovery data; never include in model context or logs. */
+  getCompactionHistory(id: number): ReturnType<typeof getCompactionHistory> {
+    return getCompactionHistory(this.db, id);
   }
 
   // ============ FACT METHODS ============

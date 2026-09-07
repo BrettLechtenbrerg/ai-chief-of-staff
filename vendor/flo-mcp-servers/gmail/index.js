@@ -54,7 +54,8 @@ const SearchEmailsSchema = z.object({
     include_spam_trash: z.boolean().optional(),
 });
 const ExecuteSchema = z.object({
-    proposal_ids: z.array(z.string()),
+    proposal_ids: z.array(z.string()).min(1).max(10),
+    expected_payload_hashes: z.record(z.string().regex(/^[a-f0-9]{64}$/)),
     allow_external_recipients: z.boolean().optional(),
     allow_deletes: z.boolean().optional(),
 });
@@ -191,13 +192,20 @@ class GmailMCPServer {
                     },
                 },
                 {
+                    name: 'gmail_preview',
+                    description: 'Read-only full stored proposal preview and payload SHA256; no execution or consent.',
+                    annotations: { readOnlyHint: true },
+                    inputSchema: { type: 'object', properties: { proposal_ids: { type: 'array', minItems: 1, maxItems: 10, uniqueItems: true, items: { type: 'string' } } }, required: ['proposal_ids'], additionalProperties: false },
+                },
+                {
                     name: 'gmail_execute',
                     description: 'Execute approved proposals (emails, deletions, etc.). Sends the emails and returns receipts.',
                     inputSchema: {
                         type: 'object',
                         properties: {
+                            expected_payload_hashes: { type: 'object', additionalProperties: { type: 'string', pattern: '^[a-f0-9]{64}$' }, description: 'Exact ID-to-payload_hash map captured from gmail_preview by the approval boundary. Hashes are binding, not consent.' },
                             proposal_ids: {
-                                type: 'array',
+                                type: 'array', minItems: 1, maxItems: 10, uniqueItems: true,
                                 items: { type: 'string' },
                                 description: 'Array of proposal IDs to execute',
                             },
@@ -210,7 +218,7 @@ class GmailMCPServer {
                                 description: 'Override safety check for email deletions',
                             },
                         },
-                        required: ['proposal_ids'],
+                        required: ['proposal_ids', 'expected_payload_hashes'],
                     },
                 },
                 {
@@ -421,6 +429,8 @@ class GmailMCPServer {
                         return await this.handleListLabels();
                     case 'gmail_search_emails':
                         return await this.handleSearchEmails(request.params.arguments);
+                    case 'gmail_preview':
+                        return proposalCache.previewTool(request.params.arguments, 'gmail');
                     case 'gmail_execute':
                         return await this.handleExecute(request.params.arguments);
                     case 'gmail_list_pending':
@@ -623,33 +633,26 @@ class GmailMCPServer {
     }
     async handleExecute(args) {
         const parsed = ExecuteSchema.parse(args);
-        // Ensure token is valid before proceeding
+        const claimed = proposalCache.claimProposals(parsed.proposal_ids, parsed.expected_payload_hashes, 'gmail');
+        try {
+            return await this.executeClaimed(parsed, claimed);
+        } catch (error) {
+            throw new Error('Execution interrupted. Claim retained; reconcile before resubmission.', { cause: error });
+        }
+    }
+    async executeClaimed(parsed, claimed) {
+        // Claims remain reserved even when authentication fails.
         const isValidToken = await oauthManager.ensureValidToken();
         if (!isValidToken) {
-            return {
-                content: [
-                    {
-                        type: 'text',
-                        text: '❌ Authentication failed: Token expired or invalid. Please restart Claude Desktop and re-authenticate.',
-                    },
-                ],
-            };
+            throw new Error('Authentication failed. Claim retained; reconcile before resubmission.');
         }
         if (!this.gmail) {
             const auth = oauthManager.getClient();
             this.gmail = google.gmail({ version: 'v1', auth });
         }
         const results = [];
-        for (const proposalId of parsed.proposal_ids) {
-            const proposal = proposalCache.getProposal(proposalId);
-            if (!proposal) {
-                results.push(`❌ ${proposalId}: Not found`);
-                continue;
-            }
-            if (proposal.executed) {
-                results.push(`⚠️ ${proposalId}: Already executed`);
-                continue;
-            }
+        for (const proposal of claimed) {
+            const proposalId = proposal.id;
             // Re-check safety with overrides
             let violations = proposal.violations;
             if (parsed.allow_external_recipients) {
@@ -754,14 +757,14 @@ class GmailMCPServer {
                 }
             }
             catch (error) {
-                results.push(`❌ ${proposalId}: Failed - ${error.message}`);
+                results.push(`❌ ${proposalId}: Failed - ${error.message}. Claim retained; reconcile before resubmission.`);
             }
         }
         return {
             content: [
                 {
                     type: 'text',
-                    text: `📨 Execution Results\n\n${results.join('\n\n')}`,
+                    text: `📨 Execution Results\n\n${results.join('\n\n')}\n\nAll claims retained. For any unsuccessful or ambiguous outcome, reconcile before resubmission.`,
                 },
             ],
         };
