@@ -59,3 +59,8 @@ verified. Source/GitHub and additional backup locations are recorded separately 
 app-data/browser-storage bytes, shared Flo data, brand profiles and private helper
 markers. Keychain is not exported; another Mac may need normal reauthentication.
 A source-only archive is not an app-data backup. Never restore over live data.
+
+The encrypted external-drive backup completed: all six private roots were
+verified from a read-only mount in 164.09 seconds. The iCloud-local encrypted copy
+also matches; iCloud server upload remains unverified. Keep the backup password
+in a password manager, separately from the backup folders.

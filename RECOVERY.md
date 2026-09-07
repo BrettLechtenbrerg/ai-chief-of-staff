@@ -16,6 +16,13 @@ checkpoint branch is `checkpoint/2026-09-06-session-closeout`; no public release
 or automatic-service resumption is authorized by this save request. Check the
 closeout receipts before asserting a remote push or off-device copy completed.
 
+**Closing backup verified:** the AES-256 external-drive image and iCloud-local
+copy have matching checksums. All six private backup roots were verified from a
+read-only external-drive mount in 164.09 seconds; the final receipt says
+`state: complete`. This is content verification, not a full reinstall timing.
+iCloud server upload remains unverified. See the closeout document for paths,
+image digest and receipts. Keep the password separately; never export Keychain.
+
 **Resume safety:** the app is stopped, not running in paused mode. A normal Dock
 launch may start services. Validate the installed private bundle and use the
 existing guarded validation-launch path before further acceptance work. Preserve

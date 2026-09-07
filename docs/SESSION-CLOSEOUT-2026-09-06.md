@@ -97,19 +97,29 @@ continuous protection, and no absolute zero-loss guarantee is possible.
   checkpoint/installed bundle (28,489), shared Flo data (6), brand profiles (199)
   and the home workspace routing file. `payload/verification.json` records
   per-root digests/counts. Symlinks were preserved without following them.
-- **Private off-device copy pending:** the noninteractive macOS encryption dialog
-  failed with `Inappropriate ioctl for device`; no encrypted image was produced
-  by that attempt. An interactive Terminal recipe was then opened at
-  `payload/finish-private-backup.command` for hidden password entry. Its shell
-  syntax passed. It creates an AES-256 image, verifies encryption and matching
-  external/iCloud-local copies, then asks for the password again to verify all
-  six roots from a read-only external-drive mount. It never records the password.
-  Do not overwrite an existing image or partial copy to retry.
+- **RUNTIME — encrypted external backup completed:** after Brett entered the
+  password interactively, `payload/finish-private-backup.command` completed the
+  AES-256 image, verified encryption and matching external/iCloud-local copies,
+  then unlocked the external image with a second private password entry. All six
+  roots matched their manifests from the read-only external-drive mount in
+  **164.09 seconds**. This measures content verification, not total recovery time
+  including copying, mounting, password entry or installation. The image was
+  detached successfully; the script never recorded the password.
+- **RUNTIME — image receipt:** `ACOS-private-closeout-20260907.dmg` is
+  **3,606,098,944 bytes**, SHA-256
+  `e306d7c80bb3fbccc8418b27e7c1f8f2f294ad38c9ab29b05019e9f0aa0db71e`.
+  Both destination copies are under `session-closeout-20260907/` within the
+  external and iCloud backup destinations above. The initial noninteractive
+  attempt failed before producing an image; the interactive workflow succeeded.
+  Do not rerun the creation recipe against this completed backup.
 - **Completion authority:** inspect `private-backup-status.json`,
   `image-copy-receipt.json` and `external-restore-receipt.json` in that private
   closeout directory. Only `state: complete` plus the restore receipt establishes
-  this recipe completed. Absence or `incomplete` means it did not. A verified
-  iCloud-local file is not proof of completed server upload.
+  this recipe completed. All three receipts were observed: `state: complete`,
+  encryption and both copy checksums verified, and `rootsVerified: 6` with
+  `externalRestoreVerified: true`. Absence or `incomplete` would not establish
+  completion. **iCloud server upload remains unverified** (`iCloudUploadVerified:
+  false`); a verified iCloud-local file alone is not proof of server upload.
 
 Keep the encryption password in a password manager, separately from these backup
 folders. The private image's repository snapshot is the initial source checkpoint;
