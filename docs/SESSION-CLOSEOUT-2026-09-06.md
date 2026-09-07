@@ -113,5 +113,6 @@ continuous protection, and no absolute zero-loss guarantee is possible.
 
 Keep the encryption password in a password manager, separately from these backup
 folders. The private image's repository snapshot is the initial source checkpoint;
-use the newer checkpoint-branch documents/Git bundle for subsequent receipt-only
-updates. No source, data or installer was deleted to make a backup check pass.
+use the newer checkpoint-branch documents on GitHub for subsequent receipt-only
+updates. No separate closeout Git bundle is verified. No source, data or installer
+was deleted to make a backup check pass.
