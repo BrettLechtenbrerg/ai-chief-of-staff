@@ -17,7 +17,7 @@ contains historical instructions; current handoff constraints take precedence.
   grant permanent access, or hot-patch the installed signed app.
 - Back up and verify a separate restore before data-affecting recovery. Code
   archives do not replace app-data or credential recovery.
-- `docs/SESSION-CLOSEOUT-2026-09-06.md` records closing checks and backup receipts;
+- `docs/SESSION-CLOSEOUT-2026-09-07.md` records closing checks and backup receipts;
   unfinished acceptance is not a finished release.
 
 Follow `CLAUDE.md` for project/build conventions. During an Ideal review, do not
