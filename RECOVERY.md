@@ -18,9 +18,14 @@ the private desktop app does not require a Vercel deployment.
 Read `docs/SESSION-CLOSEOUT-2026-09-07.md` for exact receipts and backup limits.
 Desktop routing pointer: `~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
 Keep the checkpoint branch, source changes, consumed approvals and Google access.
-Source upload and the broader private archive are being finalized; encrypted
-external recovery is not complete until its private completion/restore receipts
-exist. A local snapshot or iCloud-local file alone is not an off-machine guarantee.
+GitHub source commit `53f661c943d4a710849a3c0ae4d034e5a842b4c4` was pushed and
+remote-verified. The full private local recovery copy was verified at
+`~/dev/_backups/acos-private-closeout-20260908T002928Z-zfpu3kio/payload/` (seven roots).
+Its encrypted external-backup launcher is open in Terminal for private password
+entry. Last observed status: `awaiting-encryption`. Inspect that directory's
+`private-backup-status.json` and copy/restore receipts; do not call external
+recovery complete without them. A local or iCloud-local file is not server-upload
+proof. Later receipt-only commits on the same checkpoint branch are authoritative.
 On resume use the validated guarded launch, never the normal Dock launch while
 services are paused. Next development remains connector validation.
 

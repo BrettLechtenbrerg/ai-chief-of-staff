@@ -48,7 +48,8 @@ Keep automatic services paused and preserve Google access and consumed markers.
 GitHub is **public**: `BrettLechtenbrerg/ai-chief-of-staff`. Only reviewed source,
 tests and handoff documents may be pushed to the existing checkpoint branch.
 Keep `.gg/`, credentials, app data, private bundles and generated reports out.
-Source upload and secret-scan receipts are recorded below once verified.
+Source upload and secret-scan receipts are recorded below. Later receipt-only
+commits may advance the same branch; use its current remote tip when resuming.
 
 **RUNTIME:** Vercel inspection of `https://www.totalsuccessai.com` returned project
 `tsai-site`, deployment `dpl_CjNkrHixroYLHJGVXscvvBUYQ8Fb`, state **READY**.
@@ -58,10 +59,11 @@ release or unrelated website modification was performed.
 
 ## Private archival and limits
 
-The current SQLite/persistent-file checkpoint is verified locally. A broader
-private archive is being prepared separately under `~/dev/_backups/`, including
-repository history, ignored `.gg/` helpers/approvals, dependencies, built bundles,
-full stopped app data, shared Flo data, brand profiles and resume routing.
+The current SQLite/persistent-file checkpoint and broader local private recovery
+copy are verified. The latter contains repository history, ignored `.gg/` helpers
+and approvals, dependencies, built bundles, full stopped app data, shared Flo data,
+brand profiles and resume routing. Exact scope/counts and the encrypted external
+backup's separate completion authority follow.
 
 Private copies on the external drive or iCloud must be **encrypted first**.
 The user enters the encryption password privately in Terminal, never in chat.
@@ -77,4 +79,32 @@ not continuous protection. Preserve the existing installed-app rollback bundles.
 
 ## Final receipts
 
-Pending completion of the current source upload and private archival steps.
+- **RUNTIME:** source checkpoint `53f661c943d4a710849a3c0ae4d034e5a842b4c4`
+  committed and pushed to `checkpoint/2026-09-06-session-closeout`; `git ls-remote`
+  matched local HEAD. Public `main`, release tags and installers were not published.
+- **RUNTIME:** official Gitleaks 8.30.1 release archive SHA-256 was verified before
+  execution. The scan of all 486 publishable files (~5.96 MB) found no leaks.
+  Redaction was enabled and inline allow comments were ignored. This is a current
+  source scan, not a new full-history scan or a whole-project security certification.
+- **RUNTIME:** complete private local copy matched its sources in **331.562 seconds**:
+  `~/dev/_backups/acos-private-closeout-20260908T002928Z-zfpu3kio/payload/`.
+  Verified roots: repository 203,605 entries (including `.git`, `.gg`, dependencies
+  and release files); full app data 178; current verified checkpoint/installed
+  bundle 28,489; shared Flo 6; brand profiles 199; home routing 1; Desktop resume 1.
+  Symlinks were preserved without following them. `payload/verification.json`
+  records per-root digests. Local copy verification is not external recovery.
+- **Pending external encryption/restore:** the new `payload/finish-private-backup.command`
+  was syntax-checked and opened in Terminal. It requires private password entry,
+  creates an AES-256 image, copies it to the existing external and iCloud-local
+  destinations in a NEW folder, verifies checksums, then mounts the external image
+  read-only and checks all seven roots. It never writes a password or exports Keychain.
+- **Completion authority:** `private-backup-status.json`, `image-copy-receipt.json`
+  and `external-restore-receipt.json` in the new private closeout directory. The
+  last observed state was `awaiting-encryption`, not complete. Do not infer success
+  from the launcher being open or an image file merely existing. Require
+  `state: complete`, `externalRestoreVerified: true`, and seven verified roots.
+  iCloud server upload remains separately unverified even after local copies match.
+- The archive's repository snapshot includes source commit `53f661c`; subsequent
+  receipt-only GitHub commits are newer than that snapshot. Use the current branch
+  documents plus private completion receipts on resume. Do not rerun the creation
+  recipe over a completed or partially created image; retain all previous backups.

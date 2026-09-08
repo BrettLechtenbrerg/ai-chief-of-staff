@@ -41,8 +41,12 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
 The closing checkpoint is `checkpoint-step18-HQEWjy` under the existing backup
 root. Restore drills and post-suite data/config comparisons passed. Typecheck,
 lint and **1,824 tests / 101 files** passed. See the current closeout document for
-GitHub and private-archive completion receipts; never infer encrypted external
-backup success from a pending recipe or local copy. The Desktop resume pointer
+GitHub and private-archive completion receipts. Source commit `53f661c` was pushed
+and remote-verified; a complete local copy is verified under
+`~/dev/_backups/acos-private-closeout-20260908T002928Z-zfpu3kio/payload/`.
+The external encrypted backup still needs its private completion/restore receipts;
+last observed state was `awaiting-encryption` in Terminal. Never infer success
+from a pending recipe or local copy. Check actual receipts on resume. The Desktop resume pointer
 is `~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
 
 ## Next useful work
