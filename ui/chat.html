@@ -1682,7 +1682,7 @@
         <header class="hl-card-header"><div class="hl-card-title"><h2>Build mode</h2></div></header>
         <div class="hl-card-body">
           <div class="hl-form-row"><label for="hl-mode">Mode</label><select id="hl-mode" class="hl-brand-picker" onchange="_hlOnModeChange()"><option value="full">Full Lab: 5 options × 5 elements (default)</option><option value="quick">Quick Pass: one complete combination</option><option value="rewrite">Targeted rewrite: one element only</option></select></div>
-          <div class="hl-form-row"><label for="hl-duration">Duration (seconds, 1–180)</label><input id="hl-duration" class="hl-brand-picker" type="number" min="1" max="180" step="1" value="30"></div>
+          <div class="hl-form-row"><label for="hl-duration">Duration (seconds, 1–180)</label><input id="hl-duration" class="hl-brand-picker" type="number" min="1" max="180" step="1" value="30" oninput="_hlInvalidateSceneTiming()"></div>
           <details>
             <summary>Optional audience, offer and evidence</summary>
             <div class="hl-form-row"><label for="hl-platform">Platform</label><input id="hl-platform" class="hl-brand-picker" maxlength="100"></div>
@@ -1697,10 +1697,19 @@
         <button class="hl-start-btn" id="hl-start-btn" onclick="playNormalClick(); startHookLab()" disabled>Build My Hooks</button>
         <p class="hl-actions-hint" id="hl-actions-hint">Describe your video, offer, or topic to begin.</p>
       </div>
-      <details class="hl-card" id="hl-selection-details">
-        <summary class="hl-card-header">Review, rewrite and save a chosen combination</summary>
+      <section class="hl-card" id="hl-scene-timing">
+        <header class="hl-card-header"><div class="hl-card-title"><h2>Check scene timing</h2><span class="hl-card-status">Catch rushed lines, gaps and overlaps before recording</span></div></header>
         <div class="hl-card-body">
-          <p class="hl-hint">Paste/edit your actual chosen five elements below. Freeform chat is not automatically selected. Saving stays local; it does not publish or add your library to model context.</p>
+          <p class="hl-hint" id="hl-scene-help">Paste only your timestamped scene blocks, with one Spoken: line per scene. Use seconds (0–4 seconds or 0–4s); decimals and bold Markdown headings work. Optional Visual, Text, Audio and Caption lines are not counted as speech. Checks use the requested duration above. To keep your script, expand “Save and send your draft + script” below, fill in the five selected elements, and save. Checking alone does not save.</p>
+          <div class="hl-form-row"><label for="hl-scene-script">Full scene script</label><textarea id="hl-scene-script" rows="8" maxlength="20000" aria-describedby="hl-scene-help" placeholder="0–4 seconds&#10;Spoken: Your opening line goes here.&#10;Visual: Show the opening shot.&#10;&#10;4–30 seconds&#10;Spoken: The rest of your script goes here." oninput="_hlInvalidateSceneTiming()"></textarea></div>
+          <button class="hl-chip" id="hl-check-scene-timing" onclick="_hlCheckSceneTiming()">Check timing</button>
+          <p id="hl-scene-timing-result" class="hl-hint" role="status" aria-atomic="true" style="white-space:pre-line"></p>
+        </div>
+      </section>
+      <details class="hl-card" id="hl-selection-details">
+        <summary class="hl-card-header">Save and send your draft + script</summary>
+        <div class="hl-card-body">
+          <p class="hl-hint">Paste/edit your actual chosen five elements below. Freeform chat is not automatically selected. Saving includes the full scene script above, even if timing needs revision. Loading a saved draft restores it. Sending to Video Studio rechecks timing and carries the exact script into review, without starting generation.</p>
           <div class="hl-form-row"><label for="hl-rewrite-target">Element to rewrite (targeted mode only)</label><select id="hl-rewrite-target" class="hl-brand-picker"><option value="verbal">Verbal</option><option value="text">Text overlay</option><option value="visual">Visual</option><option value="audio">Audio</option><option value="caption">Caption</option></select></div>
 <div class="hl-form-row"><label for="hl-selected-verbal">Selected Verbal</label><textarea id="hl-selected-verbal" maxlength="2000"></textarea></div>
 <div class="hl-form-row"><label for="hl-selected-text">Selected Text overlay</label><textarea id="hl-selected-text" maxlength="2000"></textarea></div>
@@ -1708,10 +1717,10 @@
 <div class="hl-form-row"><label for="hl-selected-audio">Selected Audio</label><textarea id="hl-selected-audio" maxlength="2000"></textarea></div>
 <div class="hl-form-row"><label for="hl-selected-caption">Selected Caption</label><textarea id="hl-selected-caption" maxlength="2000"></textarea></div>
 <div class="hl-form-row"><label for="hl-save-name">Selection name</label><input id="hl-save-name" maxlength="100" class="hl-brand-picker" placeholder="Untitled"></div>
-<button class="hl-chip" onclick="_hlSaveCurrent()">Save current combination</button>
+<button class="hl-chip" id="hl-save-draft" onclick="_hlSaveCurrent()">Save draft + script</button>
 <button class="hl-chip" onclick="_hlCheckSelection()">Check selected combination</button>
 <p id="hl-selection-advisory" class="hl-hint" role="status"></p>
-<button class="hl-chip" onclick="_hlHandoff()">Use current combination in Video Studio</button>
+<button class="hl-chip" id="hl-send-draft" onclick="_hlHandoff()">Send draft + script to Video Studio</button>
 <button id="hl-undo-removal" class="hl-chip" onclick="_hlUndoRemoval()" disabled>Undo last removal</button>
 <button id="hl-discard-undo" class="hl-chip" onclick="_hlDiscardUndo()" disabled>Discard removal undo</button>
 <p class="hl-hint">Saved selections stay local. Remove frees space; one undo is kept until this window closes or another removal replaces it.</p>

@@ -336,6 +336,7 @@ const _HL_FIELDS = ['verbal', 'text', 'visual', 'audio', 'caption'];
 const _HL_CONTEXT = { platform: 100, audience: 500, duration: 3, offer: 1000, evidence: 4000 };
 const _HL_STORE = 'hl-combinations-v1';
 const _HL_PENDING = 'hl-video-draft-v1';
+const _HL_PENDING_MAX = 100000;
 function _hlText(value, max, required = false) {
   if (typeof value !== 'string' || value.length > max || (required && !value.trim())) throw new Error('Invalid or oversized Hook Lab input');
   return value;
@@ -344,8 +345,9 @@ function _hlObject(value, keys) {
   if (!value || Object.getPrototypeOf(value) !== Object.prototype || Object.keys(value).length !== keys.length || !keys.every(k => Object.hasOwn(value, k))) throw new Error('Invalid Hook Lab record');
 }
 function _hlValidateStored(draft) {
-  _hlObject(draft, ['version', 'id', 'name', 'brandId', 'context', 'elements']);
-  if (draft.version !== 1) throw new Error('Unsupported Hook Lab version');
+  _hlObject(draft, ['version', 'id', 'name', 'brandId', 'context', 'elements', ...(draft?.version === 2 ? ['sceneScript'] : [])]);
+  if (![1, 2].includes(draft.version)) throw new Error('Unsupported Hook Lab version');
+  if (draft.version === 2) _hlText(draft.sceneScript, 20000);
   _hlText(draft.id, 100, true); _hlText(draft.name, 100, true);
   if (draft.brandId !== null) _hlText(draft.brandId, 100, true);
   _hlObject(draft.context, Object.keys(_HL_CONTEXT));
@@ -362,7 +364,8 @@ function _hlValidate(draft, brands = _hlBrands) {
 }
 function _hlValue(id, fallback = '') { return document.getElementById(id)?.value ?? fallback; }
 function _hlCurrent() {
-  return _hlValidate({ version: 1, id: crypto.randomUUID(), name: _hlValue('hl-save-name', 'Untitled') || 'Untitled', brandId: _hlPickedBrandId,
+  const sceneScript = _hlValue('hl-scene-script');
+  return _hlValidate({ version: sceneScript.length ? 2 : 1, ...(sceneScript.length ? { sceneScript } : {}), id: crypto.randomUUID(), name: _hlValue('hl-save-name', 'Untitled') || 'Untitled', brandId: _hlPickedBrandId,
     context: Object.fromEntries(Object.keys(_HL_CONTEXT).map(k => [k, _hlValue('hl-' + k, k === 'duration' ? '30' : '')])),
     elements: Object.fromEntries(_HL_FIELDS.map(k => [k, _hlValue('hl-selected-' + k)])) });
 }
@@ -394,7 +397,7 @@ function _hlSave(draft) {
 }
 function _hlStatus(message) { const el = document.getElementById('hl-selection-status'); if (el) el.textContent = message; }
 function _hlSaveCurrent() {
-  try { _hlSave(_hlCurrent()); _hlRenderSaved(); _hlStatus('Saved locally as a draft.'); }
+  try { const draft = _hlCurrent(); _hlSave(draft); _hlRenderSaved(); _hlStatus(draft.version === 2 ? 'Saved locally with your full scene script. Load the saved draft to restore it; timing still needs review.' : 'Saved locally as a draft.'); }
   catch (err) { _hlStatus('Save failed: ' + err.message); }
 }
 function _hlRenderSaved() {
@@ -408,13 +411,17 @@ function _hlRenderSaved() {
       const row = document.createElement('div'); row.className = 'hl-chips';
       const button = document.createElement('button'); button.className = 'hl-chip';
       button.disabled = draft.brandId !== null && !_hlBrands.some(b => b.id === draft.brandId);
-      button.textContent = draft.name + ' · ' + draft.id.slice(0, 8) + (button.disabled ? ' (brand unavailable; preserved)' : '');
+      button.textContent = draft.name + ' · ' + draft.id.slice(0, 8) + (draft.version === 2 ? ' · script included' : '') + (button.disabled ? ' (brand unavailable; preserved)' : '');
       button.addEventListener('click', () => {
         try { _hlValidate(draft); } catch (err) { _hlStatus(err.message); return; }
+        if (_hlValue('hl-scene-script') && _hlValue('hl-scene-script') !== (draft.sceneScript ?? '') && !window.confirm('Loading this draft replaces the scene script currently in the editor. Save it first if needed. Continue?')) return;
         for (const k of _HL_FIELDS) document.getElementById('hl-selected-' + k).value = draft.elements[k];
         for (const k of Object.keys(_HL_CONTEXT)) document.getElementById('hl-' + k).value = draft.context[k];
+        document.getElementById('hl-scene-script').value = draft.sceneScript ?? '';
+        document.getElementById('hl-save-name').value = draft.name;
         _hlReviewSelection();
-        _hlStatus('Loaded draft. Review/edit the five fields before use.');
+        _hlInvalidateSceneTiming();
+        _hlStatus(draft.version === 2 ? 'Loaded draft and exact scene script. Check timing again before handoff.' : 'Loaded draft. No scene script was saved with this selection.');
       }); row.appendChild(button);
       const remove = document.createElement('button'); remove.className = 'hl-chip';
       remove.textContent = 'Remove ' + draft.name + ' · ' + draft.id.slice(0, 8);
@@ -468,14 +475,86 @@ function _hlReviewSelection(draft = _hlCurrent()) {
 function _hlCheckSelection() {
   try { _hlReviewSelection(); } catch (err) { _hlStatus('Review failed: ' + err.message); }
 }
+
+function _hlSceneTiming(script, duration) {
+  _hlText(script, 20000, true);
+  if (typeof duration !== 'string' || !/^([1-9]\d?|1[0-7]\d|180)$/.test(duration)) throw new Error('Duration must be 1–180 seconds.');
+  const scenes = [];
+  // simplification: one Spoken line per scene; other script formats require explicit parser support.
+  for (const [index, raw] of script.split(/\r?\n/u).entries()) {
+    const line = raw.trim();
+    if (!line) continue;
+    const heading = line.replace(/^\*\*(.*)\*\*$/u, '$1');
+    const time = heading.match(/^(\d{1,3}(?:\.\d{1,3})?)\s*[–—-]\s*(\d{1,3}(?:\.\d{1,3})?)\s*(?:seconds?|s)(?:,\s*CTA)?$/iu);
+    if (time) {
+      const start = Math.round(Number(time[1]) * 1000);
+      const end = Math.round(Number(time[2]) * 1000);
+      if (start >= end || end > 180000) throw new Error(`Line ${index + 1}: scene times must increase within 0–180 seconds.`);
+      if (scenes.length >= 60) throw new Error('Use at most 60 scenes.');
+      scenes.push({ start, end, spoken: null, issues: [] });
+      continue;
+    }
+    const scene = scenes.at(-1);
+    const spoken = line.match(/^(?:\*\*)?Spoken:(?:\*\*)?\s*(.*)$/iu);
+    if (scene && spoken) {
+      if (scene.spoken !== null) throw new Error(`Line ${index + 1}: use one Spoken line per scene.`);
+      const text = spoken[1].replace(/^(?:"(.*)"|“(.*)”)$/u, (_, straight, curly) => straight ?? curly).trim();
+      if (!text) throw new Error(`Line ${index + 1}: Spoken text is empty.`);
+      scene.spoken = text;
+    } else if (!scene || !/^(?:\*\*)?(?:Visual|Text(?: overlay)?|Audio|Caption):(?:\*\*)?/iu.test(line)) {
+      throw new Error(`Line ${index + 1}: paste only scene blocks: 0–4 seconds, then Spoken: your words. Visual/Text/Audio/Caption lines are optional.`);
+    }
+  }
+  if (!scenes.length) throw new Error('Add at least one timestamped scene.');
+  let cursor = 0;
+  let words = 0;
+  for (const [index, scene] of scenes.entries()) {
+    if (scene.spoken === null) throw new Error(`Scene ${index + 1}: add a Spoken line.`);
+    scene.words = scene.spoken.split(/\s+/u).length;
+    scene.speech = scene.words * 400;
+    words += scene.words;
+    const delta = scene.start - cursor;
+    if (delta > 0) scene.issues.push(`Gap ${(delta / 1000).toFixed(3)}s before scene`);
+    if (delta < 0) scene.issues.push(`Overlap ${(-delta / 1000).toFixed(3)}s with earlier timeline`);
+    const overrun = scene.speech - (scene.end - scene.start);
+    if (overrun > 0) scene.issues.push(`Speech overrun ${(overrun / 1000).toFixed(3)}s`);
+    cursor = Math.max(cursor, scene.end);
+  }
+  const issues = scenes.flatMap((scene, index) => scene.issues.map(issue => `Scene ${index + 1}: ${issue}`));
+  const difference = cursor - Number(duration) * 1000;
+  if (difference !== 0) issues.push(`Timeline ${difference > 0 ? 'exceeds' : 'ends before'} requested duration by ${(Math.abs(difference) / 1000).toFixed(3)}s.`);
+  return { scenes, words, issues };
+}
+function _hlInvalidateSceneTiming() {
+  const el = document.getElementById('hl-scene-timing-result');
+  if (el) el.textContent = 'Inputs changed. Check timing again.';
+}
+function _hlCheckSceneTiming() {
+  const el = document.getElementById('hl-scene-timing-result');
+  if (!el) return;
+  try {
+    const result = _hlSceneTiming(_hlValue('hl-scene-script'), _hlValue('hl-duration', '30'));
+    el.textContent = [
+      result.issues.length ? `${result.issues.length} timing issue(s) — review before production.` : 'No timing issues found at the estimated speaking rate.',
+      `${result.scenes.length} scenes · ${result.words} spoken words · ${(result.words * 0.4).toFixed(1)}s estimated speech at 150 words/minute.`,
+      ...result.scenes.map((scene, index) => `Scene ${index + 1} (${scene.start / 1000}–${scene.end / 1000}s): ${scene.words} words · needs ${(scene.speech / 1000).toFixed(1)}s / slot ${((scene.end - scene.start) / 1000).toFixed(3)}s — ${scene.issues.length ? scene.issues.join('; ') : 'Fits estimate'}.`),
+      ...result.issues.filter(issue => issue.startsWith('Timeline')),
+      'Estimate only: pauses and delivery need a timed read-through. This check does not change or save your script. Use Save draft + script below to keep it.',
+    ].join('\n\n');
+  } catch (err) { el.textContent = 'Cannot check timing: ' + err.message; }
+}
 function _hlHandoff() {
   try {
     const draft = _hlCurrent();
     const advisory = _hlReviewSelection(draft);
-    if (!window.confirm(advisory + '\n\nContinue with this exact selection to Video Studio review? No generation or approval.')) return;
+    const timing = draft.version === 2 ? _hlSceneTiming(draft.sceneScript, draft.context.duration) : null;
+    const scriptReview = timing ? `\n\nFull script: ${timing.scenes.length} scenes, ${timing.words} spoken words. ${timing.issues.length ? timing.issues.join('\n') : 'No timing issues at the estimated speaking rate.'} Timed delivery still needs review.` : '\n\nNo full scene script attached; only the five selected hook fields will be sent.';
+    if (!window.confirm(advisory + scriptReview + '\n\nContinue with this exact draft and any attached scene script to Video Studio review? No generation or approval.')) return;
     if (localStorage.getItem(_HL_PENDING)) throw new Error('A Video Studio draft is already pending. Review and explicitly clear it there first.');
-    localStorage.setItem(_HL_PENDING, JSON.stringify(draft));
-    _hlStatus('Exact selection saved for Video Studio review. No generation or approval.');
+    const raw = JSON.stringify(draft);
+    if (raw.length > _HL_PENDING_MAX) throw new Error('Draft is too large for Video Studio review. Shorten the script or selected fields; nothing was overwritten.');
+    localStorage.setItem(_HL_PENDING, raw);
+    _hlStatus(draft.version === 2 ? 'Exact selection and full scene script saved for Video Studio review. No generation or approval.' : 'Exact selection saved for Video Studio review. No generation or approval.');
     showVideoStudioPanel();
   } catch (err) { _hlStatus('Handoff failed: ' + err.message); }
 }

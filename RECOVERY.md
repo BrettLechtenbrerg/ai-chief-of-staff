@@ -2,7 +2,203 @@
 
 This is the canonical session-kickoff document. If you're a fresh Claude session, start here.
 
-## Current handoff — session closeout, September 6 local / September 7 UTC
+## Current handoff — session closeout, September 7 local / September 8 UTC
+
+Both Hook Lab upgrades are installed: scene timing checks plus full-script
+save/load and Video Studio handoff. The installed app was quit normally for a
+fresh closing backup and must remain stopped during archival. No public release,
+service resumption, credential reset or repeated live generation was performed.
+
+Closing checkpoint: `checkpoint-step18-HQEWjy` under the existing app-backup root.
+Restore drills passed; a post-suite comparison confirmed all original app/finance
+rows and Google/MCP files unchanged. Typecheck, lint and the full suite passed:
+**101 test files / 1,824 tests**. Vercel's existing TSAI site deployment is READY;
+the private desktop app does not require a Vercel deployment.
+
+Read `docs/SESSION-CLOSEOUT-2026-09-07.md` for exact receipts and backup limits.
+Desktop routing pointer: `~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
+Keep the checkpoint branch, source changes, consumed approvals and Google access.
+Source upload and the broader private archive are being finalized; encrypted
+external recovery is not complete until its private completion/restore receipts
+exist. A local snapshot or iCloud-local file alone is not an off-machine guarantee.
+On resume use the validated guarded launch, never the normal Dock launch while
+services are paused. Next development remains connector validation.
+
+### Installation handoff — September 7, 2026: saved scripts and full handoff installed
+
+Brett explicitly approved installation. The signed, Apple-notarized private Intel
+build now installed in `/Applications/AI Chief of Staff.app` includes both the
+scene timing checker and full-script save/load/Video Studio handoff. It is running
+in guarded validation mode. Native accessibility opened Hook Lab, expanded the
+save/send section and confirmed both new buttons in the actual installed app.
+All three changed UI files match the tested source; the packaged backend is
+byte-identical to the previous installed backend. No public release or version
+bump: the private app still displays `1.0.0-beta.25`.
+
+**Behavior:** “Save draft + script” keeps the exact script, including line breaks,
+spoken text, visuals and timing headings. Loading restores it and the draft name;
+replacing a different editor script requires confirmation. Partial/malformed scripts
+can be saved for recovery, but handoff requires a parseable script and freshly
+rechecks timing. Overruns remain explicit review warnings, not production approval.
+Video Studio displays the complete script and includes it in its kickoff data,
+with preservation instructions and existing build/render/publication approval gates.
+No live model request, render, publication or synthetic draft save in the installed app was performed.
+
+**Storage:** the existing bounded v1 library envelope/keys are retained without a
+migration. Drafts without scripts remain v1; script-bearing records are explicitly
+v2. Legacy records remain readable and unchanged. Unknown/invalid record versions,
+oversized inputs and over-limit serialized handoffs fail closed. Existing pending
+handoffs cannot be silently replaced. Saved incomplete scripts survive failed
+handoffs; quota failures and remove/undo preserve prior data. Older installed
+readers do not understand v2 records: do not roll back after saving v2 drafts
+without preserving the newer library and using a compatible reader.
+
+**Verified:** 44 Hook Lab + 5 Video Studio tests passed, including exact five-scene
+save/new-context-load/review/kickoff JSON equality; v1 compatibility, overwrite
+confirmation, malformed input recovery, fresh timing warnings, undo, quota failure
+and JSON-escaping size limits. Real browser controls also passed save/reload,
+complete handoff/reload, original/corrected timing, keyboard, invalid input and
+390px layout checks without page errors. An initial preview-only failure was
+caused by omitted context controls; the preview now extracts those actual controls
+and asserts no page errors at reload. The product code was not weakened to pass.
+
+**Installation receipts:** release build and signed/notarized personal packaging
+passed using `release/personal-hook-handoff-2026-09-07`, with no publication.
+The existing installer returned `installed-ready`, with manifest/signature and
+current startup-health validation. The prior 49 feature tests/browser assertions
+were reused because feature code did not change during installation. No native
+save/send action was executed against real app storage; native acceptance checked
+control presence, while exact script round-trip behavior was tested in isolation.
+
+**Backup and preservation:** fresh checkpoint
+`~/Library/Application Support/acos-local-improvement-backups/checkpoint-step18-VLLpcv`.
+Main restore/verification: 26 ms; finance: 18 ms; persistent-file copy/restore:
+107 ms; previous signed-bundle copy/verification: 26,499 ms. Local Storage is
+included; Keychain/cookies are excluded. See the checkpoint's `verification.json`.
+Installer rollback bundle: `/Applications/.acos-install-rbcz2L/previous.app`.
+All original non-settings database rows were preserved, and Google credentials,
+Google tokens and MCP configuration files are byte-identical. Strict settings
+comparison again flagged only `window.chatBounds`; an independent exact-row
+check verified all other settings unchanged and bounds valid. No check was weakened.
+All consumed approval markers remain. Startup health reports guarded validation,
+SQLite/IPC ready, initialization complete and no startup error.
+
+**Shutdown note:** native preflight found two visible editable controls with no
+nonempty non-default values; no values were exported. The installer's SIGTERM
+stop attempt timed out without force. Normal macOS Quit then succeeded; an exact
+process census confirmed zero installed processes before backup/replacement.
+Do not force-kill or bypass the updater guard if this occurs again.
+
+**Use now:** in the actual app, Hook Lab → Save and send your draft + script.
+Save to keep the full script; loading restores it; Send carries it to Video Studio
+review without generation. The temporary browser preview server is stopped.
+The app is currently running, not quit for a final closing backup. Keep Google
+access and paused services unchanged; continue connector validation only within
+existing authorization. No commit, push, tag or service resumption.
+Private browser screenshot remains `.gg/hook-script-handoff.png`.
+
+### Previous delivery — September 7, 2026: timing-checker upgrade installed and opened
+
+Brett approved packaging and installation after trying the preview. The signed,
+Apple-notarized private Intel upgrade is now installed in
+`/Applications/AI Chief of Staff.app` and running in guarded validation mode.
+A native accessibility check opened Hook Lab and confirmed the actual installed
+**Check scene timing**, **Full scene script**, and **Check timing** controls.
+Do not treat this as a public release or permission to resume automatic services.
+
+**Build/install receipts:**
+- `BUILD_KIND=release npm run build` passed. Personal packaging used the existing
+  signing profile and `--mac --x64 --dir --config build/personal.cjs --publish never`,
+  with output `release/personal-hook-timing-2026-09-07`. Notarization succeeded.
+- Packaged backend files are byte-identical to the previous installed backend,
+  including embedded Google configuration. Only `ui/chat.html` and
+  `ui/chat/hook-lab-panel.js` differ in the packaged UI; both installed files match
+  the tested working-tree source exactly. Version remains private `1.0.0-beta.25`;
+  no version bump, tag, commit, push or public updater publication.
+- 59 installer/personal-build/payload tests passed. The prior 38 Hook Lab/Video
+  Studio tests and browser interaction checks still cover unchanged feature code.
+- The guarded installer returned `installed-ready`: signature/team/architecture,
+  staged/installed manifests and current startup health passed. Native controls
+  were confirmed after installation; timing interactions were tested in the prior
+  isolated browser, not repeated through native accessibility.
+
+**Recovery/data receipts:**
+- Fresh checkpoint: `~/Library/Application Support/acos-local-improvement-backups/checkpoint-step18-XTpzCH`.
+  Main database restore/verification took 22 ms; finance 15 ms; persistent-file
+  copy/restore/verification 89 ms; prior signed-bundle copy/verification 23,162 ms.
+  See its `verification.json` for exact scope (Keychain/cookies excluded).
+- Installer retained the prior signed bundle at `/Applications/.acos-install-ytHQft/previous.app`.
+  Preserve it; no live data restore was performed.
+- Read-only post-install checks found every original conversation, task, finance
+  and other non-settings row preserved. Google credentials/tokens and MCP config
+  files are byte-identical. Strict all-settings equality flagged only
+  `window.chatBounds`; a separate exact-row check confirmed all other settings
+  unchanged and the updated bounds are valid window geometry. The existing window
+  move/resize persistence explains this difference; the strict helper was not weakened.
+- All three consumed approval markers remain. Startup health confirms validation
+  mode, SQLite, IPC and completed initialization without a startup error.
+
+**Next:** Brett can use Hook Lab → Check scene timing in the actual app. The app is
+currently running, not quit for a closing backup. Continue connector validation
+only within existing authorization; keep Google access and service-pause guards.
+If launching after a later quit, retain the validated guarded launch path below.
+The old browser preview is no longer needed for acceptance. Preserve all current
+uncommitted source/docs/test changes.
+
+### Implementation checkpoint — September 7, 2026: preview-tested scene checker
+
+Brett requested a visible, testable app upgrade rather than more editorial work.
+Implemented a **Check scene timing** card in `ui/chat.html` and bounded local
+parsing/reporting in `ui/chat/hook-lab-panel.js`. Paste timestamped scene blocks
+with one Spoken line per scene. Reports individual speech overruns, initial/internal
+gaps, overlaps and requested-duration mismatches at an estimated 150 words/minute.
+Rejects unsupported/malformed input instead of returning a partial pass. Changes
+to script or requested duration (including loading saved selections) invalidate
+old results. The scratchpad is not persisted, sent to GPT or included in handoffs.
+
+**Verified:** 33 Hook Lab + 5 Video Studio tests passed. Browser checks used the
+actual new HTML/JS, isolated Chrome storage and no Electron bridge: original
+synthetic script has exactly two overruns; corrected script has five fitting
+scenes. Keyboard activation, input invalidation, malformed input, duration mismatch,
+390px layout without horizontal overflow and zero page errors passed.
+Private screenshots: `.gg/hook-timing-{original,corrected,narrow}.png`.
+
+**Delivery:** source implementation and an interactive browser preview, NOT a new
+installed build. Opened `http://127.0.0.1:57114` for Brett; the loopback server stops
+after one hour. Restart with `node .gg/preview-hook-timing.cjs` and use its printed
+URL. The private helper extracts the actual card/renderer, serves only allowlisted
+assets and synthetic samples, and does not read live app data. Existing signed app,
+Google configuration and consumed approval markers were not modified. No product
+build, installation, commit, push, release or service resumption was performed.
+
+**Next:** let Brett try the visible checker; packaging and guarded installation
+remain separate work. Preserve the current uncommitted source/docs/test changes.
+Do not describe passing preview tests as installed-app acceptance.
+
+### Earlier local editorial handoff — September 7, 2026
+
+Completed the first resume item as a local editorial correction, without launching
+or modifying the installed app. Corrected draft and production handoff:
+`.gg/hook-timing-handoff-2026-09-07.md` (private, Git-ignored; not included in the
+previous closing backup). The saved app conversation retains its original timings.
+
+Read-only SQLite inspection reproduced the opener/CTA overruns: six seconds of
+speech in a four-second slot and 4.8 seconds in a three-second slot. The corrected
+five-scene timeline preserves all spoken lines, visuals and selected hook elements.
+An independent Python check passed: five contiguous scenes, 30 seconds total,
+73 words, 29.2 seconds estimated speech at 150 words/minute, positive spare time
+in every scene and 0.8 seconds spare overall. All three consumed markers remain
+present. No AI request, credential change, database/library write, render or
+publication was performed. No product code changed; no build or suite was needed.
+
+**Next:** connector validation remains unfinished. For Hook production, a timed
+read-through and any Video Studio import/preview remain pending. The handoff
+separates post caption, opener and full scene script to avoid losing the body/CTA.
+Arithmetic timing acceptance does not establish natural delivery or rendered
+quality. Keep existing launch guards and authorization limits below; do not rerun
+any consumed generation. No service resumption, public release or commit/push.
+
+### Previous session closeout — September 6 local / September 7 UTC
 
 Brett requested a complete save and a one-sentence resume next session. Start with
 `RESUME-PROMPT.md` and `docs/SESSION-CLOSEOUT-2026-09-06.md`; the latter records

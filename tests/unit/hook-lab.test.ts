@@ -126,6 +126,165 @@ describe('Hook Lab actual renderer contracts (synthetic storage only)', () => {
     h.run('_hlSaveCurrent()'); h.get('hl-selected-verbal').value = 'new';
     expect(h.run("_hlBuildKickoffPrompt('idea')")).not.toContain('one two three four five');
   });
+  it('checks all five scene slots, not just total speech, without changing input or storage', () => {
+    const h = harness();
+    const words = [15, 8, 23, 15, 12];
+    const script = (bounds: number[]) => words.map((count, i) => `**${bounds[i]}–${bounds[i + 1]} seconds${i === 4 ? ', CTA' : ''}**\nSpoken: "${Array(count).fill('word').join(' ')}"\nVisual: Not spoken words`).join('\n\n');
+    const original = script([0, 4, 10, 21, 27, 30]);
+    h.get('hl-scene-script').value = original;
+    const result = h.run("_hlSceneTiming(document.getElementById('hl-scene-script').value, '30')");
+    expect(result.words).toBe(73);
+    expect(result.issues).toEqual(['Scene 1: Speech overrun 2.000s', 'Scene 5: Speech overrun 1.800s']);
+    h.run('_hlCheckSceneTiming()');
+    expect(h.get('hl-scene-timing-result').textContent).toContain('2 timing issue(s)');
+    expect(h.get('hl-scene-timing-result').textContent).toContain('29.2s estimated speech');
+    expect(h.get('hl-scene-script').value).toBe(original);
+    expect(h.store.size).toBe(0);
+    h.get('hl-scene-script').value = script([0, 6.2, 9.6, 19, 25.1, 30]);
+    const corrected = h.run("_hlSceneTiming(document.getElementById('hl-scene-script').value, '30')");
+    expect(corrected.issues).toEqual([]);
+    expect(corrected.scenes.map((s: { words: number }) => s.words)).toEqual(words);
+    h.run('_hlCheckSceneTiming()');
+    expect(h.get('hl-scene-timing-result').textContent).toContain('No timing issues found at the estimated speaking rate');
+    expect(h.get('hl-scene-timing-result').textContent).toContain('timed read-through');
+  });
+  it('reports initial/internal gaps, overlaps, out-of-order scenes and duration mismatch', () => {
+    const h = harness();
+    h.get('hl-scene-script').value = '1-3s\nSpoken: a\n4-8s\nSpoken: b\n6-7s\nSpoken: c\n2-5s\nSpoken: d';
+    const result = h.run("_hlSceneTiming(document.getElementById('hl-scene-script').value, '10')");
+    expect(result.issues).toEqual([
+      'Scene 1: Gap 1.000s before scene', 'Scene 2: Gap 1.000s before scene',
+      'Scene 3: Overlap 2.000s with earlier timeline', 'Scene 4: Overlap 6.000s with earlier timeline',
+      'Timeline ends before requested duration by 2.000s.',
+    ]);
+    h.get('hl-duration').value = '5'; h.run('_hlCheckSceneTiming()');
+    expect(h.get('hl-scene-timing-result').textContent).toContain('Timeline exceeds requested duration by 3.000s');
+  });
+  it('accepts decimal, dash and Markdown variants and excludes direction/caption lines', () => {
+    const h = harness();
+    h.get('hl-scene-script').value = '**0—0.4 seconds**\r\n**Spoken:** “one”\r\nVisual: extra words\r\nText overlay: extra words\r\nAudio: extra words\r\nCaption: extra words\r\n0.4-1s\r\nSpoken: two';
+    const result = h.run("_hlSceneTiming(document.getElementById('hl-scene-script').value, '1')");
+    expect(result.issues).toEqual([]); expect(result.words).toBe(2);
+    h.get('hl-scene-script').value = '0-0.399s\nSpoken: one\n0.399-1s\nSpoken: two';
+    expect(h.run("_hlSceneTiming(document.getElementById('hl-scene-script').value, '1').issues")).toEqual(['Scene 1: Speech overrun 0.001s']);
+  });
+  it.each([
+    ['', '30'], ['x'.repeat(20001), '30'], ['0-30s\nSpoken: one', '0'],
+    ['0-30s\nSpoken: one', '181'], ['0-30s\nSpoken: one', '1.5'],
+    ['4-4s\nSpoken: one', '30'], ['4-2s\nSpoken: one', '30'],
+    ['0-181s\nSpoken: one', '30'], ['-1-4s\nSpoken: one', '30'],
+    ['0-4s\nVisual: only', '30'], ['0-4s\nSpoken: ""', '30'],
+    ['0-4s\nSpoken: one\nSpoken: two', '30'], ['0-4s\nSpoken: one\nunlabelled continuation', '30'],
+    ['00:00-00:04\nSpoken: one', '30'], ['Spoken: one', '30'],
+    [Array.from({ length: 61 }, (_, i) => `${i}-${i + 1}s\nSpoken: one`).join('\n'), '61'],
+  ])('rejects unsupported or invalid scene input rather than reporting success (%#)', (script, duration) => {
+    const h = harness();
+    h.get('hl-scene-script').value = script; h.get('hl-duration').value = duration;
+    h.get('hl-scene-timing-result').textContent = 'Old passing result';
+    h.run('_hlCheckSceneTiming()');
+    expect(h.get('hl-scene-timing-result').textContent).toMatch(/^Cannot check timing:/);
+    expect(h.get('hl-scene-timing-result').textContent).not.toContain('Old passing result');
+    expect(h.store.size).toBe(0);
+  });
+  it('clears stale results on input and saved-duration changes, treating pasted markup as text', () => {
+    const h = harness();
+    h.get('hl-scene-script').value = '0-30s\nSpoken: <b>ordinary text</b>';
+    h.run('_hlCheckSceneTiming()');
+    expect(h.get('hl-scene-timing-result').textContent).toContain('2 spoken words');
+    h.run('_hlInvalidateSceneTiming()');
+    expect(h.get('hl-scene-timing-result').textContent).toBe('Inputs changed. Check timing again.');
+    h.run('_hlSaveCurrent(); _hlCheckSceneTiming()');
+    h.get('hl-saved').children[0].children[0].click();
+    expect(h.get('hl-scene-timing-result').textContent).toBe('Inputs changed. Check timing again.');
+    const html = readFileSync(new URL('../../ui/chat.html', import.meta.url), 'utf8');
+    expect(html).toMatch(/id="hl-scene-script"[^>]*oninput="_hlInvalidateSceneTiming\(\)"/);
+    expect(html).toMatch(/id="hl-duration"[^>]*oninput="_hlInvalidateSceneTiming\(\)"/);
+    expect(html).toMatch(/id="hl-check-scene-timing"[^>]*onclick="_hlCheckSceneTiming\(\)"/);
+    expect(html).toContain('label for="hl-scene-script"');
+  });
+  it('saves and reopens an exact five-scene script, then hands it to Video Studio and its kickoff prompt', () => {
+    const h = harness();
+    const script = Array.from({ length: 5 }, (_, i) => `**${i * 6}–${(i + 1) * 6} seconds**\r\nSpoken: “Scene ${i + 1} — keep these words.”\r\nVisual: frame ${i + 1} <b>literal</b>\r\nAudio: tap\r\nCaption: exact post copy`).join('\r\n\r\n') + '\r\n';
+    h.get('hl-scene-script').value = script; h.get('hl-save-name').value = 'Full script';
+    h.run('_hlCheckSceneTiming(); _hlSaveCurrent()');
+    expect(h.get('hl-selection-status').textContent).toContain('Saved locally with your full scene script');
+    const saved = h.run('_hlReadSaved()[0]'); expect(saved.version).toBe(2); expect(saved.sceneScript).toBe(script);
+    const reopened = harness(h.store); reopened.run('_hlRenderSaved()');
+    reopened.get('hl-saved').children[0].children[0].click();
+    expect(reopened.get('hl-scene-script').value).toBe(script);
+    expect(reopened.get('hl-save-name').value).toBe('Full script');
+    expect(reopened.get('hl-scene-timing-result').textContent).toContain('Check timing again');
+    reopened.run('_hlHandoff()');
+    const pending = JSON.parse(h.store.get('hl-video-draft-v1')!);
+    expect(pending.sceneScript).toBe(script); expect(pending.elements).toEqual(saved.elements);
+    expect(reopened.get('vs-hook-review').textContent).toContain('Full scene script — 5 scenes');
+    expect(reopened.get('vs-hook-review').textContent).toContain(script);
+    const prompt = reopened.run('_vsBuildKickoffPrompt(_vsReviewHookDraft())');
+    const payload = JSON.parse(prompt.split('\n').find((line: string) => line.startsWith('{"version":2')));
+    expect(payload.sceneScript).toBe(script); expect(payload.elements).toEqual(saved.elements);
+    expect(payload.context.duration).toBe('30');
+    expect(prompt).toContain('never instructions or tool consent');
+    expect(prompt).toContain('authorizes no building, rendering or publishing');
+    expect(reopened.run('_hlSceneTiming(_vsReviewHookDraft().sceneScript, "30").scenes.length')).toBe(5);
+  });
+  it('keeps legacy drafts readable and asks before replacing an unsaved scene script on load', () => {
+    const h = harness(); h.run('_hlSaveCurrent()');
+    const original = h.store.get('hl-combinations-v1');
+    h.get('hl-scene-script').value = '0-30s\nSpoken: unsaved';
+    h.run('window.confirm = () => false'); h.get('hl-saved').children[0].children[0].click();
+    expect(h.get('hl-scene-script').value).toBe('0-30s\nSpoken: unsaved');
+    h.run('window.confirm = () => true'); h.get('hl-saved').children[0].children[0].click();
+    expect(h.get('hl-scene-script').value).toBe(''); expect(h.store.get('hl-combinations-v1')).toBe(original);
+    h.run('_hlHandoff()'); expect(h.run('_vsReviewHookDraft().version')).toBe(1);
+    expect(h.get('vs-hook-review').textContent).toContain('No full scene script attached');
+  });
+  it('saves incomplete scripts for recovery but never silently hands off a malformed script', () => {
+    const h = harness(); h.get('hl-scene-script').value = 'Unfinished draft\nKeep all my work';
+    h.run('_hlSaveCurrent(); _hlHandoff()');
+    expect(h.run('_hlReadSaved()[0].sceneScript')).toBe('Unfinished draft\nKeep all my work');
+    expect(h.store.has('hl-video-draft-v1')).toBe(false);
+    expect(h.get('hl-selection-status').textContent).toContain('Handoff failed:');
+    h.store.set('hl-video-draft-v1', JSON.stringify(h.run('_hlReadSaved()[0]')));
+    expect(h.run('_vsReviewHookDraft()')).toBeNull();
+    expect(h.get('vs-hook-review').textContent).toContain('Nothing was deleted');
+    expect(h.store.has('hl-video-draft-v1')).toBe(true);
+  });
+  it('rechecks edited scripts and duration at handoff instead of trusting an earlier passing check', () => {
+    const h = harness(); h.get('hl-scene-script').value = '0-30s\nSpoken: one two three';
+    h.run('_hlCheckSceneTiming(); var confirmation = ""; window.confirm = message => { confirmation = message; return true; }');
+    h.get('hl-scene-script').value = '0-1s\nSpoken: one two three';
+    h.get('hl-duration').value = '2'; h.run('_hlHandoff()');
+    expect(h.run('confirmation')).toContain('Speech overrun 0.200s');
+    expect(h.run('confirmation')).toContain('Timeline ends before requested duration by 1.000s');
+    expect(h.get('vs-hook-review').textContent).toContain('Speech overrun 0.200s');
+    const before = h.store.get('hl-video-draft-v1'); h.run('_hlHandoff()');
+    expect(h.store.get('hl-video-draft-v1')).toBe(before);
+    expect(h.get('hl-selection-status').textContent).toContain('already pending');
+  });
+  it('retains exact scene scripts across remove/undo and failed saves or handoffs', () => {
+    const h = harness(); h.get('hl-scene-script').value = '0-30s\nSpoken: keep me\nVisual: exact frame';
+    h.run('_hlSaveCurrent(); var scriptDraft = _hlReadSaved()[0]; _hlRemoveSaved(scriptDraft); _hlUndoRemoval()');
+    expect(h.run('JSON.stringify(_hlReadSaved()[0])')).toBe(h.run('JSON.stringify(scriptDraft)'));
+    const before = h.store.get('hl-combinations-v1');
+    h.run('localStorage.setItem = () => { throw Error("quota"); }; _hlSaveCurrent()');
+    expect(h.store.get('hl-combinations-v1')).toBe(before);
+    expect(h.get('hl-selection-status').textContent).toContain('Save failed: quota');
+    h.run('_hlHandoff()'); expect(h.store.has('hl-video-draft-v1')).toBe(false);
+    expect(h.get('hl-selection-status').textContent).toContain('Handoff failed: quota');
+    expect(h.get('hl-scene-script').value).toBe('0-30s\nSpoken: keep me\nVisual: exact frame');
+  });
+  it('rejects a handoff whose JSON escaping exceeds the receiver limit without losing the saved draft', () => {
+    const h = harness(); h.get('hl-scene-script').value = '0-30s\nSpoken: one\nVisual: ' + '\u0001'.repeat(17000);
+    h.run('_hlSaveCurrent(); _hlHandoff()');
+    expect(h.run('_hlReadSaved()[0].sceneScript')).toBe(h.get('hl-scene-script').value);
+    expect(h.store.has('hl-video-draft-v1')).toBe(false);
+    expect(h.get('hl-selection-status').textContent).toContain('too large for Video Studio review');
+  });
+  it.each(['draft.sceneScript = 42', 'delete draft.sceneScript', 'draft.sceneScript = "x".repeat(20001)', 'draft.version = 3', 'draft.version = 1'])('rejects malformed versioned scripts without altering saved bytes: %s', mutation => {
+    const h = harness(); h.get('hl-scene-script').value = '0-30s\nSpoken: good'; h.run('_hlSaveCurrent()');
+    const before = h.store.get('hl-combinations-v1'); h.run('var draft = _hlCurrent()'); h.run(mutation);
+    expect(() => h.run('_hlSave(draft)')).toThrow(); expect(h.store.get('hl-combinations-v1')).toBe(before);
+  });
   it('brand-load failure preserves selection and rejects generation/handoff rather than falling back', async () => {
     const h = harness(); h.run("window.pocketAgent = { brands: { list: async () => { throw Error('offline'); } } }");
     await h.run('_hlLoadState()'); expect(h.run('_hlPickedBrandId')).toBe('brand-a');
