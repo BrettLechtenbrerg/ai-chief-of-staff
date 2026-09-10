@@ -92,34 +92,99 @@ const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
   trim_video_silence: 'local-execute',
 };
 
-// Free-form execution is not local-only: programs can use network and credentials.
-// Constrained file/memory operations remain unattended; unknown execution does not.
-const CONFIRMATION_CAPABILITIES = new Set<ToolCapability>(['external-write', 'local-execute', 'unknown']);
-// Choosing a project expands subsequent file access; it is an authority change.
-const CONFIRMATION_TOOLS = new Set<string>(['fetch_aeo_visibility', 'set_project']);
+// Owner policy: only actions that leave this machine (send, publish, create,
+// modify or delete in an external account) or bill a batch of provider calls
+// need a human. Local file, shell, memory, video and project work runs
+// unattended; the shell already runs with a credential-stripped environment.
+// Unclassified tools still fail closed.
+const CONFIRMATION_CAPABILITIES = new Set<ToolCapability>(['external-write', 'unknown']);
+const CONFIRMATION_TOOLS = new Set<string>(['fetch_aeo_visibility']);
 
-const BROWSER_READ_ACTIONS = new Set(['navigate', 'extract', 'screenshot', 'tabs_list']);
+// Browser: observing and moving around a page is unattended; anything that can
+// submit, run script or upload asks. Unknown actions ask.
+const BROWSER_READ_ACTIONS = new Set([
+  'navigate', 'extract', 'screenshot', 'scroll', 'hover',
+  'tabs_list', 'tabs_open', 'tabs_focus', 'tabs_close',
+]);
+// Shell: local commands run unattended; commands that can send data off this
+// machine (transfer tools, remote shells, mail, deploy/publish, Apple events)
+// ask. Matched only at command position (start, or after ; & | ( ` newline),
+// so `ls | grep curl` or `cat curl.md` does not trip it.
+const SHELL_OUTBOUND_COMMAND =
+  /(?:^|[;&|(`\n])\s*(?:sudo\s+)?(?:(?:curl|wget|ssh|scp|sftp|rsync|sendmail|mailx?|osascript|nc|ncat|telnet|gh|vercel|netlify|aws|gcloud|az|firebase|heroku|fly|flyctl|s3cmd)|(?:git\s+push|npm\s+publish|pnpm\s+publish|yarn\s+publish|pip\s+upload|twine\s+upload))(?=\s|$)/i;
+const shellNeedsApproval = (args: unknown): boolean => {
+  const command = (args as { command?: unknown } | null)?.command;
+  return typeof command !== 'string' || SHELL_OUTBOUND_COMMAND.test(command);
+};
 const ARG_CONFIRMATION: Readonly<Record<string, (args: unknown) => boolean>> = {
   browser: (args) =>
     !BROWSER_READ_ACTIONS.has(String((args as { action?: unknown } | null)?.action ?? '')),
+  shell_command: shellNeedsApproval,
+  bash: shellNeedsApproval,
 };
 
-// Exact capabilities inspected in bundled Flo handlers. Unknown servers/tools
-// require confirmation. Proposal handlers can load attachments; a staging verb
-// alone cannot establish safety. Add reads here only after inspecting the sink.
+// Exact tools inspected in the vendored Flo servers (vendor/flo-mcp-servers).
+// Reads and `propose_*` staging never touch Google: nothing leaves until the
+// matching `*_execute`, which asks with a full proposal preview. Direct writers
+// (`*_execute`, `gmail_send`, `gmail_delete_by_search`, label create/delete)
+// are deliberately absent. Unknown servers/tools require confirmation.
 const KNOWN_MCP_READS = new Set([
+  // flo-gmail
   'mcp__flo-gmail__gmail_search_emails',
+  'mcp__flo-gmail__gmail_get_message',
+  'mcp__flo-gmail__gmail_list_labels',
+  'mcp__flo-gmail__gmail_list_pending',
   'mcp__flo-gmail__gmail_preview',
-  'mcp__flo-calendar__calendar_preview',
-  'mcp__flo-docs__docs_preview',
+  'mcp__flo-gmail__gmail_propose_send',
+  'mcp__flo-gmail__gmail_propose_delete',
+  'mcp__flo-gmail__gmail_propose_empty_trash',
+  'mcp__flo-gmail__gmail_propose_modify_labels',
+  // flo-calendar
   'mcp__flo-calendar__calendar_list_events',
   'mcp__flo-calendar__calendar_check_conflicts',
+  'mcp__flo-calendar__calendar_find_best_time',
+  'mcp__flo-calendar__calendar_list_pending',
+  'mcp__flo-calendar__calendar_preview',
+  'mcp__flo-calendar__calendar_propose_event',
+  'mcp__flo-calendar__calendar_propose_recurring_event',
+  'mcp__flo-calendar__calendar_propose_delete',
+  'mcp__flo-calendar__calendar_block_focus_time',
+  'mcp__flo-calendar__calendar_sync_docs_deadlines',
+  // flo-docs (Docs + Drive)
   'mcp__flo-docs__docs_read_content',
-  'mcp__flo-ghl__get_contact',
-  'mcp__flo-ghl__search_contacts',
-  'mcp__flo-ghl-brett__get_contact',
-  'mcp__flo-ghl-brett__search_contacts',
+  'mcp__flo-docs__docs_debug_structure',
+  'mcp__flo-docs__docs_verify_change',
+  'mcp__flo-docs__docs_list_pending',
+  'mcp__flo-docs__docs_preview',
+  'mcp__flo-docs__docs_propose_create',
+  'mcp__flo-docs__docs_propose_append_text',
+  'mcp__flo-docs__docs_propose_replace_text',
+  'mcp__flo-docs__docs_propose_delete_content',
+  'mcp__flo-docs__docs_propose_move_content',
+  'mcp__flo-docs__docs_propose_insert_at_position',
+  'mcp__flo-docs__docs_propose_apply_formatting',
+  'mcp__flo-docs__drive_list_folder',
+  'mcp__flo-docs__drive_search',
+  'mcp__flo-docs__drive_propose_create_folder',
+  'mcp__flo-docs__drive_propose_move_file',
+  'mcp__flo-docs__drive_propose_upload',
+  // flo-bookmarks (local Chrome bookmarks file only)
+  'mcp__flo-bookmarks__bookmarks_list',
 ]);
+
+// GoHighLevel CRM: reads run unattended; every create/update/delete/send asks.
+// Server aliases come from bundled and hand-built MCP entries.
+const GHL_SERVER_ALIASES = ['ghl-mcp', 'flo-ghl', 'flo-ghl-brett'];
+const GHL_READ_PREFIX = /^(?:get|list|search)_/;
+
+function isKnownMcpRead(name: string): boolean {
+  if (KNOWN_MCP_READS.has(name)) return true;
+  for (const alias of GHL_SERVER_ALIASES) {
+    const prefix = `mcp__${alias}__`;
+    if (name.startsWith(prefix)) return GHL_READ_PREFIX.test(name.slice(prefix.length));
+  }
+  return false;
+}
 
 function isExternalMcpTool(name: string): boolean {
   return name.startsWith('mcp__') &&
@@ -140,7 +205,7 @@ export function getToolPolicy(
   let capability = Object.hasOwn(TOOL_CAPABILITIES, toolName) ? TOOL_CAPABILITIES[toolName] : undefined;
   if (!capability && source === 'mcp') {
     // Annotations are hints only; a destructive hint can escalate, never downgrade.
-    capability = KNOWN_MCP_READS.has(toolName) ? 'external-read' : 'external-write';
+    capability = isKnownMcpRead(toolName) ? 'external-read' : 'external-write';
     if (annotations?.destructiveHint === true) capability = 'external-write';
   }
   capability ||= 'unknown';

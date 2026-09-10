@@ -33,21 +33,21 @@ it('aborts the actual child on its deadline and removes the parent listener', as
 });
 
 it('inherits guarded parent tools and preserves local draft operations', async () => {
-  const shell = vi.fn(async () => 'shell executed');
+  const click = vi.fn(async () => 'clicked');
   const write = vi.fn(async () => 'draft saved');
   const scope = { sessionId: 'delegation-fixture', channel: 'cron:fixture', cwd: '/workspace', approvedRoots: ['/workspace'] };
   const parentTools = [
-    guardToolWithApproval(attachToolPolicy({ name: 'shell_command', description: '', parameters: z.object({}), execute: shell }, 'native'), scope),
+    guardToolWithApproval(attachToolPolicy({ name: 'browser', description: '', parameters: z.object({}), execute: click }, 'custom'), scope),
     guardToolWithApproval(attachToolPolicy({ name: 'write', description: '', parameters: z.object({}), execute: write }, 'native'), scope),
   ];
   loop.mockImplementation(async function* (_messages, options) {
     expect(options.tools).toEqual(parentTools);
     const context = { signal: options.signal, toolCallId: 'child-fixture' };
-    expect(await options.tools[0].execute({}, context)).toMatch(/requires user approval/);
+    expect(await options.tools[0].execute({ action: 'click', selector: 'button' }, context)).toMatch(/requires user approval/);
     expect(await options.tools[1].execute({}, context)).toBe('draft saved');
   });
   const tool = createSubAgentTool(parentTools, async () => ({ provider: 'fixture' }) as never);
   await tool.execute({ task: 'synthetic delegated draft' }, { signal: new AbortController().signal } as ToolContext);
-  expect(shell).not.toHaveBeenCalled();
+  expect(click).not.toHaveBeenCalled();
   expect(write).toHaveBeenCalledOnce();
 });

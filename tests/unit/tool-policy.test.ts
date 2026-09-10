@@ -91,9 +91,13 @@ describe('mode tool enforcement', () => {
 
 describe('tool capability registry', () => {
   it('lets local work run unattended', () => {
-    for (const name of ['read', 'write', 'subagent', 'remember', 'notify', 'create_routine', 'task_output', 'task_stop']) {
+    for (const name of [
+      'read', 'write', 'subagent', 'remember', 'notify', 'create_routine', 'task_output', 'task_stop',
+      'set_project', 'scaffold_video_project', 'render_video', 'trim_video_silence',
+    ]) {
       expect(getToolPolicy(name, 'native').confirmationRequired, name).toBe(false);
     }
+    expect(getToolPolicy('unreviewed_tool', 'native')).toMatchObject({ capability: 'unknown', confirmationRequired: true });
     expect(getToolPolicy('generate_blog_image', 'custom')).toMatchObject({
       capability: 'paid-action',
       confirmationRequired: false,
@@ -106,17 +110,28 @@ describe('tool capability registry', () => {
     }
   });
 
-  it('allows inspected MCP reads only; staging and unreviewed tools require approval', () => {
+  it('allows inspected MCP reads and staging; sends, executes and unreviewed tools require approval', () => {
     const read = [
       'mcp__flo-gmail__gmail_search_emails',
+      'mcp__flo-gmail__gmail_get_message',
+      'mcp__flo-gmail__gmail_list_pending',
+      'mcp__flo-gmail__gmail_propose_send',
       'mcp__flo-calendar__calendar_list_events',
       'mcp__flo-calendar__calendar_check_conflicts',
+      'mcp__flo-calendar__calendar_find_best_time',
+      'mcp__flo-calendar__calendar_propose_event',
+      'mcp__flo-calendar__calendar_block_focus_time',
       'mcp__flo-docs__docs_read_content',
+      'mcp__flo-docs__docs_propose_append_text',
+      'mcp__flo-docs__drive_search',
+      'mcp__flo-docs__drive_list_folder',
+      'mcp__flo-bookmarks__bookmarks_list',
       'mcp__flo-ghl__get_contact',
       'mcp__flo-ghl__search_contacts',
+      'mcp__ghl-mcp__list_opportunities',
+      'mcp__flo-ghl-brett__get_messages',
     ];
     const write = [
-      'mcp__flo-gmail__gmail_propose_send',
       'mcp__dataforseo-mcp-server__serp_organic_live_advanced',
       'mcp__firecrawl-mcp__firecrawl_scrape',
       'mcp__unknown__get_status',
@@ -124,13 +139,17 @@ describe('tool capability registry', () => {
       'mcp__flo-gmail__gmail_send',
       'mcp__flo-gmail__gmail_execute',
       'mcp__flo-gmail__gmail_delete_by_search',
+      'mcp__flo-gmail__gmail_create_label',
+      'mcp__flo-gmail__gmail_delete_label',
       'mcp__flo-calendar__calendar_execute',
-      'mcp__flo-calendar__calendar_block_focus_time',
       'mcp__flo-docs__docs_execute',
+      'mcp__flo-bookmarks__bookmarks_delete_folder',
       'mcp__flo-ghl__send_message',
       'mcp__flo-ghl__create_contact',
       'mcp__flo-ghl__add_contact_to_workflow',
       'mcp__flo-ghl__record_invoice_payment',
+      'mcp__ghl-mcp__send_campaign_now',
+      'mcp__ghl-mcp__getaway',
       'mcp__meta-ads__create_campaign',
     ];
     for (const name of read) {
@@ -138,6 +157,25 @@ describe('tool capability registry', () => {
     }
     for (const name of write) {
       expect(getToolPolicy(name, 'mcp'), name).toMatchObject({ capability: 'external-write', confirmationRequired: true });
+    }
+  });
+
+  it('only prompts the shell for commands that can leave the machine', async () => {
+    const execution = { sessionId: 's', channel: 'scheduled', cwd: '/', approvedRoots: [] };
+    ApprovalManager.setNotifier(null);
+    const ctx = {} as never;
+    for (const name of ['shell_command', 'bash']) {
+      const tool = guardToolWithApproval(
+        attachToolPolicy({ name, description: '', parameters: {} as never, execute: async () => 'ran' }, 'native'),
+        execution
+      );
+      for (const command of ['ls -la', 'ls | grep curl', 'echo ssh-keygen', 'npm test', 'git status', 'cat ~/notes/curl.md']) {
+        expect(await tool.execute({ command }, ctx), `${name}: ${command}`).toBe('ran');
+      }
+      for (const command of ['curl https://x', 'wget x', 'git push', 'npm publish', 'ls && rsync a h:/b', 'mail -s hi a@b', 'gh pr create', 'aws s3 cp a s3://b']) {
+        expect(String(await tool.execute({ command }, ctx)), `${name}: ${command}`).toContain('requires user approval');
+      }
+      expect(String(await tool.execute({}, ctx))).toContain('requires user approval');
     }
   });
 
@@ -154,7 +192,11 @@ describe('tool capability registry', () => {
     const ctx = {} as never;
     expect(await tool.execute({ action: 'navigate', url: 'https://x' }, ctx)).toBe('ran');
     expect(await tool.execute({ action: 'extract' }, ctx)).toBe('ran');
+    expect(await tool.execute({ action: 'scroll', direction: 'down' }, ctx)).toBe('ran');
+    expect(await tool.execute({ action: 'hover', selector: 'a' }, ctx)).toBe('ran');
     expect(String(await tool.execute({ action: 'click', selector: 'a' }, ctx))).toContain('requires user approval');
+    expect(String(await tool.execute({ action: 'type', selector: 'input', text: 'x' }, ctx))).toContain('requires user approval');
+    expect(String(await tool.execute({ action: 'evaluate', script: '1' }, ctx))).toContain('requires user approval');
   });
 
   it('lets a destructive annotation escalate but never downgrade', () => {

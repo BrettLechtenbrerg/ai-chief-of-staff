@@ -147,7 +147,29 @@ describe('approval tool guard', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
-  it.each(['shell_command', 'bash', 'mcp__unreviewed__lookup', 'unreviewed_tool', 'render_video', 'scaffold_video_project', 'set_project'])(
+  it.each(['shell_command', 'bash', 'render_video', 'scaffold_video_project', 'set_project'])(
+    'lets local-only %s run unattended from a scheduled routine', async (name) => {
+      const execute = vi.fn(async () => 'executed');
+      const tool = guardToolWithApproval(attachToolPolicy(
+        { name, description: '', parameters: z.object({}), execute } as AgentTool, 'native'
+      ), { sessionId: 'background', channel: 'cron:daily', cwd: '/workspace', approvedRoots: ['/workspace'] });
+      await expect(tool.execute({ command: 'ls -la' }, context)).resolves.toBe('executed');
+      expect(execute).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['curl -X POST https://x', 'git push origin main', 'ls; scp a.txt h:/', 'echo hi | ssh host', 'osascript -e x'])(
+    'blocks outbound shell %s without a user', async (command) => {
+      const execute = vi.fn(async () => 'executed');
+      const tool = guardToolWithApproval(attachToolPolicy(
+        { name: 'shell_command', description: '', parameters: z.object({}), execute } as AgentTool, 'native'
+      ), { sessionId: 'background', channel: 'cron:daily', cwd: '/workspace', approvedRoots: ['/workspace'] });
+      await expect(tool.execute({ command }, context)).resolves.toMatch(/requires user approval/i);
+      expect(execute).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['mcp__unreviewed__lookup', 'unreviewed_tool', 'mcp__flo-gmail__gmail_execute', 'mcp__ghl-mcp__send_message'])(
     'blocks unreviewed execution of %s without a user', async (name) => {
       const execute = vi.fn(async () => 'executed');
       const tool = guardToolWithApproval(attachToolPolicy(

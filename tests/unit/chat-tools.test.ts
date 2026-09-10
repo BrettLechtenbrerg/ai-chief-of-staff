@@ -146,11 +146,11 @@ describe('shell_command tool — approved safe commands pass through', () => {
     vi.restoreAllMocks();
   });
 
-  it('denies shell execution when the caller omits its execution context', async () => {
+  it('runs the sandboxed shell unattended even when the caller omits its execution context', async () => {
     const tools = getChatAgentTools({} as Parameters<typeof getChatAgentTools>[0], '/tmp');
     const result = await tools.find(tool => tool.name === 'shell_command')!.execute({ command: 'echo hi' }, ctx);
-    expect(result).toMatch(/requires user approval/);
-    expect(mockExecAsync).not.toHaveBeenCalled();
+    expect(result).toBe('ok');
+    expect(mockExecAsync).toHaveBeenCalledOnce();
   });
 
   const safeCases: string[] = ['ls', 'pwd', 'echo hi'];
