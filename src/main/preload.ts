@@ -319,6 +319,11 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     },
   },
 
+  // ─── Claude Code route (Max subscription via installed binary) ──────
+  claudeCode: {
+    status: () => ipcRenderer.invoke('claudeCode:status'),
+  },
+
   // ─── OpenAI OAuth ──────────────────────────────────────────────────
   openaiAuth: {
     startOAuth: () => ipcRenderer.invoke('openai:startOAuth'),

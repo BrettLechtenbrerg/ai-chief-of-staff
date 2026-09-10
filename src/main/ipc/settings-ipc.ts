@@ -1,6 +1,8 @@
 import { trustedHandle } from './trusted-ipc.js';
 import { AgentManager } from '../../agent';
 import { resolveAndPersistModel } from '../../agent/resolve-model';
+import { CLAUDE_CODE_AUTH_METHOD, isClaudeCodeRoute } from '../../agent/claude-code-route';
+import { isPersonalBuild } from '../update-policy';
 import { SettingsManager, SETTINGS_SCHEMA } from '../../settings';
 import { THEMES } from '../../settings/themes';
 import { createTelegramBot } from '../../channels/telegram';
@@ -17,7 +19,7 @@ export function getAvailableModels(): Array<{ id: string; name: string; provider
   const authMethod = SettingsManager.get('auth.method');
   const hasOAuth = authMethod === 'oauth' && SettingsManager.get('auth.oauthToken');
   const hasAnthropicKey = SettingsManager.get('anthropic.apiKey');
-  if (hasOAuth || hasAnthropicKey) {
+  if (hasOAuth || hasAnthropicKey || isClaudeCodeRoute()) {
     models.push(
       { id: 'claude-fable-5-1', name: 'Fable 5.1', provider: 'anthropic' },
       { id: 'claude-opus-5', name: 'Opus 5', provider: 'anthropic' },
@@ -218,6 +220,7 @@ const PROVIDER_CREDENTIAL_KEYS = new Set([
   'deepseek.apiKey',
   'auth.method',
   'auth.oauthToken',
+  'claudeCode.executable',
   'openai.auth.method',
 ]);
 
@@ -270,6 +273,10 @@ export function registerSettingsIPC(deps: IPCDependencies): void {
       }
       if (definition.validation && !definition.validation(value))
         throw new Error('Invalid setting value');
+      // Owner-only route: distributed builds must use their own API keys.
+      if (key === 'auth.method' && value === CLAUDE_CODE_AUTH_METHOD && !isPersonalBuild()) {
+        throw new Error('Claude Code sign-in is only available in the personal build');
+      }
       SettingsManager.set(key, value);
 
       // Auto-setup birthday cron jobs when birthday is set

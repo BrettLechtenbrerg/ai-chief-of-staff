@@ -32,7 +32,16 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     encrypted: false,
     category: 'auth',
     label: 'Authentication Method',
-    description: 'How you authenticate with Claude (api_key or oauth)',
+    description: 'How you authenticate with Claude (api_key, oauth, or claude-code)',
+    type: 'string',
+  },
+  {
+    key: 'claudeCode.executable',
+    defaultValue: '',
+    encrypted: false,
+    category: 'auth',
+    label: 'Claude Code Binary',
+    description: 'Path to the installed Claude Code binary (blank = auto-detect)',
     type: 'string',
   },
   {

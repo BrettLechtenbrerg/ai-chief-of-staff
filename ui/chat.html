@@ -724,6 +724,17 @@
                 </div>
               </div>
             </div>
+            <!-- Personal builds only: Claude via the installed, signed-in Claude Code binary. -->
+            <div class="auth-option hidden" id="claude-code-option">
+              <div class="auth-option-header">
+                <span class="auth-option-title">Claude Code (Max subscription)</span>
+                <div class="flex-row" style="gap: 8px;">
+                  <span id="claude-code-status" class="auth-badge none hidden"></span>
+                  <button id="claude-code-btn" class="oauth-btn" onclick="playNormalClick(); stgHandleClaudeCodeAction()">Use</button>
+                </div>
+              </div>
+              <div id="claude-code-detail" class="section-desc" style="margin-top: 6px; font-size: 12px;"></div>
+            </div>
           </div>
           <div class="keys-table" id="auth-api-key-section">
             <div class="key-row">

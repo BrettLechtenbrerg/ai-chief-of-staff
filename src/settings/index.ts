@@ -428,7 +428,8 @@ class SettingsManagerClass {
    */
   hasRequiredKeys(): boolean {
     const hasAnthropicOAuth =
-      this.get('auth.method') === 'oauth' && !!this.get('auth.oauthToken');
+      (this.get('auth.method') === 'oauth' && !!this.get('auth.oauthToken')) ||
+      this.get('auth.method') === 'claude-code';
     const hasOpenAIOAuth =
       this.get('openai.auth.method') === 'oauth' && !!this.get('openai.accessToken');
 

@@ -48,6 +48,18 @@ exports.default = async function(context) {
     }
   }
 
+  // 1b. Never ship Claude Code itself. The Claude Code route (personal builds)
+  // drives the owner's separately installed, signed-in binary; the SDK's
+  // bundled platform binaries (~200MB each) are dev-only fallbacks.
+  const anthropicScope = path.join(appPath, 'node_modules', '@anthropic-ai');
+  if (fs.existsSync(anthropicScope)) {
+    for (const entry of fs.readdirSync(anthropicScope)) {
+      if (!entry.startsWith('claude-agent-sdk-')) continue;
+      console.log(`[afterPack] Removing bundled Claude Code binary ${entry}`);
+      fs.rmSync(path.join(anthropicScope, entry), { recursive: true, force: true });
+    }
+  }
+
   // 2. Remove unused locale files (keep only en) - macOS only (.lproj)
   if (platform === 'darwin' && fs.existsSync(resourcesPath)) {
     const localeFiles = fs.readdirSync(resourcesPath).filter(f => f.endsWith('.lproj') && f !== 'en.lproj');

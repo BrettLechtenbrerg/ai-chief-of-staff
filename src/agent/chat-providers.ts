@@ -12,6 +12,7 @@ import { providerRegistry, stream } from '@kenkaiiii/gg-ai';
 import { SettingsManager } from '../settings';
 import { getProviderForModel, PROVIDER_CONFIGS } from './providers';
 import type { ProviderType } from './providers';
+import { isClaudeCodeRoute } from './claude-code-route';
 
 // Register DeepSeek with gg-ai's provider registry at module load.
 // DeepSeek's API is OpenAI Chat Completions-compatible. We route through
@@ -37,6 +38,8 @@ export interface StreamConfig {
   apiKey?: string;
   baseUrl?: string;
   accountId?: string;
+  /** `claude-code`: run through the owner's signed-in Claude Code binary; no key. */
+  transport?: 'claude-code';
 }
 
 /** One resolver per provider. Each function receives the provider's PROVIDER_CONFIGS entry. */
@@ -108,6 +111,9 @@ const PROVIDER_STRATEGY: Record<ProviderType, ProviderResolver> = {
     const apiKey = SettingsManager.get('anthropic.apiKey');
     if (apiKey) {
       return { provider: 'anthropic', apiKey };
+    }
+    if (isClaudeCodeRoute()) {
+      return { provider: 'anthropic', transport: 'claude-code' };
     }
     // OAuth path
     const authMethod = SettingsManager.get('auth.method');

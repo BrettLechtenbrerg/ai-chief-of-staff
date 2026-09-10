@@ -16,6 +16,7 @@ import { agentLoop } from '@kenkaiiii/gg-agent';
 import type { AgentTool, AgentOptions, ToolContext } from '@kenkaiiii/gg-agent';
 import type { Message } from '@kenkaiiii/gg-ai';
 import type { StreamConfig } from '../agent/chat-providers';
+import { claudeCodeAgentLoop } from '../agent/claude-code-loop';
 import { registerSubAgent, updateSubAgent, removeSubAgent } from './subagent-registry';
 import { SettingsManager } from '../settings';
 
@@ -118,7 +119,7 @@ export function createSubAgentTool(
         const messages: Message[] = [{ role: 'user', content: task }];
 
         // Keep ownership until the loop settles; abort the actual child on deadline.
-        const result = await runSubAgent(id, messages, agentOptions, childContext);
+        const result = await runSubAgent(id, messages, agentOptions, childContext, streamConfig.transport);
         child.signal.throwIfAborted();
 
         // Truncate output
@@ -154,9 +155,10 @@ async function runSubAgent(
   id: string,
   messages: Message[],
   options: AgentOptions,
-  context: ToolContext
+  context: ToolContext,
+  transport?: StreamConfig['transport']
 ): Promise<string> {
-  const loop = agentLoop(messages, options);
+  const loop = transport === 'claude-code' ? claudeCodeAgentLoop(messages, options) : agentLoop(messages, options);
   let response = '';
   let toolUseCount = 0;
   let totalInput = 0;

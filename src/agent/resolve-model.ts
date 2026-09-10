@@ -14,6 +14,7 @@
 
 import { SettingsManager } from '../settings';
 import { getProviderForModel, type ProviderType } from './providers';
+import { isClaudeCodeRoute } from './claude-code-route';
 
 /** Default model for each provider when fallback is required. */
 const PROVIDER_DEFAULT_MODEL: Record<ProviderType, string> = {
@@ -44,7 +45,7 @@ const PROVIDER_PREFERENCE: ProviderType[] = [
 
 export interface AvailableKeys {
   anthropic: boolean;
-  /** Anthropic OAuth (Claude Pro/Max sign-in). */
+  /** Anthropic subscription: legacy OAuth token, or the signed-in Claude Code binary. */
   anthropicOAuth: boolean;
   openai: boolean;
   /** OpenAI OAuth (Codex sign-in). */
@@ -61,7 +62,8 @@ export function getAvailableKeys(): AvailableKeys {
   return {
     anthropic: !!SettingsManager.get('anthropic.apiKey'),
     anthropicOAuth:
-      SettingsManager.get('auth.method') === 'oauth' && !!SettingsManager.get('auth.oauthToken'),
+      (SettingsManager.get('auth.method') === 'oauth' && !!SettingsManager.get('auth.oauthToken')) ||
+      isClaudeCodeRoute(),
     openai: !!SettingsManager.get('openai.apiKey'),
     openaiOAuth: SettingsManager.get('openai.auth.method') === 'oauth',
     moonshot: !!SettingsManager.get('moonshot.apiKey'),

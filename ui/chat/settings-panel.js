@@ -591,6 +591,7 @@ async function _stgUpdateAuthStatus() {
   if (!statusBadge || !authBtn) return;
 
   if (oauthCodeSection) oauthCodeSection.classList.add('hidden');
+  _stgUpdateClaudeCodeStatus(authMethod === 'claude-code');
 
   if (authMethod === 'oauth' && hasOAuth) {
     statusBadge.className = 'auth-badge loading';
@@ -620,6 +621,41 @@ async function _stgUpdateAuthStatus() {
 async function stgHandleAuthAction() {
   const authBtn = document.getElementById('oauth-btn');
   if (authBtn.classList.contains('logout-btn')) { await stgLogout(); } else { await stgStartOAuth(); }
+}
+
+// Claude Code route: personal builds only. The app never sees credentials;
+// sign-in happens in Terminal via `claude login`.
+async function _stgUpdateClaudeCodeStatus(active) {
+  const option = document.getElementById('claude-code-option');
+  const badge = document.getElementById('claude-code-status');
+  const btn = document.getElementById('claude-code-btn');
+  const detail = document.getElementById('claude-code-detail');
+  if (!option || !badge || !btn || !detail) return;
+  let status = null;
+  try { status = await window.pocketAgent.claudeCode.status(); } catch { status = null; }
+  if (!status || !status.supported) { option.classList.add('hidden'); return; }
+  option.classList.remove('hidden');
+  btn.textContent = active ? 'Stop using' : 'Use';
+  btn.className = active ? 'logout-btn' : 'oauth-btn';
+  btn.disabled = !active && !!status.problem;
+  if (status.problem) {
+    badge.className = 'auth-badge none';
+    badge.textContent = active ? 'Needs attention' : 'Not ready';
+    detail.textContent = status.problem;
+  } else {
+    badge.className = active ? 'auth-badge oauth' : 'auth-badge none';
+    badge.textContent = active ? 'Connected' : 'Ready';
+    detail.textContent = `Claude Code ${status.version || ''} signed in · ${status.executable}`;
+  }
+}
+
+async function stgHandleClaudeCodeAction() {
+  const active = _stgSettings['auth.method'] === 'claude-code';
+  try {
+    await window.pocketAgent.settings.set('auth.method', active ? '' : 'claude-code');
+    _stgShowToast(active ? 'Claude Code route off' : 'Claude now runs through Claude Code', 'success');
+    await _stgLoadSettings();
+  } catch (err) { _stgShowToast(err.message || 'Could not update Claude Code route', 'error'); }
 }
 
 async function stgStartOAuth() {

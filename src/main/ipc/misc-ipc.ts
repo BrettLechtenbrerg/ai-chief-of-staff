@@ -102,6 +102,16 @@ export function registerMiscIPC(deps: IPCDependencies): void {
     }
   });
 
+  // Claude Code route (personal builds): binary + sign-in state, read-only.
+  trustedHandle('claudeCode:status', async () => {
+    const { isPersonalBuild } = await import('../update-policy');
+    if (!isPersonalBuild()) {
+      return { supported: false, executable: null, version: null, loggedIn: false, problem: 'Personal build only' };
+    }
+    const { getClaudeCodeStatus } = await import('../../agent/claude-code-route');
+    return { supported: true, ...(await getClaudeCodeStatus()) };
+  });
+
   // OAuth flow for Claude subscription
   trustedHandle('auth:startOAuth', async () => {
     const { ClaudeOAuth } = await import('../../auth/oauth');

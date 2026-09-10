@@ -11,6 +11,15 @@ export function isInstallValidationStartup(requested = process.env.ACOS_INSTALL_
   return true;
 }
 
+/**
+ * Owner-only features (e.g. the Claude Code subscription route) exist in the
+ * verified personal build and in unpackaged development runs, never in a
+ * distributed beta.
+ */
+export function isPersonalBuild(): boolean {
+  return !app.isPackaged || getUpdateBlockReason() === 'Updates disabled for this personal local build';
+}
+
 /** Durable packaged metadata, never a user setting or a process environment flag. */
 export function getUpdateBlockReason(): string | null {
   try {

@@ -41,6 +41,7 @@ const PAGE_CHANNEL_POLICY: Readonly<Record<TrustedPage, readonly ChannelRule[]>>
     'auth:*',
     'openai-auth:*',
     'openai:*',
+    'claudeCode:status',
     'themes:*',
     'chat:*',
     'updater:*',

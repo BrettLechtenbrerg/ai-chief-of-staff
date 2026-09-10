@@ -23,6 +23,7 @@ import { SYSTEM_GUIDELINES } from '../config/system-guidelines';
 import { getModeConfig, buildRoutingInstructions } from './agent-modes';
 import type { AgentModeId } from './agent-modes';
 import { getStreamConfig, THINKING_LEVEL_MAP } from './chat-providers';
+import { claudeCodeAgentLoop, claudeCodeComplete } from './claude-code-loop';
 import { resolveModel } from './resolve-model';
 import { getChatAgentTools, getCoderAgentTools } from './chat-tools';
 import {
@@ -179,6 +180,9 @@ export class ChatEngine {
       for (const model of [summaryModel, currentModel]) {
         try {
           const streamCfg = await getStreamConfig(model);
+          if (streamCfg.transport === 'claude-code') {
+            return claudeCodeComplete(query, { model, cwd: this.workspace });
+          }
           const result = ggStream({
             provider: streamCfg.provider,
             model,
@@ -452,7 +456,10 @@ export class ChatEngine {
       );
 
       // Run agentLoop directly with full conversation context
-      const loop = agentLoop(messages, agentOptions);
+      const loop =
+        streamConfig.transport === 'claude-code'
+          ? claudeCodeAgentLoop(messages, agentOptions, { cwd: this.workspace })
+          : agentLoop(messages, agentOptions);
 
       // Iterate agent events
       let response = '';
@@ -1275,6 +1282,10 @@ export class ChatEngine {
       this.lastCompactionTime = Date.now();
       const streamCfg = await getStreamConfig(model);
       signal?.throwIfAborted();
+      let responseText: string;
+      if (streamCfg.transport === 'claude-code') {
+        responseText = await claudeCodeComplete(compactionPrompt, { model, cwd: this.workspace, signal });
+      } else {
       const result = ggStream({
         provider: streamCfg.provider,
         model,
@@ -1291,7 +1302,8 @@ export class ChatEngine {
           ? response.message.content
           : [{ type: 'text' as const, text: response.message.content }]
       ).filter((p): p is TextContent => p.type === 'text');
-      const responseText = textParts.map((p) => p.text).join('');
+      responseText = textParts.map((p) => p.text).join('');
+      }
 
       if (!responseText) {
         console.log('[ChatEngine] Memory compaction returned empty response, skipping');
