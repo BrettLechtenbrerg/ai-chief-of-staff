@@ -119,3 +119,27 @@ receipts. Any new external copy must be encrypted first, with the password
 entered privately in Terminal, never in chat. No Keychain export is permitted.
 
 ## Final receipts
+
+- **RUNTIME:** commits `51754b6`, `2cc6d4c` and documentation commit `a8e3e55`
+  pushed to `checkpoint/2026-09-06-session-closeout`; `git ls-remote` matched
+  local HEAD `a8e3e553f3f6abef083abff8cdfcfa2d012abd47`. Public `main`, release
+  tags and installers were not published. This receipt commit follows on the
+  same branch.
+- **RUNTIME:** Gitleaks 8.30.1 (official `ghcr.io/gitleaks/gitleaks:v8.30.1`
+  image, digest `sha256:c00b6bd0…bbb7f`) scanned all 491 publishable files
+  (~6.02 MB, HEAD plus the staged closeout docs) with redaction: **no leaks**.
+  This is a current source scan, not a full-history scan or a security certification.
+- **RUNTIME:** Vercel read-only inspection of `https://www.totalsuccessai.com`:
+  project `tsai-site`, deployment `dpl_CjNkrHixroYLHJGVXscvvBUYQ8Fb`, production,
+  status **Ready**, created 2026-09-04. Unchanged since the previous closeout;
+  nothing was deployed.
+- **RUNTIME:** complete private local copy matched its sources in **364.579 seconds**:
+  `~/dev/_backups/acos-private-closeout-20260910T142724Z-rvqyfzmn/payload/`.
+  Verified roots: repository 203,723 entries (including `.git`, `.gg`,
+  dependencies and release files); full app data 182; this session's checkpoint
+  28,508; shared Flo 6; brand profiles 199; home routing 1; Desktop resume 1.
+  Symlinks preserved without following. `payload/verification.json` records
+  per-root digests. Local copy verification is not external recovery.
+- The installed app remained stopped through archival. On resume, use the
+  validated guarded launch path; do not relaunch normally from the Dock while
+  automatic services are paused.
