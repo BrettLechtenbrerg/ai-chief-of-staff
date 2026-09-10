@@ -122,3 +122,22 @@ Do not claim that all possible subscription-backed Claude integrations are banne
 or that the existing custom integration is now supported. Seek Anthropic/legal
 clarification for an ambiguous private-use arrangement rather than spoofing identity.
 Re-verify this time-sensitive policy before implementing or distributing a route.
+
+### Update 2026-09-10 — official-binary route implemented for the owner's private build
+
+Policy re-read 2026-09-10. Commit `2cc6d4c` adds `src/agent/claude-code-route.ts`
+and `src/agent/claude-code-loop.ts`: the app drives Brett's separately installed,
+unmodified Claude Code binary through `@anthropic-ai/claude-agent-sdk`, signed in
+by Brett himself in Terminal. The app does not collect, store, refresh, forward
+or intermediate Claude.ai tokens, does not present Claude Code's client identity
+itself, and spawns the binary with an allowlisted environment that never carries
+an Anthropic API key. Claude Code's own tools, settings, hooks and MCP servers are
+disabled; only the app's tools are bridged and remain subject to the approval policy.
+
+| ID | Severity | Trigger | Evidence | Required boundary | Status / guard |
+| --- | --- | --- | --- | --- | --- |
+| CLAUDE-AUTH-2 | HIGH | Distributing the subscription route | CODE: `auth.method = 'claude-code'` is rejected by `settings-ipc` unless `isPersonalBuild()`; Settings toggle hidden elsewhere; `afterPack.cjs` strips the SDK's bundled Claude Code binary | Personal build only; public downloads use their own API keys; never ship or vendor the Claude Code binary | Guarded in code and verified in the packaged personal build |
+
+The legacy custom OAuth client (`src/auth/oauth.ts`) stays retired. This is
+engineering guidance, not legal advice; re-check the policy before any change in
+scope, hosting or distribution.

@@ -33,7 +33,8 @@ This project is an MIT-licensed rebrand of **KenKaiii/pocket-agent**.
 
 - **Framework**: Electron (menu-bar app, not window-based)
 - **Language**: TypeScript (strict mode)
-- **AI runtime**: Claude Agent SDK (`@anthropic-ai/sdk`) — users supply their own Anthropic API key
+- **AI runtime**: gg-agent loop over `@anthropic-ai/sdk` / OpenAI — users supply their own API keys (or ChatGPT OAuth). Brett's personal build additionally routes Claude through his installed, signed-in Claude Code binary (`src/agent/claude-code-*.ts`); that route is rejected in distributed builds.
+- **Approvals**: `src/agent/tool-policy.ts` prompts only for actions that leave the machine (send/execute/publish, CRM writes, browser acting, outbound shell). Local files, shell, memory and video run unattended.
 - **Storage**: SQLite via `better-sqlite3` (local-only, system Application Support dir)
 - **Browser automation**: `puppeteer-core` (hidden Electron window OR attach to user's Chrome via remote debugging)
 - **Messaging**: `grammy` (Telegram bot)

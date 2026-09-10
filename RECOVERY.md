@@ -2,7 +2,32 @@
 
 This is the canonical session-kickoff document. If you're a fresh Claude session, start here.
 
-## Current handoff — session closeout, September 7 local / September 8 UTC
+## Current handoff — session closeout, September 10, 2026
+
+Two owner-approved upgrades are built, installed, committed and pushed:
+
+1. **Approvals only for actions that leave the machine** (`51754b6`). Local
+   files, shell, memory, video, project switching, Google reads and `propose_*`
+   staging run unattended. Email/calendar/docs `*_execute`, Gmail labels, GHL
+   writes, browser click/type/upload, outbound shell commands, Telegram, paid
+   AEO batches and unknown tools still ask.
+2. **Claude via Max subscription** (`2cc6d4c`). Claude runs through Brett's
+   separately installed, signed-in Claude Code binary via the Agent SDK. The app
+   never holds Anthropic credentials. Personal builds only: the setting is
+   rejected in distributed builds and the bundled SDK binary is stripped from
+   packages. Brett enabled it in the installed app and Fable 5.1 answers.
+   ChatGPT OAuth stays connected as the other working provider.
+
+Typecheck, lint and the full suite passed: **103 test files / 1,844 tests**.
+The private app still displays `1.0.0-beta.25`; no beta or public release.
+Stopped-app checkpoint `checkpoint-step18-Rd1lru` passed restore drills.
+Read `docs/SESSION-CLOSEOUT-2026-09-10.md` for receipts, rollback bundles and
+backup limits. If Claude Code's sign-in expires, Brett runs `claude` then
+`/login` in Terminal; do not touch its Keychain entry. Everything below about
+consumed approvals, Google access and guarded launch still applies. Next
+development remains connector validation.
+
+## Previous handoff — session closeout, September 7 local / September 8 UTC
 
 Both Hook Lab upgrades are installed: scene timing checks plus full-script
 save/load and Video Studio handoff. The installed app was quit normally for a

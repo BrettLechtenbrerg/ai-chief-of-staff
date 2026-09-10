@@ -1,6 +1,6 @@
 # Resume AI Chief of Staff
 
-Updated: September 7 local / September 8 UTC — both upgrades installed; app stopped for verified closeout.
+Updated: September 10, 2026 — approval policy and Claude-via-Max route installed; app stopped for verified closeout.
 
 Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.”**
 
@@ -11,8 +11,9 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
 3. Check the branch and worktree without resetting or overwriting anything.
    The session checkpoint branch is `checkpoint/2026-09-06-session-closeout`.
    The remote is `BrettLechtenbrerg/ai-chief-of-staff` (spelling intentional).
-4. Consult `docs/SESSION-CLOSEOUT-2026-09-07.md` for backup and verification
-   receipts. Do not confuse an old release checkpoint with current app data.
+4. Consult `docs/SESSION-CLOSEOUT-2026-09-10.md` for backup and verification
+   receipts (September 7 receipts remain in their own document). Do not confuse
+   an old release checkpoint with current app data.
 
 ## Current product state
 
@@ -25,7 +26,13 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
   (`validateCandidate`), use its guarded `defaultTransport().launch`, and verify
   startup health. It checks the validation marker and sets
   `ACOS_INSTALL_VALIDATION=1`; do not bypass these guards.
-- The working provider is ChatGPT OAuth / GPT-5.6 Sol. No paid API fallback.
+- Two working providers: ChatGPT OAuth (GPT-5.6 Sol) and **Claude via Brett's
+  Max subscription** through his installed Claude Code binary (Settings › LLM ›
+  “Claude Code (Max subscription)”). No paid API fallback. The Claude route is
+  personal-build only; public downloads need their own keys. If Claude Code's
+  sign-in expires, Brett runs `claude` then `/login` in Terminal.
+- Approvals fire only for actions that leave the machine (send/execute/publish,
+  CRM writes, browser acting, outbound shell). Local work runs unattended.
 - Synthetic finance, the TSAI SEO report and a synthetic Hook Lab draft are saved
   in the app. Brett confirmed the SEO report looks good.
 - Finance, SEO and Hook Lab each consumed their one-use approvals. **Never retry
@@ -38,20 +45,22 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
 
 ## Latest closeout
 
-The closing checkpoint is `checkpoint-step18-HQEWjy` under the existing backup
-root. Restore drills and post-suite data/config comparisons passed. Typecheck,
-lint and **1,824 tests / 101 files** passed. See the current closeout document for
-GitHub and private-archive completion receipts. Source commit `53f661c` was pushed
-and remote-verified; a complete local copy is verified under
-`~/dev/_backups/acos-private-closeout-20260908T002928Z-zfpu3kio/payload/`.
-The external encrypted backup still needs its private completion/restore receipts;
-last observed state was `awaiting-encryption` in Terminal. Never infer success
-from a pending recipe or local copy. Check actual receipts on resume. The Desktop resume pointer
-is `~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
+The closing checkpoint is `checkpoint-step18-Rd1lru` under the existing backup
+root; restore drills passed. Typecheck, lint and **1,844 tests / 103 files**
+passed. Commits `51754b6` (approval policy) and `2cc6d4c` (Claude Code route)
+plus the closeout documentation are on the checkpoint branch; see the current
+closeout document for push, secret-scan and private-copy receipts. The older
+external encrypted backup was last observed `awaiting-encryption`; never infer
+success from a pending recipe or local copy. The Desktop resume pointer is
+`~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
 
 ## Next useful work
 
-**Second upgrade installed with Brett's approval:** Hook Lab now saves exact full
+Connector validation within existing authorization. Rollback bundles for this
+session's installs: `/Applications/.acos-install-kzeIks/previous.app` and
+`/Applications/.acos-install-XpT7K9/previous.app`.
+
+**Earlier Hook Lab upgrade (September 7):** Hook Lab now saves exact full
 scene scripts with drafts, restores them on load and sends all scenes to Video
 Studio review/kickoff data. **49 targeted tests** and browser round-trip checks
 passed. Signed/notarized packaging and guarded installation passed; native
