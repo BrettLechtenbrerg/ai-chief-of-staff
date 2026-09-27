@@ -33,7 +33,9 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
   sign-in expires, Brett runs `claude` then `/login` in Terminal.
 - Approvals fire only for actions that leave the machine (send/execute/publish,
   CRM writes, browser acting, outbound shell). Local work runs unattended.
-  **September 27 hardening (source only, not yet built or installed):** agent
+  **September 27 hardening (commit `a5e23aa`, signed/notarized private Intel
+  build installed via `install-local.cjs` → `installed-ready`; rollback bundle
+  `/Applications/.acos-install-gzdlLx/previous.app`; not pushed, no release):** agent
   shell commands run inside a macOS sandbox (`src/agent/shell-sandbox.ts`) with
   no network, no hidden home folders and no `~/Library` (except Caches, iCloud
   Drive and the app's workspace/attachments); network commands
