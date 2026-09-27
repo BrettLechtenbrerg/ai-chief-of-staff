@@ -7,7 +7,9 @@ import { spawn } from 'child_process';
 import type { Dirent, ReadStream, Stats } from 'fs';
 import type { AgentTool } from '@kenkaiiii/gg-agent';
 import { isPathWithin } from '../utils/safe-path.js';
-import type { PolicyAwareAgentTool, ToolExecutionContext } from './tool-policy.js';
+import { shellCommandNeedsNetwork, type PolicyAwareAgentTool, type ToolExecutionContext } from './tool-policy.js';
+import { sandboxShellCommand, shellSandboxAvailable } from './shell-sandbox.js';
+import { validateBashCommand } from './safety.js';
 
 const MAX_TOOL_RESULT_CHARACTERS = 50_000;
 const FILE_ARGUMENTS: Readonly<Record<string, string>> = {
@@ -25,6 +27,8 @@ const SENSITIVE_PATH_PARTS = [
   '/library/application support/brave/', '/library/application support/firefox/',
   '/appdata/roaming/mozilla/', '/appdata/local/google/chrome/', '/windows/system32/config/',
   '/finance/', '/acos-local-improvement-backups/',
+  // Git hooks/config run code and can hold remote tokens.
+  '/.git/hooks/', '/.git/config/',
 ];
 const SENSITIVE_FILE_NAMES = new Set([
   '.env', '.npmrc', '.pypirc', '.netrc', 'credentials', 'credentials.json',
@@ -36,14 +40,35 @@ function expandPath(candidate: string, cwd: string): string {
   return path.resolve(cwd, expanded);
 }
 
+function slashWrapped(candidate: string): string {
+  return `/${candidate.replaceAll('\\', '/').toLowerCase().replace(/^\/+|\/+$/g, '')}/`;
+}
+
+// Home is in scope for documents and repos, but its hidden entries (~/.flo,
+// ~/.config, ~/.gg, ~/.zshrc…) and ~/Library hold other tools' credentials,
+// browser data and auto-start locations. Allow-by-exception: iCloud Drive and
+// this app's draft folders stay reachable.
+function isPrivateHomeLocation(withSlashes: string): boolean {
+  const home = slashWrapped(os.homedir());
+  if (!withSlashes.startsWith(home)) return false;
+  const rest = withSlashes.slice(home.length);
+  if (rest.startsWith('.')) return true;
+  if (!rest.startsWith('library/')) return false;
+  return !(
+    rest.startsWith('library/mobile documents/') ||
+    /^library\/application support\/ai-chief-of-staff\/(?:workspace|attachments)\//.test(rest)
+  );
+}
+
 export function isSensitivePrivatePath(candidate: string): boolean {
   const normalized = candidate.replaceAll('\\', '/').toLowerCase();
-  const withSlashes = `/${normalized.replace(/^\/+|\/+$/g, '')}/`;
+  const withSlashes = slashWrapped(candidate);
   const fileName = path.basename(normalized);
   const appState = /\/(?:library\/application support|appdata\/roaming|\.config)\/ai-chief-of-staff\/(.*)$/.exec(withSlashes);
   const privateAppState = appState && !/^(?:workspace|attachments)\//.test(appState[1]);
   const financePacket = /(?:^|\/)books-\d{4}-[0-9a-f-]{36}(?:\/|$)/.test(withSlashes);
-  return Boolean(privateAppState) || financePacket || SENSITIVE_PATH_PARTS.some((part) => withSlashes.includes(part)) ||
+  return Boolean(privateAppState) || financePacket || isPrivateHomeLocation(withSlashes) ||
+    SENSITIVE_PATH_PARTS.some((part) => withSlashes.includes(part)) ||
     SENSITIVE_FILE_NAMES.has(fileName) ||
     fileName.startsWith('.env.');
 }
@@ -113,11 +138,23 @@ export function validateShellCommandScope(
   return { allowed: true };
 }
 
+const SHELL_SANDBOX_NOTE =
+  ' Commands run in a macOS sandbox: no internet access and no access to hidden home folders or ~/Library. ' +
+  'Commands that need the network (curl, git push/pull, npm install, ssh, open…) ask the owner for approval first.';
+
+/**
+ * Must be wrapped by guardToolWithApproval: network access is granted to exactly
+ * the commands that tool-policy sends through owner approval.
+ */
 export function guardNativeToolScope(
   tool: AgentTool,
   execution: ToolExecutionContext
 ): AgentTool {
   const originalExecute = tool.execute.bind(tool);
+  const isShell = tool.name === 'bash' || tool.name === 'shell_command';
+  if (isShell && shellSandboxAvailable() && !tool.description.includes(SHELL_SANDBOX_NOTE)) {
+    tool.description += SHELL_SANDBOX_NOTE;
+  }
   tool.execute = async (args, context) => {
     const record = (args && typeof args === 'object' ? args : {}) as Record<string, unknown>;
     const pathKey = FILE_ARGUMENTS[tool.name];
@@ -142,13 +179,32 @@ export function guardNativeToolScope(
         return 'Tool blocked: Search tree contains private, linked, or inaccessible paths. Choose a narrower draft directory.';
       }
     }
-    if ((tool.name === 'bash' || tool.name === 'shell_command') && record.command !== undefined) {
-      const validation = validateShellCommandScope(
-        String(record.command),
-        execution.cwd,
-        execution.approvedRoots
-      );
+    if (isShell && record.command !== undefined) {
+      const command = String(record.command);
+      // Check the catastrophic-command filter on the original text: its patterns
+      // are end-anchored and would not see the command once it is wrapped.
+      const safety = validateBashCommand(command);
+      if (!safety.allowed) return `Command blocked by safety filter: ${safety.reason}`;
+      const validation = validateShellCommandScope(command, execution.cwd, execution.approvedRoots);
       if (!validation.allowed) return `Tool blocked: ${validation.reason}.`;
+      if (shellSandboxAvailable()) {
+        // Rewriting the command (not the spawn) also covers run_in_background,
+        // which the installed tool starts outside the restricted operations.
+        let sandboxed: string;
+        try {
+          sandboxed = sandboxShellCommand(command, {
+            cwd: execution.cwd,
+            approvedRoots: [execution.cwd, ...execution.approvedRoots]
+              .map((root) => canonicalFilePath(expandPath(root, execution.cwd)))
+              .filter((root) => !isSensitivePrivatePath(root)),
+            allowNetwork: shellCommandNeedsNetwork(command),
+            env: restrictedShellEnvironment(execution.cwd),
+          });
+        } catch {
+          return 'Tool blocked: shell sandbox could not be prepared for this folder.';
+        }
+        return originalExecute({ ...record, command: sandboxed } as typeof args, context);
+      }
     }
     return originalExecute(args, context);
   };

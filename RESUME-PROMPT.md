@@ -33,6 +33,15 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
   sign-in expires, Brett runs `claude` then `/login` in Terminal.
 - Approvals fire only for actions that leave the machine (send/execute/publish,
   CRM writes, browser acting, outbound shell). Local work runs unattended.
+  **September 27 hardening (source only, not yet built or installed):** agent
+  shell commands run inside a macOS sandbox (`src/agent/shell-sandbox.ts`) with
+  no network, no hidden home folders and no `~/Library` (except Caches, iCloud
+  Drive and the app's workspace/attachments); network commands
+  (curl, git pull/push, npm install, open…) ask and only then get network.
+  File tools also refuse hidden home entries, `~/Library` (except iCloud Drive
+  and the app's workspace/attachments) and `.git/hooks`/`.git/config`. Once a
+  session has read untrusted content *and* private data (e.g. an email), new
+  URLs via `web_fetch` or browser navigate ask.
 - Synthetic finance, the TSAI SEO report and a synthetic Hook Lab draft are saved
   in the app. Brett confirmed the SEO report looks good.
 - Finance, SEO and Hook Lab each consumed their one-use approvals. **Never retry

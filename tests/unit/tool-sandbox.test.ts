@@ -73,6 +73,26 @@ describe('agent file and shell scope', () => {
     expect(validateShellCommandScope('npm test', workspace, execution.approvedRoots).allowed).toBe(true);
   });
 
+  it('keeps hidden home entries, ~/Library and git internals private while home documents stay reachable', () => {
+    const home = os.homedir();
+    for (const privatePath of [
+      '.flo/tokens.json', '.config/gh/hosts.yml', '.gg/auth.json', '.claude/credentials', '.zshrc', '.gitconfig',
+      'Library/Application Support/Google/Chrome/Default/Cookies', 'Library/LaunchAgents/evil.plist',
+      'Library/Keychains/login.keychain-db', 'Library/Application Support/ai-chief-of-staff/google-tokens.json',
+      'dev/repo/.git/hooks/pre-commit', 'dev/repo/.git/config',
+    ]) {
+      expect(isSensitivePrivatePath(path.join(home, privatePath)), privatePath).toBe(true);
+    }
+    for (const publicPath of [
+      'Desktop/notes.md', 'dev/repo/src/index.ts', 'dev/repo/.github/workflows/ci.yml', 'dev/repo/.gitignore',
+      'Library/Mobile Documents/com~apple~CloudDocs/plan.md',
+      'Library/Application Support/ai-chief-of-staff/workspace/draft.md',
+    ]) {
+      expect(isSensitivePrivatePath(path.join(home, publicPath)), publicPath).toBe(false);
+    }
+    expect(validateShellCommandScope(`cat ${path.join(home, '.flo/tokens.json')}`, workspace, [home]).allowed).toBe(false);
+  });
+
   it('rechecks canonical credential aliases and missing leaves under linked parents', async () => {
     const privateDir = path.join(workspace, '.ssh');
     fs.mkdirSync(privateDir);

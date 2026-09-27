@@ -100,25 +100,69 @@ const TOOL_CAPABILITIES: Readonly<Record<string, ToolCapability>> = {
 const CONFIRMATION_CAPABILITIES = new Set<ToolCapability>(['external-write', 'unknown']);
 const CONFIRMATION_TOOLS = new Set<string>(['fetch_aeo_visibility']);
 
+// Prompt-injection egress guard (the "lethal trifecta"). Once a session has
+// both taken in untrusted content (web pages, email, CRM, any MCP result) and
+// touched private data (local files, shell output, email, CRM), a request to a
+// new URL could carry that data out inside the address. From then on, egress
+// URLs need the owner. Pure research (web only) and pure local work stay
+// unattended. Tracked for the life of the process, per session.
+interface SessionExposure { untrusted: boolean; privateData: boolean }
+const sessionExposure = new Map<string, SessionExposure>();
+const UNTRUSTED_CAPABILITIES = new Set<ToolCapability>(['web-read', 'external-read', 'external-write']);
+const PRIVATE_CAPABILITIES = new Set<ToolCapability>(['local-read', 'local-execute', 'external-read']);
+
+function recordToolExposure(sessionId: string, policy: ToolPolicy): void {
+  const untrusted = UNTRUSTED_CAPABILITIES.has(policy.capability) || policy.source === 'mcp';
+  const privateData = PRIVATE_CAPABILITIES.has(policy.capability);
+  if (!untrusted && !privateData) return;
+  const current = sessionExposure.get(sessionId) ?? { untrusted: false, privateData: false };
+  sessionExposure.set(sessionId, {
+    untrusted: current.untrusted || untrusted,
+    privateData: current.privateData || privateData,
+  });
+}
+
+export function sessionCanLeakPrivateData(sessionId: string): boolean {
+  const exposure = sessionExposure.get(sessionId);
+  return Boolean(exposure?.untrusted && exposure.privateData);
+}
+
+/** Test hook: forget exposure for one session, or all sessions. */
+export function resetSessionExposure(sessionId?: string): void {
+  if (sessionId === undefined) sessionExposure.clear();
+  else sessionExposure.delete(sessionId);
+}
+
 // Browser: observing and moving around a page is unattended; anything that can
-// submit, run script or upload asks. Unknown actions ask.
+// submit, run script or upload asks. Unknown actions ask. Opening a new URL
+// asks once the session could leak private data (see above).
 const BROWSER_READ_ACTIONS = new Set([
   'navigate', 'extract', 'screenshot', 'scroll', 'hover',
   'tabs_list', 'tabs_open', 'tabs_focus', 'tabs_close',
 ]);
-// Shell: local commands run unattended; commands that can send data off this
-// machine (transfer tools, remote shells, mail, deploy/publish, Apple events)
-// ask. Matched only at command position (start, or after ; & | ( ` newline),
-// so `ls | grep curl` or `cat curl.md` does not trip it.
-const SHELL_OUTBOUND_COMMAND =
-  /(?:^|[;&|(`\n])\s*(?:sudo\s+)?(?:(?:curl|wget|ssh|scp|sftp|rsync|sendmail|mailx?|osascript|nc|ncat|telnet|gh|vercel|netlify|aws|gcloud|az|firebase|heroku|fly|flyctl|s3cmd)|(?:git\s+push|npm\s+publish|pnpm\s+publish|yarn\s+publish|pip\s+upload|twine\s+upload))(?=\s|$)/i;
-const shellNeedsApproval = (args: unknown): boolean => {
-  const command = (args as { command?: unknown } | null)?.command;
-  return typeof command !== 'string' || SHELL_OUTBOUND_COMMAND.test(command);
-};
-const ARG_CONFIRMATION: Readonly<Record<string, (args: unknown) => boolean>> = {
-  browser: (args) =>
-    !BROWSER_READ_ACTIONS.has(String((args as { action?: unknown } | null)?.action ?? '')),
+const BROWSER_URL_ACTIONS = new Set(['navigate', 'tabs_open']);
+// Shell: commands run inside the OS sandbox (shell-sandbox.ts) with no network
+// and no access to credential folders. Commands that need the network (transfer
+// tools, remote shells, mail, deploy/publish, package installs, Apple events,
+// handing work to launchd/cron) ask, and only then get network access. A command
+// this list misses is not a leak: it simply runs offline. Matched at command
+// position (start, or after ; & | ( ` newline), so `ls | grep curl` does not trip it.
+const SHELL_NETWORK_COMMAND =
+  /(?:^|[;&|(`\n])\s*(?:sudo\s+)?(?:(?:curl|wget|ssh|scp|sftp|rsync|sendmail|mailx?|osascript|open|launchctl|crontab|nc|ncat|socat|telnet|ftp|ping|dig|nslookup|host|gh|vercel|netlify|aws|gcloud|az|firebase|heroku|fly|flyctl|s3cmd|brew|docker|npx|pnpx|bunx)|(?:git\s+(?:push|pull|fetch|clone|ls-remote|submodule)|(?:npm|pnpm|yarn|bun)\s+(?:install|i|ci|add|update|upgrade|up|outdated|view|info|audit|publish|login|exec|dlx|create|init)|pip3?\s+(?:install|download|upload)|python3?\s+-m\s+pip|twine\s+upload))(?=\s|$)/i;
+
+/** True when a shell command needs the network; such commands require approval. */
+export function shellCommandNeedsNetwork(command: unknown): boolean {
+  return typeof command !== 'string' || SHELL_NETWORK_COMMAND.test(command);
+}
+const shellNeedsApproval = (args: unknown): boolean =>
+  shellCommandNeedsNetwork((args as { command?: unknown } | null)?.command);
+const ARG_CONFIRMATION: Readonly<Record<string, (args: unknown, sessionId: string) => boolean>> = {
+  browser: (args, sessionId) => {
+    const action = String((args as { action?: unknown } | null)?.action ?? '');
+    if (!BROWSER_READ_ACTIONS.has(action)) return true;
+    return BROWSER_URL_ACTIONS.has(action) && sessionCanLeakPrivateData(sessionId);
+  },
+  web_fetch: (_args, sessionId) => sessionCanLeakPrivateData(sessionId),
   shell_command: shellNeedsApproval,
   bash: shellNeedsApproval,
 };
@@ -240,9 +284,16 @@ export function guardToolWithApproval(
   const originalExecute = tool.execute.bind(tool);
   const needsApproval = Object.hasOwn(ARG_CONFIRMATION, tool.name) ? ARG_CONFIRMATION[tool.name] : () => true;
   const { sessionId, channel } = execution;
+  const run: typeof originalExecute = async (args, context) => {
+    try {
+      return await originalExecute(args, context);
+    } finally {
+      recordToolExposure(sessionId, tool.policy);
+    }
+  };
   tool.execute = async (args, context) => {
     if (context.signal?.aborted) return 'Tool blocked: execution canceled.';
-    if (!tool.policy.confirmationRequired || !needsApproval(args)) return originalExecute(args, context);
+    if (!tool.policy.confirmationRequired || !needsApproval(args, sessionId)) return run(args, context);
     // Capture before yielding: execute the reviewed destination/body, not a
     // caller-owned reference that can change while approval is pending.
     let approvedArgs: typeof args;
@@ -278,7 +329,7 @@ export function guardToolWithApproval(
       signal: context.signal,
     });
     if (!approved || context.signal?.aborted) return `Tool blocked: ${tool.name} requires user approval.`;
-    return originalExecute(approvedArgs, context);
+    return run(approvedArgs, context);
   };
   return tool;
 }
