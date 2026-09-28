@@ -35,7 +35,8 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
   CRM writes, browser acting, outbound shell). Local work runs unattended.
   **September 27 hardening (commit `a5e23aa`, signed/notarized private Intel
   build installed via `install-local.cjs` → `installed-ready`; rollback bundle
-  `/Applications/.acos-install-gzdlLx/previous.app`; not pushed, no release):** agent
+  `/Applications/.acos-install-gzdlLx/previous.app`; pushed to the checkpoint
+  branch as a backup, no tag and no release):** agent
   shell commands run inside a macOS sandbox (`src/agent/shell-sandbox.ts`) with
   no network, no hidden home folders and no `~/Library` (except Caches, iCloud
   Drive and the app's workspace/attachments); network commands
