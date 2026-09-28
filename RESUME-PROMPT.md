@@ -44,6 +44,15 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
   and the app's workspace/attachments) and `.git/hooks`/`.git/config`. Once a
   session has read untrusted content *and* private data (e.g. an email), new
   URLs via `web_fetch` or browser navigate ask.
+- **Manual-only routines (Sept 27, commit `d1af714`, installed; rollback
+  `/Applications/.acos-install-ISlEXi/previous.app`):** Brett chose to run
+  routines by hand. `scheduler.enabled` is set to `false` (was `true`), which
+  now means manual-only: routines are listed and "Run now" works, but no
+  routine, due job or calendar/task reminder fires by itself. The app now runs
+  in a normal launch (not validation mode), so Telegram and MCP servers are on.
+  A routine's `send_telegram_message` shows one desktop popup with the exact
+  text; nothing reaches the phone without that click. To restore automatic
+  runs, set `scheduler.enabled` back to `true` and relaunch.
 - Synthetic finance, the TSAI SEO report and a synthetic Hook Lab draft are saved
   in the app. Brett confirmed the SEO report looks good.
 - Finance, SEO and Hook Lab each consumed their one-use approvals. **Never retry
