@@ -193,7 +193,7 @@ describe('approval tool guard', () => {
   it('binds approval to immutable arguments and destination', async () => {
     const execute = vi.fn(async () => 'executed');
     const tool = guardToolWithApproval(attachToolPolicy(
-      { name: 'send_telegram_message', description: '', parameters: z.object({}), execute } as AgentTool, 'custom'
+      { name: 'campaign_send_message', description: '', parameters: z.object({}), execute } as AgentTool, 'custom'
     ), { sessionId: 'desktop', channel: 'desktop', cwd: '/workspace', approvedRoots: ['/workspace'] });
     let request: ApprovalRequest | undefined;
     ApprovalManager.setNotifier(next => { request = next; return true; });
@@ -210,7 +210,7 @@ describe('approval tool guard', () => {
     const execute = vi.fn(async () => 'executed');
     const controller = new AbortController();
     const tool = guardToolWithApproval(attachToolPolicy(
-      { name: 'send_telegram_message', description: '', parameters: z.object({}), execute } as AgentTool, 'custom'
+      { name: 'campaign_send_message', description: '', parameters: z.object({}), execute } as AgentTool, 'custom'
     ), { sessionId: 'desktop', channel: 'desktop', cwd: '/workspace', approvedRoots: ['/workspace'] });
     let request: ApprovalRequest | undefined;
     ApprovalManager.setNotifier(next => { request = next; return true; });
@@ -224,7 +224,7 @@ describe('approval tool guard', () => {
   it('runs an interactive tool once approved', async () => {
     const execute = vi.fn(async () => 'executed');
     const tool = attachToolPolicy(
-      { name: 'send_telegram_message', description: 'send', parameters: z.object({}), execute } as AgentTool,
+      { name: 'campaign_send_message', description: 'send', parameters: z.object({}), execute } as AgentTool,
       'custom'
     );
     let request: ApprovalRequest | undefined;

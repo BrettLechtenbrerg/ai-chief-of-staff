@@ -8,7 +8,8 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { TelegramBot } from '../../src/channels/telegram';
 import { sendToAllChannels, sendReminderToAllChannels } from '../../src/scheduler/notifications';
-import { sendTelegram, setTelegramBotForTools } from '../../src/tools/telegram-tool';
+import { handleSendTelegramTool, sendTelegram, setTelegramBotForTools } from '../../src/tools/telegram-tool';
+import { attachToolPolicy, guardToolWithApproval } from '../../src/agent/tool-policy';
 import type { MemoryManager } from '../../src/memory';
 
 vi.mock('fs/promises', async (original) => {
@@ -262,6 +263,38 @@ describe('Telegram wire approval (real grammY, inert transport)', () => {
     expect(transport).not.toHaveBeenCalled();
     expect(JSON.parse(previews[0].details).payload).toMatchObject({ chat_id: 456, text: 'transformed' });
   });
+  it('lets a routine send to Telegram only after the exact message is approved at the desktop', async () => {
+    const routineTool = () => guardToolWithApproval(
+      attachToolPolicy({ name: 'send_telegram_message', description: '', parameters: {} as never,
+        execute: async (args: unknown) => handleSendTelegramTool(args) }, 'custom'),
+      { sessionId: 'routine-session', channel: 'cron:seo_daily_reviews', cwd: '/', approvedRoots: [] }
+    );
+    const ctx = {} as never;
+
+    // No desktop to ask: nothing is sent.
+    ApprovalManager.setNotifier(null);
+    expect(JSON.parse(String(await routineTool().execute({ text: 'Review reminder' }, ctx))).success).toBe(false);
+    // Denied: nothing is sent, and the preview showed the exact text.
+    decision(false);
+    expect(JSON.parse(String(await routineTool().execute({ text: 'Review reminder' }, ctx))).success).toBe(false);
+    expect(previews).toHaveLength(1);
+    expect(previews[0].details).toContain('Review reminder');
+    expect(previews[0].details).toContain('123');
+    expect(transport).not.toHaveBeenCalled();
+
+    // Approved: exactly one delivery to the allowed chat, one popup (not two).
+    decision(true);
+    expect(JSON.parse(String(await routineTool().execute({ text: 'Review reminder' }, ctx))))
+      .toEqual({ success: true, sentTo: [123] });
+    expect(previews).toHaveLength(2);
+    expect(previews[1].toolName).toBe('telegram.api.sendMessage');
+    expect(transport).toHaveBeenCalledTimes(1);
+
+    // A routine cannot pick an unlisted recipient.
+    expect(JSON.parse(String(await routineTool().execute({ text: 'x', chatId: 999 }, ctx))).success).toBe(false);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
   it('does not broaden generic remote tool permission', async () => {
     decision(true);
     expect(await ApprovalManager.request({ toolName: 'bash', capability: 'external-write', args: {},

@@ -87,6 +87,8 @@ export class CronScheduler {
   private dbPath: string | null = null;
   private db: Database.Database | null = null; // Persistent DB connection for reminders
   private isCheckingReminders: boolean = false; // Mutex to prevent overlapping checks
+  // False = manual-only: routines run only via runJobNow(), nothing fires by itself.
+  private automatic: boolean = true;
 
   private onNotification?: NotificationHandler;
   private onChatMessage?: ChatHandler;
@@ -108,9 +110,14 @@ export class CronScheduler {
   /**
    * Initialize scheduler with memory manager and load jobs
    */
-  async initialize(memory: MemoryManager, dbPath?: string): Promise<void> {
+  async initialize(
+    memory: MemoryManager,
+    dbPath?: string,
+    options: { automatic?: boolean } = {}
+  ): Promise<void> {
     this.memory = memory;
     this.dbPath = dbPath || null;
+    this.automatic = options.automatic ?? true;
 
     // Open persistent DB connection for reminder checks (avoids creating new connection every 30s)
     // WAL mode allows this connection to see rows inserted by the tool handler's separate connection
@@ -128,6 +135,13 @@ export class CronScheduler {
     this.reloadInterval = setInterval(() => {
       this.checkForNewJobs();
     }, 60000);
+
+    // Manual-only: no reminder/due-job timer, so no missed or due routine (or
+    // calendar/task reminder) fires by itself. Run now still works.
+    if (!this.automatic) {
+      console.log('[Scheduler] Manual-only mode: automatic runs are off');
+      return;
+    }
 
     // Start periodic check for calendar/task reminders (every 30 seconds)
     this.reminderInterval = setInterval(() => {
@@ -548,6 +562,14 @@ export class CronScheduler {
     // Stop existing task with same name
     this.stopJob(job.name);
 
+    if (!this.automatic) {
+      // Listed and runnable by hand only. Clearing next_run_at keeps the panel
+      // honest and stops a stale time from firing if automatic runs return.
+      this.jobs.set(job.name, job);
+      this.persistNextRunAt(job.name, null);
+      return true;
+    }
+
     const schedule = job.schedule;
     const cronTask = new Cron(schedule, async () => {
       await this.executeJob(job);
@@ -836,11 +858,12 @@ export class CronScheduler {
    * Stop a specific job
    */
   stopJob(name: string): boolean {
+    // Manual-only jobs are registered without a timer; drop those too.
+    this.jobs.delete(name);
     const task = this.tasks.get(name);
     if (task) {
       task.stop();
       this.tasks.delete(name);
-      this.jobs.delete(name);
       console.log(`[Scheduler] Stopped: ${name}`);
       return true;
     }
@@ -918,7 +941,8 @@ export class CronScheduler {
    * Run a job immediately (for testing)
    */
   async runJobNow(name: string): Promise<JobResult | null> {
-    const job = this.jobs.get(name);
+    // A paused routine is not registered but can still be run by hand.
+    const job = this.jobs.get(name) ?? this.loadRunnableJob(name);
     if (!job) {
       console.error(`[Scheduler] Job not found: ${name}`);
       return null;
@@ -926,6 +950,22 @@ export class CronScheduler {
 
     await this.executeJob(job);
     return this.jobHistory[0] || null;
+  }
+
+  private loadRunnableJob(name: string): ScheduledJob | undefined {
+    const dbJob = this.memory?.getCronJobs(false).find((candidate) => candidate.name === name);
+    if (!dbJob || (dbJob.schedule_type ?? 'cron') !== 'cron' || !dbJob.schedule) return undefined;
+    return {
+      id: dbJob.id,
+      name: dbJob.name,
+      scheduleType: 'cron',
+      schedule: dbJob.schedule,
+      prompt: dbJob.prompt,
+      channel: dbJob.channel,
+      recipient: this.extractRecipient(dbJob.prompt),
+      enabled: dbJob.enabled,
+      sessionId: dbJob.session_id || 'default',
+    };
   }
 
   /**

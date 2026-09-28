@@ -165,6 +165,12 @@ const ARG_CONFIRMATION: Readonly<Record<string, (args: unknown, sessionId: strin
   web_fetch: (_args, sessionId) => sessionCanLeakPrivateData(sessionId),
   shell_command: shellNeedsApproval,
   bash: shellNeedsApproval,
+  // Every Telegram send already stops at the bot's wire gate
+  // (security/telegram-delivery.ts): the desktop shows the exact recipient and
+  // text and nothing leaves without a click, from any origin. A second,
+  // tool-level ask blocked routines outright (no desktop origin) and asked
+  // twice on desktop. Recipients stay limited to telegram.allowedUserIds.
+  send_telegram_message: () => false,
 };
 
 // Exact tools inspected in the vendored Flo servers (vendor/flo-mcp-servers).

@@ -643,8 +643,10 @@ async function initializeAgent(): Promise<void> {
     }
   );
 
-  // Initialize scheduler
-  if (!validationStartup && SettingsManager.getBoolean('scheduler.enabled')) {
+  // Initialize scheduler. With scheduler.enabled off it runs manual-only:
+  // routines are listed and "Run now" works, but nothing fires by itself.
+  if (!validationStartup) {
+    const automaticRuns = SettingsManager.getBoolean('scheduler.enabled');
     scheduler = createScheduler();
 
     // Set all handlers BEFORE initialize() — jobs can fire during init
@@ -670,7 +672,7 @@ async function initializeAgent(): Promise<void> {
       }
     );
 
-    await scheduler.initialize(memory, dbPath);
+    await scheduler.initialize(memory, dbPath, { automatic: automaticRuns });
 
     // Set up birthday reminders if birthday is configured
     const birthday = SettingsManager.get('profile.birthday');

@@ -610,5 +610,60 @@ describe('CronScheduler', () => {
 
       expect(result).toBeNull();
     });
+
+    it('runs a paused routine by hand', async () => {
+      mockMemory._jobs.set('paused', {
+        id: 7, name: 'paused', schedule: '0 9 * * *', prompt: 'Paused prompt', channel: 'desktop', enabled: false,
+      });
+      const result = await scheduler.runJobNow('paused');
+      expect(result).toMatchObject({ jobName: 'paused', success: true, response: 'Mock agent response' });
+    });
+  });
+
+  describe('manual-only mode', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('lists routines and runs them on request, but starts no timers', async () => {
+      vi.useFakeTimers();
+      const { AgentManager } = await import('../../src/agent');
+      mockMemory._jobs.set('seo_daily_reviews', {
+        id: 1, name: 'seo_daily_reviews', schedule: '0 9 * * *', prompt: 'Daily prompt', channel: 'desktop', enabled: true,
+      });
+
+      await scheduler.initialize(mockMemory, undefined, { automatic: false });
+
+      expect(scheduler.getJobs().map((job) => job.name)).toEqual(['seo_daily_reviews']);
+      expect(scheduler.isRunning('seo_daily_reviews')).toBe(false);
+      expect(scheduler.getStats().activeJobs).toBe(0);
+      // Only the job-list refresh interval exists: no reminder/due-job timer.
+      expect(vi.getTimerCount()).toBe(1);
+      await vi.advanceTimersByTimeAsync(7 * 24 * 60 * 60 * 1000);
+      expect(AgentManager.processMessage).not.toHaveBeenCalled();
+
+      const result = await scheduler.runJobNow('seo_daily_reviews');
+      expect(result).toMatchObject({ jobName: 'seo_daily_reviews', success: true });
+      expect(AgentManager.processMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps new routines manual after a reload', async () => {
+      vi.useFakeTimers();
+      await scheduler.initialize(mockMemory, undefined, { automatic: false });
+      expect(await scheduler.createJob('added', '0 9 * * *', 'Added prompt', 'desktop')).toBe(true);
+      await vi.advanceTimersByTimeAsync(61_000);
+      expect(scheduler.getJobs().map((job) => job.name)).toEqual(['added']);
+      expect(scheduler.getStats().activeJobs).toBe(0);
+      expect(scheduler.deleteJob('added')).toBe(true);
+      expect(scheduler.getJobs()).toEqual([]);
+    });
+
+    it('automatic mode still schedules timers', async () => {
+      vi.useFakeTimers();
+      await scheduler.initialize(mockMemory);
+      await scheduler.createJob('auto', '0 9 * * *', 'Auto prompt', 'desktop');
+      expect(scheduler.isRunning('auto')).toBe(true);
+      expect(vi.getTimerCount()).toBe(2);
+    });
   });
 });

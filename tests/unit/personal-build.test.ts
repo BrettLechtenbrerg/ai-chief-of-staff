@@ -43,7 +43,11 @@ describe('personal packaging contract (inert; no packaging)', () => {
     const main = readFileSync(join(root, 'src/main/index.ts'), 'utf8');
     expect(main).toContain('const validationStartup = isInstallValidationStartup();');
     expect(main).toMatch(/if \(!validationStartup\) \{\s*getMCPManager\(\)/);
-    expect(main).toContain("if (!validationStartup && SettingsManager.getBoolean('scheduler.enabled'))");
+    // Validation launches create no scheduler; otherwise automatic runs follow the setting.
+    expect(main).toMatch(
+      /if \(!validationStartup\) \{\s*const automaticRuns = SettingsManager\.getBoolean\('scheduler\.enabled'\);\s*scheduler = createScheduler\(\);/
+    );
+    expect(main).toContain('await scheduler.initialize(memory, dbPath, { automatic: automaticRuns });');
     expect(main).toContain("!validationStartup && SettingsManager.getBoolean('telegram.enabled')");
     expect(main).toContain("!validationStartup && SettingsManager.getBoolean('browser.enabled')");
     expect(main).toMatch(/if \(!validationStartup\) \{\s*refreshDiscoveredModels\(\)/);
