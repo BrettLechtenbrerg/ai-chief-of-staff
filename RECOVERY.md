@@ -27,7 +27,9 @@ holds the draft.) `_brand-profiles` pushed (`b96c59b` 1536×1024 hero default,
 `73c62fe` topic ledger marks belt-order published). Its three untracked
 `aeo.json` files (July) were left alone. A post-merge `gh` check that is not a
 plain push/PR/merge command cannot read `~/.config/gh` by design; verify with
-`git fetch` + `git log origin/main` instead.
+`git fetch` + `git log origin/main` instead. Open item: the June 9 PMMA post
+(`kids-martial-arts-sandy-utah-guide`, PR #3) was never merged and is not live;
+the topic ledger now says so. Publish it only after Brett approves.
 
 ## Previous handoff — session closeout, September 29, 2026
 
