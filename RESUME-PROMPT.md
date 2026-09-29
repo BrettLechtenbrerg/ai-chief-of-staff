@@ -25,6 +25,9 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
 > and `git push --dry-run` is accepted (nothing pushed). Typecheck, lint, 1869/1869 tests pass.
 > Next: rerun the blog routine in a NEW chat and confirm it only asks for the topic and the
 > final "post it?". June post PR #3 is still open and unmerged.
+> **Closeout:** all four commits pushed to `checkpoint/2026-09-06-session-closeout`. The belt-order
+> post is saved on PMMA branch `blog/2026-09-28-taekwondo-belt-order` (`de4925a`), not merged,
+> not live. Full handoff: top of `RECOVERY.md`.
 
 ## Start here
 

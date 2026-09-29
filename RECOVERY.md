@@ -2,7 +2,36 @@
 
 This is the canonical session-kickoff document. If you're a fresh Claude session, start here.
 
-## Current handoff — session closeout, September 10, 2026
+## Current handoff — session closeout, September 29, 2026
+
+Fixes from the Sept 28 PMMA blog run are committed, pushed to
+`checkpoint/2026-09-06-session-closeout` and installed as a signed, notarized
+private Intel build (still `1.0.0-beta.25`; no beta, public release or Vercel
+change). The installed app runs in a normal launch; routines stay manual-only.
+
+- **Runs finish end to end:** step cap 150 (was 20); SEO research (DataForSEO,
+  Firecrawl search) runs unattended; "Allow web for this chat" button; shell
+  reaches `~/Desktop` and `~/dev`; guidelines carry Brett's rule: nothing goes
+  public without his yes, everything else runs, publishing is one question plus
+  one approval popup.
+- **Posting:** approved `git push`/`gh` commands use the saved GitHub login;
+  `gh` acts as the repo owner's account (PMMARocks-1 for PMMA) without changing
+  the globally active account (BoardChairIs1). Repo hooks/helpers are
+  overridden and `gh auth token`/switch/config are refused.
+- Commits: `b276301`, `6e48b55` (+ notes). Rollback app:
+  `/Applications/.acos-install-XmCYrZ/previous.app`. Typecheck, lint and
+  **104 test files / 1,869 tests** passed.
+- **PMMA blog post** "Taekwondo Belt Order" is saved on GitHub branch
+  `blog/2026-09-28-taekwondo-belt-order` (`de4925a`) in
+  `PMMARocks-1/PMMA-Website-2026-Master`, NOT merged and NOT live (pushing to
+  that repo's `main` auto-deploys). The June post is still open as PR #3.
+  A Desktop review copy is `~/Desktop/Taekwondo Belt Order - PMMA Blog Draft.html`.
+- **Next:** in a NEW chat, ask the app to post the belt-order blog from that
+  branch; confirm it asks only "post it?" and one popup. Not yet exercised live.
+- Not done this session: no new app-data checkpoint (last: Sept 10,
+  `checkpoint-step18-Rd1lru`); this session changed code only, not app data.
+
+## Previous handoff — session closeout, September 10, 2026
 
 Two owner-approved upgrades are built, installed, committed and pushed:
 
