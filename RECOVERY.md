@@ -16,7 +16,7 @@ change). The installed app runs in a normal launch; routines stay manual-only.
   one approval popup.
 - **Posting:** approved `git push`/`gh` commands use the saved GitHub login;
   `gh` acts as the repo owner's account (PMMARocks-1 for PMMA) without changing
-  the globally active account (BoardChairIs1). Repo hooks/helpers are
+  the Mac-wide active account. Repo hooks/helpers are
   overridden and `gh auth token`/switch/config are refused.
 - Commits: `b276301`, `6e48b55` (+ notes). Rollback app:
   `/Applications/.acos-install-XmCYrZ/previous.app`. Typecheck, lint and
@@ -30,10 +30,12 @@ change). The installed app runs in a normal launch; routines stay manual-only.
   branch; confirm it asks only "post it?" and one popup. Not yet exercised live.
 - Not done this session: no new app-data checkpoint (last: Sept 10,
   `checkpoint-step18-Rd1lru`); this session changed code only, not app data.
-- Pushing this repo needs the BrettLechtenbrerg gh login (the globally active
-  BoardChairIs1 gets 403). Closeout push used
-  `GH_TOKEN="$(gh auth token -u BrettLechtenbrerg)" git push` without switching
-  the active account.
+- **GitHub accounts (Brett's rule):** Mac-wide gh account is `BrettLechtenbrerg`
+  (owns this repo). `BoardChairIs1` is for Murray Chamber only and is pinned per
+  repo in `~/dev/macc-web` and `~/dev/foundation-web` via
+  `~/.local/bin/gh-credential-for-user BoardChairIs1`; `crockspot` and
+  `P4P-Website` are pinned the same way to their own accounts. Never
+  `gh auth switch` to BoardChairIs1.
 
 ## Previous handoff — session closeout, September 10, 2026
 
