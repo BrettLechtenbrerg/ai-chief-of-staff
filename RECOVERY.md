@@ -27,9 +27,12 @@ holds the draft.) `_brand-profiles` pushed (`b96c59b` 1536×1024 hero default,
 `73c62fe` topic ledger marks belt-order published). Its three untracked
 `aeo.json` files (July) were left alone. A post-merge `gh` check that is not a
 plain push/PR/merge command cannot read `~/.config/gh` by design; verify with
-`git fetch` + `git log origin/main` instead. Open item: the June 9 PMMA post
-(`kids-martial-arts-sandy-utah-guide`, PR #3) was never merged and is not live;
-the topic ledger now says so. Publish it only after Brett approves.
+`git fetch` + `git log origin/main` instead. The June 9 PMMA post
+(`kids-martial-arts-sandy-utah-guide`) had sat in PR #3 as a **draft**; with
+Brett's approval it was dated 2026-09-29, fact-fixed and merged (`5521eb2`),
+and it is live. The "shy kids" post logged as published 2026-05-18 never
+existed (404, no draft); the topic ledger re-opens it. Publishing should mark
+the PR ready, not leave it as a draft.
 
 ## Previous handoff — session closeout, September 29, 2026
 
