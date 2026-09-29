@@ -141,8 +141,26 @@ export function isGitHubCredentialCommand(command: string): boolean {
   const steps = bare.split(';').map((step) => step.trim());
   return (
     steps.some((step) => /^(?:git|gh)\s/.test(step)) &&
-    steps.every((step) => /^(?:cd\s+\S|git\s+(?:push|fetch|ls-remote)(?:\s|$)|gh\s)/.test(step))
+    steps.every((step) => /^(?:cd\s+\S|git\s+(?:push|fetch|ls-remote)(?:\s|$)|gh\s)/.test(step)) &&
+    steps.every(ghStepKeepsLoginPrivate)
   );
+}
+
+/**
+ * `gh auth token` (and `status --show-token`) would print the login into the
+ * chat; login/switch/logout/setup-git and `gh config` change the owner's global
+ * GitHub setup (and `config set browser` runs a program). Only `gh auth status`
+ * is allowed from the auth and config groups.
+ */
+function ghStepKeepsLoginPrivate(step: string): boolean {
+  if (!/^gh\s/.test(step)) return true;
+  // Any position, so flags placed before the group cannot hide it. Quoted text
+  // (titles, bodies) was already replaced, so it never matches here.
+  const words = step.split(/\s+/);
+  if (words.includes('config')) return false;
+  const auth = words.indexOf('auth');
+  if (auth < 0) return true;
+  return words[auth + 1] === 'status' && !words.some((word) => /^(?:-t|--show-token)(?:=|$)/.test(word));
 }
 
 let trustedHelpers: Array<[string, string]> | undefined;
@@ -219,7 +237,24 @@ const REPO_CONFIG_GUARD = `__acos_repo_ok() {
   done < <(command git config --list --show-scope -z 2>/dev/null)
 }
 git() { __acos_repo_ok && command git "$@"; }
-gh() { __acos_repo_ok && command gh "$@"; }`;
+# gh acts as the account that owns the repo (from -R/--repo, else origin) when
+# the owner is logged in to gh, so publishing does not depend on which of the
+# owner's accounts happens to be active globally. The global setting is untouched.
+gh() {
+  __acos_repo_ok || return 1
+  local arg prev='' owner='' token=''
+  for arg in "$@"; do
+    case "$prev" in -R|--repo) owner="\${arg%%/*}" ;; esac
+    case "$arg" in --repo=*) owner="\${arg#--repo=}"; owner="\${owner%%/*}" ;; esac
+    prev="$arg"
+  done
+  if [ -z "$owner" ]; then
+    owner="$(command git remote get-url origin 2>/dev/null | /usr/bin/sed -nE 's#^https://([^/@]+@)?github\\.com/([^/]+)/.*#\\2#p')"
+  fi
+  case "$owner" in ''|*[!A-Za-z0-9-]*) owner='' ;; esac
+  if [ -n "$owner" ]; then token="$(command gh auth token -u "$owner" 2>/dev/null)" || token=''; fi
+  if [ -n "$token" ]; then GH_TOKEN="$token" command gh "$@"; else command gh "$@"; fi
+}`;
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
