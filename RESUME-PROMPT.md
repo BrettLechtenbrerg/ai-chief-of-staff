@@ -17,9 +17,14 @@ Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.
 > repo-level hooks, fsmonitor and credential helpers overridden and any non-plain `.git/config`
 > key refused (commit first, offline); Brett's rule in `system-guidelines.ts`: nothing goes public
 > without his yes, everything else runs unattended, publishing is one final question + one popup.
-> Typecheck, lint, 1869/1869 tests pass. Next: Brett runs `gh auth switch -u BrettLechtenbrerg`
-> (active gh account BoardChairIs1 cannot see the PMMA repo), then rerun the blog routine in a
-> NEW chat and confirm it only asks for the topic and the final "post it?".
+> **Posting fix (`6e48b55`, installed; rollback `/Applications/.acos-install-XmCYrZ/previous.app`):**
+> in approved publish commands `gh` acts as the repo owner's account (PMMARocks-1 for the PMMA
+> site) via `gh auth token -u <owner>`; the global active gh account (BoardChairIs1) is left
+> alone, so no `gh auth switch` is needed. `gh auth token`/`--show-token`/login/switch and
+> `gh config` never get the login. Verified in the sandbox: gh acts as PMMARocks-1, sees PR #3,
+> and `git push --dry-run` is accepted (nothing pushed). Typecheck, lint, 1869/1869 tests pass.
+> Next: rerun the blog routine in a NEW chat and confirm it only asks for the topic and the
+> final "post it?". June post PR #3 is still open and unmerged.
 
 ## Start here
 
