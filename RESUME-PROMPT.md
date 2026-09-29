@@ -4,6 +4,23 @@ Updated: September 10, 2026 — approval policy and Claude-via-Max route install
 
 Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.”**
 
+> **Sept 29, 2026: fixes from the PMMA blog run are committed (`b276301`, local only, not pushed)
+> and installed** (signed + notarized private Intel build, `install-local.cjs` → `installed-ready`,
+> rollback `/Applications/.acos-install-8KMIfC/previous.app`; then quit and reopened normally so
+> MCP servers run; routines still manual-only). No beta, release or website change.
+> The run kept stopping at 20 steps, asked approval for every DataForSEO/Firecrawl call, and
+> its shell could not reach `~/dev` or `~/Desktop` (a text filter treated `~/dev/...` as `/dev/`,
+> `HOME` pointed at the workspace, and git/gh could not read their login). Changes: 150-step cap
+> with a "say keep going" note and partial work kept; DataForSEO/Firecrawl search run unattended;
+> "Allow web for this chat" button on web-read approvals; shell `HOME` is the real home; approved
+> commands made only of `cd`/`gh`/`git push|fetch|ls-remote` can use the saved GitHub login, with
+> repo-level hooks, fsmonitor and credential helpers overridden and any non-plain `.git/config`
+> key refused (commit first, offline); Brett's rule in `system-guidelines.ts`: nothing goes public
+> without his yes, everything else runs unattended, publishing is one final question + one popup.
+> Typecheck, lint, 1869/1869 tests pass. Next: Brett runs `gh auth switch -u BrettLechtenbrerg`
+> (active gh account BoardChairIs1 cannot see the PMMA repo), then rerun the blog routine in a
+> NEW chat and confirm it only asks for the topic and the final "post it?".
+
 ## Start here
 
 1. Work only in `/Users/brettlechtenberg/dev/ai-chief-of-staff`.
