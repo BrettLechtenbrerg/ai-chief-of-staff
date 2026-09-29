@@ -197,6 +197,19 @@ describe('claudeCodeAgentLoop', () => {
     expect(events[2]).toMatchObject({ toolCallId: 'toolu_1', result: 'looked up {"q":"invoice"}', details: { hits: 1 }, isError: false });
   });
 
+  it('ends at the step cap like the native loop, keeping the text written so far', async () => {
+    scripted = [
+      { type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Post written.' } } },
+      { type: 'stream_event', event: { type: 'message_stop' } },
+      resultMessage({ subtype: 'error_max_turns', is_error: true, num_turns: 150, result: undefined }),
+    ];
+    const { events, result } = await collect(
+      claudeCodeAgentLoop([{ role: 'user', content: 'go' }], { provider: 'anthropic', model: 'claude-sonnet-4-6', tools: [], maxTurns: 150 })
+    );
+    expect(events.at(-1)).toMatchObject({ type: 'agent_done', totalTurns: 150 });
+    expect(result).toMatchObject({ message: { content: 'Post written.' }, totalTurns: 150 });
+  });
+
   it('turns a sign-in failure into the one action the owner can take', async () => {
     scripted = [
       { type: 'assistant', error: 'authentication_failed', message: { id: 'msg_1', content: [{ type: 'text', text: 'Failed to authenticate: OAuth session expired and could not be refreshed' }], usage } },

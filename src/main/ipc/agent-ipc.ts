@@ -23,7 +23,7 @@ export function registerAgentIPC(deps: IPCDependencies): void {
     return true;
   });
   trustedHandle('approval:resolve', async (_, id: string, decision: ApprovalDecision) => {
-    if (decision !== 'approve' && decision !== 'deny') return { success: false };
+    if (decision !== 'approve' && decision !== 'approve-session' && decision !== 'deny') return { success: false };
     return { success: ApprovalManager.resolve(id, decision, 'ui') };
   });
   trustedHandle('approval:resolveVoice', async (_, id: string, transcript: string) => {

@@ -685,13 +685,13 @@ describe('ChatEngine', () => {
   // ─── Agent options ──────────────────────────────────────────────────
 
   describe('Agent options', () => {
-    it('sets maxTurns to 20', async () => {
+    it('allows long routines (150 steps) instead of stopping at 20', async () => {
       setDefaultAgentEvents('Hi');
       const { engine } = createEngine();
 
       await engine.processMessage('hi', 'desktop', 'test-session');
 
-      expect(capturedAgentOptions!.maxTurns).toBe(20);
+      expect(capturedAgentOptions!.maxTurns).toBe(150);
     });
 
     it('sets maxTokens to 16384', async () => {

@@ -8,7 +8,7 @@ import type { Dirent, ReadStream, Stats } from 'fs';
 import type { AgentTool } from '@kenkaiiii/gg-agent';
 import { isPathWithin } from '../utils/safe-path.js';
 import { shellCommandNeedsNetwork, type PolicyAwareAgentTool, type ToolExecutionContext } from './tool-policy.js';
-import { sandboxShellCommand, shellSandboxAvailable } from './shell-sandbox.js';
+import { isGitHubCredentialCommand, sandboxShellCommand, shellSandboxAvailable } from './shell-sandbox.js';
 import { validateBashCommand } from './safety.js';
 
 const MAX_TOOL_RESULT_CHARACTERS = 50_000;
@@ -126,12 +126,15 @@ export function validateShellCommandScope(
   if (typeof command !== 'string' || command.length > 100_000) {
     return { allowed: false, reason: 'Invalid shell command' };
   }
-  if (/(?:^|\s)(?:env|printenv|set)(?:\s|$)|(?:^|[\s'"=])\.\.[\\/]|~[A-Za-z]|\/proc\/|\/dev\/|security\s+find-|keychain|credential|\.env\b|\.ssh\b|\.aws\b|\.gnupg\b/i.test(command)) {
+  // Device files only at the start of a path (so ~/dev/repo and 2>/dev/null
+  // pass); bare `set` dumps variables, `set -e` does not.
+  if (/(?:^|\s)(?:env|printenv)(?:\s|$)|(?:^|[;&|(\s])set\s*(?:$|[;&|)])|(?:^|[\s'"=])\.\.[\\/]|~[A-Za-z]|\/proc\/|(?:^|[\s'"=<>])\/dev\/(?!(?:null|stdout|stderr)\b)|security\s+find-|keychain|credential|\.env\b|\.ssh\b|\.aws\b|\.gnupg\b/i.test(command)) {
     return { allowed: false, reason: 'Shell command requests credentials or private system data' };
   }
   const absolutePaths = command.match(/(?:^|[\s'"=])((?:[A-Za-z]:[\\/]|\/)[^\s'";|&]+)/g) || [];
   for (const match of absolutePaths) {
     const candidate = match.trim().replace(/^['"=]/, '');
+    if (/^\/dev\/(?:null|stdout|stderr)$/.test(candidate)) continue;
     const validation = validateAgentFilePath(candidate, cwd, approvedRoots);
     if (!validation.allowed) return validation;
   }
@@ -198,7 +201,10 @@ export function guardNativeToolScope(
               .map((root) => canonicalFilePath(expandPath(root, execution.cwd)))
               .filter((root) => !isSensitivePrivatePath(root)),
             allowNetwork: shellCommandNeedsNetwork(command),
-            env: restrictedShellEnvironment(execution.cwd),
+            allowGitCredentials: shellCommandNeedsNetwork(command) && isGitHubCredentialCommand(command),
+            // Real home so ~/Desktop and ~/dev mean what the owner means; the
+            // sandbox keeps hidden home folders and ~/Library closed.
+            env: { ...restrictedShellEnvironment(execution.cwd), HOME: os.homedir() },
           });
         } catch {
           return 'Tool blocked: shell sandbox could not be prepared for this folder.';

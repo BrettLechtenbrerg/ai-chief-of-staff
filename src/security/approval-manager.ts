@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
 import type { ToolCapability } from '../agent/tool-policy.js';
 
-export type ApprovalDecision = 'approve' | 'deny';
+/** `approve-session` also grants the request's sessionGrant for the rest of that chat. */
+export type ApprovalDecision = 'approve' | 'approve-session' | 'deny';
 export type ApprovalSource = 'ui' | 'voice';
 
 export interface ApprovalRequest {
@@ -13,6 +14,8 @@ export interface ApprovalRequest {
   sessionId: string;
   channel: string;
   expiresAt: number;
+  /** Set when this kind of request may be allowed for the rest of the chat. */
+  sessionGrant?: string;
 }
 
 interface PendingApproval {
@@ -28,6 +31,8 @@ class ApprovalManagerImpl {
   private pending = new Map<string, PendingApproval>();
   private notifier: ((request: ApprovalRequest) => boolean) | null = null;
   private telegramDeliveries = new Map<AbortController, string>();
+  /** sessionId -> grants the owner gave with "allow for this chat". Process lifetime. */
+  private sessionGrants = new Map<string, Set<string>>();
 
   setNotifier(notifier: ((request: ApprovalRequest) => boolean) | null): void {
     this.notifier = notifier;
@@ -44,10 +49,20 @@ class ApprovalManagerImpl {
     sessionId: string;
     channel: string;
     signal?: AbortSignal;
+    sessionGrant?: string;
   }): Promise<boolean> {
     // Scheduled and remote channels cannot present a user-originated confirmation.
     if (options.channel !== 'desktop') return false;
+    if (options.sessionGrant && this.sessionGrants.get(options.sessionId)?.has(options.sessionGrant)) {
+      return !options.signal?.aborted;
+    }
     return this.present(options);
+  }
+
+  /** Forget "allow for this chat" grants for one session, or all. */
+  clearSessionGrants(sessionId?: string): void {
+    if (sessionId === undefined) this.sessionGrants.clear();
+    else this.sessionGrants.delete(sessionId);
   }
 
   /** Only Telegram delivery may ask the desktop from a remote/scheduled origin.
@@ -93,6 +108,7 @@ class ApprovalManagerImpl {
     sessionId: string;
     channel: string;
     signal?: AbortSignal;
+    sessionGrant?: string;
   }, exactDelivery = false): Promise<boolean> {
     if (!this.notifier || options.signal?.aborted || this.pending.size >= 20) return false;
 
@@ -116,6 +132,7 @@ class ApprovalManagerImpl {
       sessionId: options.sessionId,
       channel: options.channel,
       expiresAt: Date.now() + APPROVAL_TIMEOUT_MS,
+      ...(options.sessionGrant && !exactDelivery ? { sessionGrant: options.sessionGrant } : {}),
     };
 
     return new Promise<boolean>((resolve) => {
@@ -154,7 +171,15 @@ class ApprovalManagerImpl {
       pending.resolve(false);
       return false;
     }
-    pending.resolve(decision === 'approve');
+    if (decision === 'approve-session') {
+      // Only for requests that offered it; never widen a send or a shell command.
+      const grant = pending.request.sessionGrant;
+      if (!grant) return false;
+      const grants = this.sessionGrants.get(pending.request.sessionId) ?? new Set<string>();
+      grants.add(grant);
+      this.sessionGrants.set(pending.request.sessionId, grants);
+    }
+    pending.resolve(decision === 'approve' || decision === 'approve-session');
     return true;
   }
 

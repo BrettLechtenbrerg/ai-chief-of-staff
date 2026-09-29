@@ -133,6 +133,13 @@ export function resetSessionExposure(sessionId?: string): void {
   else sessionExposure.delete(sessionId);
 }
 
+// One owner click ("Allow web for this chat") covers every later URL request in
+// that desktop chat, so a research-heavy routine does not stop at each page.
+// Only offered for web egress (reading public pages); never for sends, writes
+// or shell commands.
+export const WEB_EGRESS_GRANT = 'web-egress';
+const egressNeedsOwner = (sessionId: string): boolean => sessionCanLeakPrivateData(sessionId);
+
 // Browser: observing and moving around a page is unattended; anything that can
 // submit, run script or upload asks. Unknown actions ask. Opening a new URL
 // asks once the session could leak private data (see above).
@@ -162,7 +169,7 @@ const ARG_CONFIRMATION: Readonly<Record<string, (args: unknown, sessionId: strin
     if (!BROWSER_READ_ACTIONS.has(action)) return true;
     return BROWSER_URL_ACTIONS.has(action) && sessionCanLeakPrivateData(sessionId);
   },
-  web_fetch: (_args, sessionId) => sessionCanLeakPrivateData(sessionId),
+  web_fetch: (_args, sessionId) => egressNeedsOwner(sessionId),
   shell_command: shellNeedsApproval,
   bash: shellNeedsApproval,
   // Every Telegram send already stops at the bot's wire gate
@@ -236,6 +243,54 @@ function isKnownMcpRead(name: string): boolean {
   return false;
 }
 
+// Public-web research servers. Their results are untrusted page/SEO data, never
+// the owner's private data, so they count as web reads, not CRM/email reads.
+// - DataForSEO: the server refuses any host but its own API; queries are like a
+//   web search, so reads run unattended. Only GET/POST (the whole data API);
+//   anything else asks.
+// - Firecrawl: only these read tools. Search runs unattended like web_search;
+//   URL tools follow the web_fetch egress rule. Monitors, interact, agent and
+//   feedback stay on the unknown-MCP path (always ask).
+const DATAFORSEO_PREFIX = 'mcp__dataforseo-mcp-server__';
+const FIRECRAWL_PREFIX = 'mcp__firecrawl-mcp__';
+const FIRECRAWL_UNATTENDED = new Set([
+  'firecrawl_search', 'firecrawl_check_crawl_status', 'firecrawl_credit_usage',
+  'firecrawl_research_search_papers', 'firecrawl_research_search_github',
+]);
+const FIRECRAWL_URL_READS = new Set([
+  'firecrawl_scrape', 'firecrawl_map', 'firecrawl_crawl', 'firecrawl_extract',
+  'firecrawl_research_read_paper', 'firecrawl_research_inspect_paper', 'firecrawl_research_related_papers',
+]);
+
+function researchMcpApproval(name: string): ((args: unknown, sessionId: string) => boolean) | undefined {
+  if (name.startsWith(DATAFORSEO_PREFIX)) {
+    if (name.slice(DATAFORSEO_PREFIX.length) !== 'api_request') return () => false;
+    return (args) => {
+      const method = String((args as { method?: unknown } | null)?.method ?? '').toUpperCase();
+      return method !== 'GET' && method !== 'POST';
+    };
+  }
+  if (name.startsWith(FIRECRAWL_PREFIX)) {
+    const tool = name.slice(FIRECRAWL_PREFIX.length);
+    if (FIRECRAWL_UNATTENDED.has(tool)) return () => false;
+    if (FIRECRAWL_URL_READS.has(tool)) return (_args, sessionId) => egressNeedsOwner(sessionId);
+  }
+  return undefined;
+}
+
+/** Tool calls that may be covered by the per-chat web grant. */
+export function webEgressGrantFor(toolName: string, args: unknown): string | undefined {
+  if (toolName === 'web_fetch') return WEB_EGRESS_GRANT;
+  if (toolName === 'browser') {
+    const action = String((args as { action?: unknown } | null)?.action ?? '');
+    return BROWSER_URL_ACTIONS.has(action) ? WEB_EGRESS_GRANT : undefined;
+  }
+  if (toolName.startsWith(FIRECRAWL_PREFIX) && FIRECRAWL_URL_READS.has(toolName.slice(FIRECRAWL_PREFIX.length))) {
+    return WEB_EGRESS_GRANT;
+  }
+  return undefined;
+}
+
 function isExternalMcpTool(name: string): boolean {
   return name.startsWith('mcp__') &&
     !name.startsWith('mcp__pocket-agent__') &&
@@ -253,6 +308,8 @@ export function getToolPolicy(
   annotations?: MCPToolAnnotations
 ): ToolPolicy {
   let capability = Object.hasOwn(TOOL_CAPABILITIES, toolName) ? TOOL_CAPABILITIES[toolName] : undefined;
+  const research = source === 'mcp' ? researchMcpApproval(toolName) : undefined;
+  if (!capability && research) capability = 'web-read';
   if (!capability && source === 'mcp') {
     // Annotations are hints only; a destructive hint can escalate, never downgrade.
     capability = isKnownMcpRead(toolName) ? 'external-read' : 'external-write';
@@ -265,6 +322,7 @@ export function getToolPolicy(
     confirmationRequired:
       CONFIRMATION_TOOLS.has(toolName) ||
       Object.hasOwn(ARG_CONFIRMATION, toolName) ||
+      Boolean(research) ||
       CONFIRMATION_CAPABILITIES.has(capability),
     source,
     ...(annotations ? { annotations: { ...annotations } } : {}),
@@ -288,7 +346,10 @@ export function guardToolWithApproval(
   execution: ToolExecutionContext
 ): PolicyAwareAgentTool {
   const originalExecute = tool.execute.bind(tool);
-  const needsApproval = Object.hasOwn(ARG_CONFIRMATION, tool.name) ? ARG_CONFIRMATION[tool.name] : () => true;
+  const needsApproval =
+    (Object.hasOwn(ARG_CONFIRMATION, tool.name) ? ARG_CONFIRMATION[tool.name] : undefined) ??
+    (tool.policy.source === 'mcp' ? researchMcpApproval(tool.name) : undefined) ??
+    (() => true);
   const { sessionId, channel } = execution;
   const run: typeof originalExecute = async (args, context) => {
     try {
@@ -326,6 +387,7 @@ export function guardToolWithApproval(
         return 'Tool blocked: complete proposal preview unavailable or invalid.';
       }
     }
+    const sessionGrant = webEgressGrantFor(tool.name, approvedArgs);
     const approved = await ApprovalManager.request({
       toolName: tool.name,
       capability: tool.policy.capability,
@@ -333,6 +395,7 @@ export function guardToolWithApproval(
       sessionId,
       channel,
       signal: context.signal,
+      ...(sessionGrant ? { sessionGrant } : {}),
     });
     if (!approved || context.signal?.aborted) return `Tool blocked: ${tool.name} requires user approval.`;
     return run(approvedArgs, context);

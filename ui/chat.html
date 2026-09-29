@@ -1821,6 +1821,7 @@
         <p class="approval-note">Only you can approve this request. Scheduled and remote runs are denied automatically.</p>
         <div class="approval-actions">
           <button class="approval-deny" id="approval-deny-btn" onclick="playNormalClick(); resolveToolApproval('deny')">Deny</button>
+          <button class="approval-session" id="approval-session-btn" hidden onclick="playNormalClick(); resolveToolApproval('approve-session')">Allow web for this chat</button>
           <button onclick="playNormalClick(); resolveToolApproval('approve')">Approve once</button>
         </div>
       </div>

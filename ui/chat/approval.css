@@ -56,12 +56,23 @@
 
 .approval-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
 }
 
 .approval-actions button {
   min-width: 92px;
+}
+
+.approval-session {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)) !important;
+}
+
+.approval-session[hidden] {
+  display: none;
 }
 
 .approval-deny {

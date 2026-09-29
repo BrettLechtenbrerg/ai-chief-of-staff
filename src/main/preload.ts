@@ -58,7 +58,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   },
 
   approval: {
-    resolve: (id: string, decision: 'approve' | 'deny') =>
+    resolve: (id: string, decision: 'approve' | 'approve-session' | 'deny') =>
       ipcRenderer.invoke('approval:resolve', id, decision),
     resolveVoice: (id: string, transcript: string) =>
       ipcRenderer.invoke('approval:resolveVoice', id, transcript),
@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
         details: string;
         sessionId: string;
         expiresAt: number;
+        sessionGrant?: string;
       }) => void
     ) => {
       const listener = (
@@ -641,7 +642,7 @@ declare global {
       };
 
       approval: {
-        resolve: (id: string, decision: 'approve' | 'deny') => Promise<{ success: boolean }>;
+        resolve: (id: string, decision: 'approve' | 'approve-session' | 'deny') => Promise<{ success: boolean }>;
         onRequested: (
           callback: (request: {
             id: string;
@@ -651,6 +652,7 @@ declare global {
             details: string;
             sessionId: string;
             expiresAt: number;
+            sessionGrant?: string;
           }) => void
         ) => () => void;
       };

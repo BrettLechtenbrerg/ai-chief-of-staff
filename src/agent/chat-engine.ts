@@ -63,7 +63,12 @@ function annotateRoutineMessage(msg: MemoryMessage): string {
   return `[Executed tools: ${tools}]\n\n${msg.content}`;
 }
 
-const MAX_TOOL_ITERATIONS = 20;
+// Steps (model turns) per message. A full routine (research → write → verify
+// sources → images → packet → PR) needs 40–80; 20 cut Brett's blog run off
+// mid-flight. The cap only guards runaway loops.
+const MAX_TOOL_ITERATIONS = 150;
+const STEP_LIMIT_NOTE =
+  `\n\n---\n_Paused after ${MAX_TOOL_ITERATIONS} steps so nothing runs away. Everything above is saved — say "keep going" and I'll pick up from here._`;
 
 // Base message limit for 200K context models — scaled up for larger contexts
 const BASE_CONTEXT_MESSAGES = 80;
@@ -339,6 +344,10 @@ export class ChatEngine {
     const abortController = new AbortController();
     this.abortControllersBySession.set(sessionId, abortController);
 
+    // Text streamed so far; kept outside the try so a late failure does not
+    // throw away the work already shown to the owner.
+    let response = '';
+
     try {
       // Get model early — needed for context-window-aware message limits and token-based compaction.
       // resolveModel() guarantees we pick a model whose provider has a key, even if `agent.model`
@@ -462,7 +471,6 @@ export class ChatEngine {
           : agentLoop(messages, agentOptions);
 
       // Iterate agent events
-      let response = '';
       let totalInputTokens = 0;
       let totalOutputTokens = 0;
       // Track the last turn's input tokens — this represents the actual context size
@@ -637,6 +645,15 @@ export class ChatEngine {
             console.log(
               `[ChatEngine] Done — ${event.totalTurns} turn(s), ${tu.inputTokens + tu.outputTokens} total tokens (in: ${tu.inputTokens}, out: ${tu.outputTokens}), cache_hit: ${overallHit}%, cache_read: ${tu.cacheRead ?? 0}, cache_create: ${tu.cacheWrite ?? 0}`
             );
+            if (event.totalTurns >= MAX_TOOL_ITERATIONS) {
+              response += STEP_LIMIT_NOTE;
+              this.emitStatus({
+                type: 'partial_text',
+                sessionId,
+                partialText: STEP_LIMIT_NOTE,
+                message: 'pausing...',
+              });
+            }
             break;
           }
 
@@ -724,7 +741,20 @@ export class ChatEngine {
       console.error('[ChatEngine] Query failed:', errorMsg);
 
       this.memory.saveMessage('user', userMessage, sessionId);
-      this.memory.saveMessage('assistant', errorMsg, sessionId, { isError: true });
+      // Keep the progress report the owner already saw, so "keep going" resumes
+      // from it instead of redoing the research.
+      const partial = response.trim();
+      if (partial) {
+        this.conversationsBySession
+          .get(sessionId)
+          ?.push({ role: 'assistant', content: `${partial}\n\n[Stopped early: ${errorMsg}]` });
+      }
+      this.memory.saveMessage(
+        'assistant',
+        partial ? `${partial}\n\n---\n_Stopped early: ${errorMsg}_` : errorMsg,
+        sessionId,
+        { isError: true }
+      );
 
       throw error;
     } finally {

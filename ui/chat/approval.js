@@ -25,6 +25,8 @@ function _approvalShowNext() {
   document.getElementById('approval-capability').textContent =
     _approvalCurrent.capability.replaceAll('-', ' ');
   document.getElementById('approval-summary').textContent = `Session: ${_approvalCurrent.sessionId}. ${_approvalCurrent.summary}`;
+  const sessionButton = document.getElementById('approval-session-btn');
+  if (sessionButton) sessionButton.hidden = !_approvalCurrent.sessionGrant;
   document.getElementById('approval-details').textContent = _approvalCurrent.details || 'No argument preview available.';
   for (let container = overlay; container?.parentElement; container = container.parentElement) {
     for (const sibling of container.parentElement.children) {

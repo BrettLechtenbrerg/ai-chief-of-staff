@@ -365,7 +365,10 @@ export async function* claudeCodeAgentLoop(
       if (message.type === 'result') {
         const done = finishTurn();
         if (done) yield done;
-        if (message.is_error || message.subtype !== 'success') {
+        // Hitting the step cap is a pause, not a failure: finish like the native
+        // loop does (agent_done at the cap) so the caller keeps the work so far.
+        const hitStepCap = message.subtype === 'error_max_turns';
+        if (!hitStepCap && (message.is_error || message.subtype !== 'success')) {
           const reason =
             message.subtype === 'success'
               ? message.result
@@ -373,10 +376,11 @@ export async function* claudeCodeAgentLoop(
           throw new Error(explainClaudeCodeError(reason || 'Claude Code returned an error'));
         }
         const totalUsage = mapUsage(message.usage);
-        yield { type: 'agent_done', totalTurns: message.num_turns, totalUsage };
+        const totalTurns = hitStepCap ? Math.max(message.num_turns, options.maxTurns ?? 0) : message.num_turns;
+        yield { type: 'agent_done', totalTurns, totalUsage };
         return {
-          message: { role: 'assistant', content: text || message.result },
-          totalTurns: message.num_turns,
+          message: { role: 'assistant', content: text || (message.subtype === 'success' ? message.result : '') },
+          totalTurns,
           totalUsage,
         };
       }
