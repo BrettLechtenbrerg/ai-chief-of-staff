@@ -88,6 +88,39 @@ describe('agent file and shell scope', () => {
     }
   });
 
+  it('does not mistake web paths in PR text or folders with spaces for blocked paths (Sept 29 blog publish)', () => {
+    const home = os.homedir();
+    const appWorkspace = path.join(home, 'Library', 'Application Support', 'ai-chief-of-staff', 'workspace');
+    const spaced = path.join(root, 'Shared Drafts');
+    fs.mkdirSync(spaced);
+    const roots = [appWorkspace, home, spaced];
+    for (const ok of [
+      'cd ~/dev/PMMA-Website-2026-Master && git push -u origin blog/x && ' +
+        'gh pr create --title "Belt order" --body "Publishes /blog/taekwondo-belt-order with /images/blog/hero.png" && ' +
+        'gh pr merge --squash --delete-branch',
+      "git commit -m 'Adds /blog/taekwondo-belt-order'",
+      `cp ~/dev/PMMA-Website-2026-Master/public/hero.png "${appWorkspace}/blogreview/"`,
+      `cp ~/dev/PMMA-Website-2026-Master/public/hero.png '${appWorkspace}/blogreview/hero.png'`,
+      `cp ~/dev/PMMA-Website-2026-Master/public/hero.png ${appWorkspace.replaceAll(' ', '\\ ')}/blogreview/`,
+      `ls "${spaced}"`,
+    ]) expect(validateShellCommandScope(ok, appWorkspace, roots), ok).toMatchObject({ allowed: true });
+    for (const bad of [
+      'cat "/etc/passwd"',
+      `bash -c "${spaced}/run /etc/passwd"`,
+      `bash -c "cd ${spaced}; cat /etc/passwd"`,
+      `cp "${path.join(home, 'Library', 'Application Support', 'Google', 'Chrome', 'Default', 'Cookies')}" .`,
+      `cat ${path.join(home, 'Library', 'Application\\ Support', 'ai-chief-of-staff', 'google-tokens.json')}`,
+      'gh pr create --body "see /etc/passwd"',
+      'cat</etc/passwd',
+      `bash -c "${spaced};cat</etc/passwd"`,
+      `cat "~/Library/Application Support/Google/Chrome/Default/Cookies"`,
+    ]) expect(validateShellCommandScope(bad, appWorkspace, roots).allowed, bad).toBe(false);
+  });
+
+  it('names the refused path so the agent can correct the command', () => {
+    expect(validateShellCommandScope('cat /etc/hosts', workspace, execution.approvedRoots).reason).toContain('/etc/hosts');
+  });
+
   it('keeps hidden home entries, ~/Library and git internals private while home documents stay reachable', () => {
     const home = os.homedir();
     for (const privatePath of [

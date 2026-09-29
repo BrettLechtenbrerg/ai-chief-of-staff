@@ -4,6 +4,11 @@ Updated: September 10, 2026 — approval policy and Claude-via-Max route install
 
 Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.”**
 
+> **Sept 29 evening: publish-step fix installed, committed and pushed.** The shell path check mistook
+> `/blog/...` in PR text and quoted folders with spaces for blocked files. Fixed in
+> `src/agent/tool-sandbox.ts`; 1,871 tests pass; rollback `/Applications/.acos-install-3JMWE9/previous.app`.
+> Proven: the app published the belt-order post (PR #4, `2093954`, live). Details: top of `RECOVERY.md`.
+>
 > **Sept 29, 2026: fixes from the PMMA blog run are committed (`b276301`), pushed at closeout
 > and installed** (signed + notarized private Intel build, `install-local.cjs` → `installed-ready`,
 > first rollback `/Applications/.acos-install-8KMIfC/previous.app`; then quit and reopened normally so

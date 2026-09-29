@@ -131,14 +131,63 @@ export function validateShellCommandScope(
   if (/(?:^|\s)(?:env|printenv)(?:\s|$)|(?:^|[;&|(\s])set\s*(?:$|[;&|)])|(?:^|[\s'"=])\.\.[\\/]|~[A-Za-z]|\/proc\/|(?:^|[\s'"=<>])\/dev\/(?!(?:null|stdout|stderr)\b)|security\s+find-|keychain|credential|\.env\b|\.ssh\b|\.aws\b|\.gnupg\b/i.test(command)) {
     return { allowed: false, reason: 'Shell command requests credentials or private system data' };
   }
-  const absolutePaths = command.match(/(?:^|[\s'"=])((?:[A-Za-z]:[\\/]|\/)[^\s'";|&]+)/g) || [];
-  for (const match of absolutePaths) {
-    const candidate = match.trim().replace(/^['"=]/, '');
+  for (const candidate of shellPathCandidates(command)) {
     if (/^\/dev\/(?:null|stdout|stderr)$/.test(candidate)) continue;
+    // A web path in a PR body or commit message (/blog/post) is text, not a
+    // file: nothing can exist under a top-level folder that does not exist, and
+    // only root can create one.
+    if (!topLevelFolderExists(candidate)) continue;
     const validation = validateAgentFilePath(candidate, cwd, approvedRoots);
-    if (!validation.allowed) return validation;
+    if (!validation.allowed) return { allowed: false, reason: `${validation.reason}: ${candidate}` };
   }
   return { allowed: true };
+}
+
+const ABSOLUTE_PATH = /(?:^|[\s'"=<>;|&(])((?:[A-Za-z]:[\\/]|\/)(?:\\ |[^\s'";|&])+)/g;
+const PATH_START = /^(?:[A-Za-z]:[\\/]|\/|~\/)/;
+
+/**
+ * Absolute paths named in a command. A quoted path keeps its spaces
+ * ("~/Library/Application Support/…") when its folder exists and no later word
+ * starts another path; otherwise quoted text is scanned word by word, so
+ * `bash -c "cat /etc/passwd"` is still checked. Text with shell operators is
+ * never one path. `\ ` escapes stay in the path.
+ */
+function shellPathCandidates(command: string): string[] {
+  const candidates: string[] = [];
+  const unquoted = command.replace(/'([^']*)'|"((?:[^"\\]|\\.)*)"/g, (quoted, single?: string, double?: string) => {
+    const text = single ?? (double ?? '').replace(/\\(["\\$`])/g, '$1');
+    const words = text.split(/\s+/);
+    const expanded = text.startsWith('~') ? path.join(os.homedir(), text.slice(1)) : text;
+    const onePath =
+      PATH_START.test(text) &&
+      !/[;|&<>$`()\n]/.test(text) &&
+      !words.slice(1).some((word) => PATH_START.test(word)) &&
+      parentFolderExists(expanded);
+    if (onePath) {
+      candidates.push(expanded);
+      return ' ';
+    }
+    return ` ${text} `;
+  });
+  for (const match of unquoted.matchAll(ABSOLUTE_PATH)) candidates.push(match[1].replaceAll('\\ ', ' '));
+  return candidates;
+}
+
+function parentFolderExists(candidate: string): boolean {
+  return fs.existsSync(candidate) || fs.existsSync(path.dirname(candidate));
+}
+
+function topLevelFolderExists(candidate: string): boolean {
+  if (!candidate.startsWith('/')) return true;
+  const first = candidate.split('/').find(Boolean);
+  if (!first) return true;
+  try {
+    fs.lstatSync(`/${first}`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const SHELL_SANDBOX_NOTE =

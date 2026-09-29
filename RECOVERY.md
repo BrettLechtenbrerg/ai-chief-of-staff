@@ -2,7 +2,34 @@
 
 This is the canonical session-kickoff document. If you're a fresh Claude session, start here.
 
-## Current handoff — session closeout, September 29, 2026
+## Current handoff — publish-step fix, September 29, 2026 (evening)
+
+The belt-order "please post the blog" run stopped at the push; the agent said
+the shell refused paths outside the workspace (the matching refusal is
+"outside approved workspaces" from `validateAgentFilePath`). The app does not
+log tool arguments, so the exact command is inferred: the shell's path check
+read every `/word` as a file, so web paths in PR text
+(`/blog/taekwondo-belt-order`) and quoted folders with spaces
+(`Application Support`) were refused. Fix in
+`src/agent/tool-sandbox.ts` (`shellPathCandidates`): quoted paths with spaces
+stay whole; web-style paths under a top-level folder that does not exist are
+treated as text; refusals now name the path. `/etc`, `~/Library`, hidden home
+folders and quoted `bash -c "…/etc/passwd"` are still refused (new tests).
+Typecheck, lint, **104 files / 1,871 tests** passed. Signed, notarized private
+Intel build installed via `install-local.cjs` → `installed-ready`; rollback
+`/Applications/.acos-install-3JMWE9/previous.app`. Committed and pushed to this
+checkpoint branch at Brett's request. **Proven live:** in chat "New3" the app pushed, opened PR #4 and
+squash-merged it (`2093954` on `main`); Vercel deploy succeeded and
+`www.personalmasterymartialarts.com/blog/taekwondo-belt-order` returns 200 with
+the hero image. ("Please post the blog" sent to the old "SEO Report" chat
+failed only because chats do not share context: publish from the chat that
+holds the draft.) `_brand-profiles` pushed (`b96c59b` 1536×1024 hero default,
+`73c62fe` topic ledger marks belt-order published). Its three untracked
+`aeo.json` files (July) were left alone. A post-merge `gh` check that is not a
+plain push/PR/merge command cannot read `~/.config/gh` by design; verify with
+`git fetch` + `git log origin/main` instead.
+
+## Previous handoff — session closeout, September 29, 2026
 
 Fixes from the Sept 28 PMMA blog run are committed, pushed to
 `checkpoint/2026-09-06-session-closeout` and installed as a signed, notarized
