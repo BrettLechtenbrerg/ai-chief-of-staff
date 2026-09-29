@@ -4,9 +4,9 @@ Updated: September 10, 2026 — approval policy and Claude-via-Max route install
 
 Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.”**
 
-> **Sept 29, 2026: fixes from the PMMA blog run are committed (`b276301`, local only, not pushed)
+> **Sept 29, 2026: fixes from the PMMA blog run are committed (`b276301`), pushed at closeout
 > and installed** (signed + notarized private Intel build, `install-local.cjs` → `installed-ready`,
-> rollback `/Applications/.acos-install-8KMIfC/previous.app`; then quit and reopened normally so
+> first rollback `/Applications/.acos-install-8KMIfC/previous.app`; then quit and reopened normally so
 > MCP servers run; routines still manual-only). No beta, release or website change.
 > The run kept stopping at 20 steps, asked approval for every DataForSEO/Firecrawl call, and
 > its shell could not reach `~/dev` or `~/Desktop` (a text filter treated `~/dev/...` as `/dev/`,

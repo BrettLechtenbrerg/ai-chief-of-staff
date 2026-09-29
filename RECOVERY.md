@@ -30,6 +30,10 @@ change). The installed app runs in a normal launch; routines stay manual-only.
   branch; confirm it asks only "post it?" and one popup. Not yet exercised live.
 - Not done this session: no new app-data checkpoint (last: Sept 10,
   `checkpoint-step18-Rd1lru`); this session changed code only, not app data.
+- Pushing this repo needs the BrettLechtenbrerg gh login (the globally active
+  BoardChairIs1 gets 403). Closeout push used
+  `GH_TOKEN="$(gh auth token -u BrettLechtenbrerg)" git push` without switching
+  the active account.
 
 ## Previous handoff — session closeout, September 10, 2026
 
