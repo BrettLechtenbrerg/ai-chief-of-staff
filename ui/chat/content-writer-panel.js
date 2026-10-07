@@ -201,16 +201,30 @@ const _CW_KICKOFF_PROMPT_BASE = [
 ].join('\n');
 
 /**
+ * Point every post-folder path in the prompt at `postsRoot` (the brand's
+ * content bucket, e.g. ".../TSAI - Total Success AI/Blogs & Social Posts").
+ * With no bucket the prompt is unchanged and posts go to ~/Desktop/Blogs/.
+ */
+function _cwApplyPostsRoot(text, postsRoot) {
+  if (!postsRoot) return text;
+  return text
+    .replaceAll('file:///$HOME/Desktop/Blogs', 'file://' + encodeURI(postsRoot))
+    .replaceAll('$HOME/Desktop/Blogs', postsRoot)
+    .replaceAll('~/Desktop/Blogs', postsRoot);
+}
+
+/**
  * Build the kickoff prompt for a run. With no publish profile (or a profile
  * that isn't a locally-cloned github-next repo) this returns the base prompt
- * byte-identical to the historical behavior — Desktop-only output. With a
- * linked profile, a PUBLISH TARGET block is appended that overrides Step 10
- * to also write + commit + push the post into the brand's site repo.
+ * — Desktop-only output. With a linked profile, a PUBLISH TARGET block is
+ * appended that overrides Step 10 to also write + commit + push the post into
+ * the brand's site repo. `postsRoot` (the brand's validated content folder,
+ * '' when none) replaces ~/Desktop/Blogs as the parent of the post folder.
  */
-function _cwBuildKickoffPrompt(publishProfile) {
+function _cwBuildKickoffPrompt(publishProfile, postsRoot) {
   const p = publishProfile;
   if (!p || p.blogBackend !== 'github-next' || !p.repoExists || !p.localRepoPath || !p.contentDir || !p.imageDir) {
-    return _CW_KICKOFF_PROMPT_BASE;
+    return _cwApplyPostsRoot(_CW_KICKOFF_PROMPT_BASE, postsRoot);
   }
 
   const publishBlock = [
@@ -240,7 +254,7 @@ function _cwBuildKickoffPrompt(publishProfile) {
     '=== END PUBLISH TARGET ===',
   ].join('\n');
 
-  return _CW_KICKOFF_PROMPT_BASE + '\n' + publishBlock;
+  return _cwApplyPostsRoot(_CW_KICKOFF_PROMPT_BASE + '\n' + publishBlock, postsRoot);
 }
 
 // ---- Show / Hide ----
@@ -518,6 +532,15 @@ function _cwResolvePublishProfile(brand) {
   return profile;
 }
 
+// The brand's content bucket (profile.json `contentFolder`, validated in the
+// main process to be an existing folder inside ~/Desktop), or '' when the
+// brand has no linked profile or no valid folder — then posts use ~/Desktop/Blogs.
+function _cwResolvePostsRoot(brand) {
+  if (!brand || !brand.profile_slug) return '';
+  const profile = _cwPublishProfiles.find((p) => p.slug === brand.profile_slug);
+  return (profile && profile.contentFolder) || '';
+}
+
 // User picked a different brand from the dropdown.
 async function _cwOnBrandPick() {
   const select = document.getElementById('cw-brand-picker');
@@ -753,7 +776,10 @@ async function startContentWriter() {
       // Brand-aware kickoff: a linked publishing profile adds the PUBLISH
       // TARGET block; unlinked brands get the base (Desktop-only) prompt.
       const pickedBrand = _cwBrands.find((b) => b.id === _cwPickedBrandId);
-      messageInput.value = _cwBuildKickoffPrompt(_cwResolvePublishProfile(pickedBrand));
+      messageInput.value = _cwBuildKickoffPrompt(
+        _cwResolvePublishProfile(pickedBrand),
+        _cwResolvePostsRoot(pickedBrand)
+      );
     }
     if (typeof sendMessage === 'function') {
       await sendMessage();

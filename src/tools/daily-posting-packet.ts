@@ -18,6 +18,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { getBrandContentFolder, PACKETS_SUBFOLDER, uniqueBaseName } from '../utils/content-folder.js';
 
 export interface PlatformPacketSection {
   /** Platform key as it appears in profile.json (e.g. "linkedinPersonal"). */
@@ -69,26 +70,23 @@ export interface WriteDailyPostingPacketResult {
 }
 
 /**
- * Daily packets land on the Desktop in a per-brand folder so Brett can
- * open the right brand's folder during his morning work session without
- * scanning a long unified inbox. Each brand's history accumulates in its
- * own folder, sorted by date.
+ * Daily packets land in the brand's content bucket when its profile names a
+ * valid `contentFolder` (see utils/content-folder.ts):
  *
- *   ~/Desktop/Daily Postings/
- *   ├── TSAI/
- *   │   └── 2026-05-25 — Post Title.md (+ hero, square, blog-draft)
- *   ├── PMMA/
- *   └── Brett/
+ *   ~/Desktop/TSAI - Total Success AI/Blogs & Social Posts/Daily Posting Packets/
+ *   └── 2026-05-25 — post-title.md (+ hero, square)
+ *
+ * Otherwise they fall back to the per-brand Desktop inbox:
+ *   ~/Desktop/Daily Postings/<BrandShortName>/
+ * HOME is read at call time so tests can sandbox it.
  */
-const PACKET_ROOT = path.resolve(
-  process.env.HOME || '',
-  'Desktop/Daily Postings',
-);
-
-function packetDirForBrand(brandShortName: string): string {
+function packetDirForBrand(brandSlug: string, brandShortName: string): string {
+  const home = process.env.HOME || '';
+  const contentFolder = getBrandContentFolder(brandSlug, home);
+  if (contentFolder) return path.join(contentFolder, PACKETS_SUBFOLDER);
   // Use the short name verbatim as the subfolder name — simpler than
   // slug-sanitizing, and matches what Brett sees in the Telegram message.
-  return path.join(PACKET_ROOT, brandShortName);
+  return path.join(path.resolve(home, 'Desktop/Daily Postings'), brandShortName);
 }
 
 /** Slug-safe filename component \u2014 lowercase, alphanumeric + dash only. */
@@ -205,14 +203,19 @@ export async function writeDailyPostingPacket(
   const err = validateInput(input);
   if (err) return { success: false, error: err };
 
-  // Ensure the brand's Desktop folder exists: ~/Desktop/Daily Postings/[Brand]/
-  const brandDir = packetDirForBrand(input.brandShortName);
+  // Ensure the packet folder exists (bucket "Daily Posting Packets" or inbox).
+  const brandDir = packetDirForBrand(input.brandSlug, input.brandShortName);
   fs.mkdirSync(brandDir, { recursive: true });
 
   // Filename no longer includes the brand name \u2014 the parent folder names it.
   // Keeps filenames short and readable.
   const titleSlug = sanitizeForFilename(input.postTitle);
-  const baseName = `${input.date} \u2014 ${titleSlug}`;
+  // Never overwrite an earlier packet: add " (2)", " (3)"… to all three names.
+  const baseName = uniqueBaseName(brandDir, `${input.date} \u2014 ${titleSlug}`, [
+    '.md',
+    ' \u2014 hero.png',
+    ' \u2014 hero-square.png',
+  ]);
   const packetPath = path.join(brandDir, `${baseName}.md`);
   const heroDest = path.join(brandDir, `${baseName} \u2014 hero.png`);
   const heroSquareDest = input.heroSquarePath
@@ -259,7 +262,7 @@ export function getWriteDailyPostingPacketToolDefinition() {
   return {
     name: 'write_daily_posting_packet',
     description:
-      "Write the daily posting packet for a brand. Drops a single markdown file plus hero + IG-square images into ~/Desktop/Daily Postings/[BrandShortName]/. The .md file contains paste-ready content for every active platform for the brand, formatted per its SOCIAL_RULES.md. Brett opens his Desktop's Daily Postings folder during his first work session, picks today's brand folder, scans top-to-bottom, pastes each section into the corresponding platform, posts. Call this at the END of the weekly routine after you've already generated per-platform copy following the brand's social rules.",
+      "Write the daily posting packet for a brand. Drops a single markdown file plus hero + IG-square images into the brand's content bucket (<contentFolder>/Daily Posting Packets/ from its profile.json), or ~/Desktop/Daily Postings/[BrandShortName]/ when the brand has no content folder. Existing packets are never overwritten. The .md file contains paste-ready content for every active platform for the brand, formatted per its SOCIAL_RULES.md. Brett opens that folder during his first work session, scans top-to-bottom, pastes each section into the corresponding platform, posts. Call this at the END of the weekly routine after you've already generated per-platform copy following the brand's social rules.",
     input_schema: {
       type: 'object' as const,
       properties: {

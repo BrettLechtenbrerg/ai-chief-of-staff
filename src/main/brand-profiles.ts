@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { resolveContentFolder } from '../utils/content-folder.js';
 
 /**
  * Reader for the ~/dev/_brand-profiles publishing profiles. Each subfolder
@@ -33,6 +34,8 @@ export interface PublishProfile {
   imageDir: string;
   /** Whether localRepoPath exists on this machine right now. */
   repoExists: boolean;
+  /** Validated real path of the brand's content bucket inside ~/Desktop ('' if none/invalid). */
+  contentFolder: string;
 }
 
 /** Shape of the raw profile.json fields we read (everything optional). */
@@ -40,6 +43,7 @@ interface RawProfile {
   slug?: string;
   name?: string;
   shortName?: string;
+  contentFolder?: unknown;
   site?: { localRepoPath?: string };
   blog?: {
     backend?: string;
@@ -73,6 +77,7 @@ function readProfile(root: string, dirName: string): PublishProfile | null {
     contentDir: raw.blog?.contentDir ?? '',
     imageDir: raw.blog?.imageDir ?? '',
     repoExists: !!localRepoPath && fs.existsSync(localRepoPath),
+    contentFolder: resolveContentFolder(raw.contentFolder) ?? '',
   };
 }
 

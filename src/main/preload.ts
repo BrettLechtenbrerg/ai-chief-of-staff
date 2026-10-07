@@ -559,6 +559,7 @@ interface PublishProfile {
   contentDir: string;
   imageDir: string;
   repoExists: boolean;
+  contentFolder: string;
 }
 
 interface BrandInput {

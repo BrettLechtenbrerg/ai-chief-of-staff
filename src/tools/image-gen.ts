@@ -21,6 +21,7 @@ import * as path from 'path';
 import OpenAI from 'openai';
 import { SettingsManager } from '../settings';
 import { isPathWithin, resolvePathForCreateWithin } from '../utils/safe-path.js';
+import { listBrandContentFolders } from '../utils/content-folder.js';
 
 export type ImageStyle = 'photo-realistic' | 'editorial-illustration';
 
@@ -88,7 +89,10 @@ function desktopPreviewPath(repoPath: string): string {
 //    for blogs hosted on github-next (currently TSAI).
 // 4. The _brand-profiles/_inbox/ folder — where images for GHL-blog brands
 //    (PMMA, brett-personal) land. Brett uploads from here.
-const ALLOWED_DIRS = [
+// 5. Each brand's validated content bucket (profile.json `contentFolder`,
+//    e.g. ~/Desktop/TSAI - Total Success AI/Blogs & Social Posts/), read at
+//    call time via utils/content-folder.ts (must sit inside ~/Desktop).
+const STATIC_ALLOWED_DIRS = [
   path.resolve(process.env.HOME || '', 'Desktop/Blogs'),
   path.resolve(process.env.HOME || '', 'Desktop/Ads'),
   path.resolve(process.env.HOME || '', 'dev/TSAI-Site/public/blog-images'),
@@ -102,6 +106,10 @@ const ALLOWED_DIRS = [
   ),
   path.resolve(process.env.HOME || '', 'dev/_brand-profiles/_inbox'),
 ];
+
+function allowedDirs(): string[] {
+  return [...STATIC_ALLOWED_DIRS, ...listBrandContentFolders()];
+}
 
 
 
@@ -135,10 +143,10 @@ function validateOutputPath(outputPath: string): string {
     throw new Error('outputPath must end with .png');
   }
   const resolved = path.resolve(outputPath);
-  const allowedDirectory = ALLOWED_DIRS.find((directory) => isPathWithin(directory, resolved));
+  const allowedDirectory = allowedDirs().find((directory) => isPathWithin(directory, resolved));
   if (!allowedDirectory) {
     throw new Error(
-      `outputPath must be inside one of: ${ALLOWED_DIRS.join(', ')} (got: ${resolved})`,
+      `outputPath must be inside one of: ${allowedDirs().join(', ')} (got: ${resolved})`,
     );
   }
   return resolved;
@@ -193,7 +201,7 @@ export async function generateBlogImage(
 
     const buffer = Buffer.from(b64, 'base64');
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
-    const allowedDirectory = ALLOWED_DIRS.find((directory) => isPathWithin(directory, resolved));
+    const allowedDirectory = allowedDirs().find((directory) => isPathWithin(directory, resolved));
     if (!allowedDirectory) throw new Error('Output path escaped the allowed directories');
     resolved = resolvePathForCreateWithin(allowedDirectory, resolved);
     fs.writeFileSync(resolved, buffer, { mode: 0o600 });
@@ -321,7 +329,7 @@ export function getGenerateBlogImageToolDefinition() {
         outputPath: {
           type: 'string',
           description:
-            "Absolute path. Must end with .png. Allowed parent dirs: ~/Desktop/Blogs/, ~/Desktop/Ads/ (Meta Ad Creator images), ~/dev/TSAI-Site/public/blog-images/, ~/dev/PMMA-Website-2026-Master/public/blog-images/, ~/dev/BL-2026-Personal-Site/public/blog-images/, or ~/dev/_brand-profiles/_inbox/. The cron picks the right dir per the brand's blog backend.",
+            "Absolute path. Must end with .png. Allowed parent dirs: a brand's content folder from its profile.json (e.g. ~/Desktop/TSAI - Total Success AI/Blogs & Social Posts/YYYY-MM-DD-slug/), ~/Desktop/Blogs/ (fallback when no brand content folder applies), ~/Desktop/Ads/ (Meta Ad Creator images), ~/dev/TSAI-Site/public/blog-images/, ~/dev/PMMA-Website-2026-Master/public/blog-images/, ~/dev/BL-2026-Personal-Site/public/blog-images/, or ~/dev/_brand-profiles/_inbox/. The cron picks the right dir per the brand's blog backend.",
         },
         desktopCopy: {
           type: 'boolean',
