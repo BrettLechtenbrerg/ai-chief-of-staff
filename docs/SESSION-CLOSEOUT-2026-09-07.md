@@ -10,7 +10,7 @@ Use `/Users/brettlechtenberg/dev/ai-chief-of-staff`, branch
 `checkpoint/2026-09-06-session-closeout`, not an older `main` or Desktop copy.
 Read `AGENTS.md`, `RESUME-PROMPT.md`, current `RECOVERY.md`, `CLAUDE.md`, and
 `CONTEXT.md`. Desktop pointer:
-`~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
+`~/Desktop/BL - Brett Lechtenberg/Projects/_Resume Prompts Archive/AI-CHIEF-OF-STAFF-RESUME.md`.
 
 Both Hook Lab upgrades are installed in the signed/notarized private Intel app:
 scene timing checks and exact full-script save/load/Video Studio handoff.

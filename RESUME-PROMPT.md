@@ -104,7 +104,7 @@ plus the closeout documentation are on the checkpoint branch; see the current
 closeout document for push, secret-scan and private-copy receipts. The older
 external encrypted backup was last observed `awaiting-encryption`; never infer
 success from a pending recipe or local copy. The Desktop resume pointer is
-`~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
+`~/Desktop/BL - Brett Lechtenberg/Projects/_Resume Prompts Archive/AI-CHIEF-OF-STAFF-RESUME.md`.
 
 ## Next useful work
 

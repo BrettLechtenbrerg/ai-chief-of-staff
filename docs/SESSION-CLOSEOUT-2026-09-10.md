@@ -9,7 +9,7 @@ Say **“Resume AI Chief of Staff from the latest session closeout.”**
 Use `/Users/brettlechtenberg/dev/ai-chief-of-staff`, branch
 `checkpoint/2026-09-06-session-closeout`. Read `AGENTS.md`, `RESUME-PROMPT.md`,
 the top of `RECOVERY.md`, `CLAUDE.md` and `CONTEXT.md`. Desktop pointer:
-`~/Desktop/Resume Prompts/AI-CHIEF-OF-STAFF-RESUME.md`.
+`~/Desktop/BL - Brett Lechtenberg/Projects/_Resume Prompts Archive/AI-CHIEF-OF-STAFF-RESUME.md`.
 
 Two owner-approved upgrades were built, installed and committed this session.
 Do not rebuild them. The private app still displays `1.0.0-beta.25`; no release

@@ -106,7 +106,7 @@ Tell it: *"Set up a daily briefing at 6 AM for [your city] that pulls my Google 
 
 `fetch_aeo_visibility` runs one configured brand's exact 25-question monthly visibility set across the enabled OpenAI, Perplexity, and Anthropic providers. Configure provider keys in Settings; keys are encrypted and no plaintext `aeo-credentials.json` is used.
 
-A three-provider run previews and requires approval for **up to 75 paid provider requests**. Requests have 30-second aborts, bounded retries, cancellation, progress heartbeats, exact hostname citation matching, and atomic `0600` reports under `~/Desktop/AEO Operating System/`. See [`docs/AEO-VISIBILITY.md`](docs/AEO-VISIBILITY.md).
+A three-provider run previews and requires approval for **up to 75 paid provider requests**. Requests have 30-second aborts, bounded retries, cancellation, progress heartbeats, exact hostname citation matching, and atomic `0600` reports under `~/Desktop/TSAI - Total Success AI/Shop - Shared Tools/AEO Operating System/`. See [`docs/AEO-VISIBILITY.md`](docs/AEO-VISIBILITY.md).
 
 ---
 

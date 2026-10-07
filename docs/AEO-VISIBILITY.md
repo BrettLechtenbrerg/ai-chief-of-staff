@@ -29,7 +29,7 @@ The approval states the maximum provider-request count and that provider charges
 - HTTP 429 and 5xx responses use bounded retry/backoff; cancellation aborts in-flight work.
 - Progress heartbeats report completed/total request counts.
 - Citations match only the normalized hostname or its real subdomains—not substring lookalikes.
-- Reports are written atomically with `0600` permissions under `~/Desktop/AEO Operating System/<brand>/reports/<timestamp>/`.
+- Reports are written atomically with `0600` permissions under `~/Desktop/TSAI - Total Success AI/Shop - Shared Tools/AEO Operating System/<brand>/reports/<timestamp>/`.
 
 ## Coverage contract (schema 2)
 
