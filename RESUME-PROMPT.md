@@ -4,6 +4,18 @@ Updated: September 10, 2026 — approval policy and Claude-via-Max route install
 
 Brett can simply say: **“Let’s resume work on the AI Chief of Staff project.”**
 
+> **Open item (7 Oct 2026): save content into Brett's business buckets.** Brett's Desktop is now
+> organized into buckets (`BL - Brett Lechtenberg`, `TSAI - Total Success AI`, `PMMA - Personal
+> Mastery Martial Arts`, `GC - Gift Connect`, `MACC - Murray Chamber`), each with a
+> `Blogs & Social Posts/` folder. The installed app still saves to `~/Desktop/Blogs/`
+> (Content Writer, `ui/chat/content-writer-panel.js`, `src/tools/image-gen.ts` `ALLOWED_DIRS`) and
+> `~/Desktop/Daily Postings/<Brand>/` (`src/tools/daily-posting-packet.ts` `PACKET_ROOT`), which
+> are now just inboxes. Proposed change: map brand → bucket (`Brett`/`brett-personal` → BL, `TSAI`,
+> `PMMA`) and save to `<bucket>/Blogs & Social Posts/YYYY-MM-DD-<slug>/` (packets in
+> `Daily Posting Packets/`), keeping the inboxes as the fallback for unknown brands. Check that the
+> tool sandbox's approved roots allow the bucket folders. This needs a normal signed build and
+> guarded install. Brett has not approved it yet.
+
 > **Sept 29 evening: publish-step fix installed, committed and pushed.** The shell path check mistook
 > `/blog/...` in PR text and quoted folders with spaces for blocked files. Fixed in
 > `src/agent/tool-sandbox.ts`; 1,871 tests pass; rollback `/Applications/.acos-install-3JMWE9/previous.app`.
