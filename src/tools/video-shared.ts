@@ -18,6 +18,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { fileURLToPath } from 'url';
+import { getVideoFolder } from '../utils/content-folder';
 import { app } from 'electron';
 
 // This file compiles to ESM (tsconfig module: ES2022), where Node's CommonJS
@@ -119,12 +120,14 @@ export function todayStamp(): string {
 }
 
 /**
- * Dated output directory for a finished video, mirroring Content Writer's
- * ~/Desktop/Blogs/<date>-<slug>/ layout:
- *   ~/Desktop/Videos/YYYY-MM-DD-<slug>/
+ * Dated output directory for a finished video:
+ *   <video folder>/YYYY-MM-DD-<slug>/
+ * The video folder is `videoFolder` from ~/dev/_brand-profiles/settings.json
+ * (validated: an existing folder inside ~/Desktop), else ~/Desktop/Videos.
  */
 export function videoOutputDir(slug: string): string {
-  return path.join(os.homedir(), 'Desktop', 'Videos', `${todayStamp()}-${slugify(slug)}`);
+  const root = getVideoFolder() ?? path.join(os.homedir(), 'Desktop', 'Videos');
+  return path.join(root, `${todayStamp()}-${slugify(slug)}`);
 }
 
 /**

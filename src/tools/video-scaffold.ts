@@ -221,7 +221,8 @@ out/
 External Remotion project driven by AI Chief of Staff's **Video Studio**. The
 agent writes compositions under \`src/remotion/\`, registers them in
 \`src/Root.tsx\`, and renders MP4s with \`npx remotion render\`. Finished videos
-are copied to \`~/Desktop/Videos/<date>-<slug>/\`.
+are copied to \`<video folder>/<date>-<slug>/\` (the \`videoFolder\` in
+\`~/dev/_brand-profiles/settings.json\`, else \`~/Desktop/Videos/\`).
 
 The Remotion best-practices skill lives at
 \`.agents/skills/remotion/SKILL.md\` — read it before writing compositions.

@@ -57,6 +57,24 @@ export function getBrandContentFolder(
   }
 }
 
+/**
+ * Validated shared video folder (`videoFolder` in `<root>/settings.json`), or
+ * null when the file, the field or the folder is missing or invalid. Video
+ * Studio then falls back to ~/Desktop/Videos.
+ */
+export function getVideoFolder(
+  home: string = currentHome(),
+  root: string = brandProfilesRoot(home)
+): string | null {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(root, 'settings.json'), 'utf-8')) as unknown;
+    if (!raw || typeof raw !== 'object') return null;
+    return resolveContentFolder((raw as { videoFolder?: unknown }).videoFolder, home);
+  } catch {
+    return null;
+  }
+}
+
 /** Every validated content folder across all profiles under `root`. */
 export function listBrandContentFolders(
   home: string = currentHome(),

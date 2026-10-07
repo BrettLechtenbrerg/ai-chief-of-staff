@@ -378,7 +378,7 @@ function _vsBuildKickoffPrompt(hookDraft = null) {
     '- Frame-based animation ONLY. No CSS transitions/animations, no Tailwind animate-* classes.',
     '- Deterministic ONLY. No Math.random / Date.now / new Date — use Remotion\u2019s random() with a seed.',
     '- Keep all Remotion files under src/remotion/. Use staticFile() for every asset in public/.',
-    '- NEVER write into the installed .app bundle. The workspace is ~/dev/_video-studio; output goes to ~/Desktop/Videos/.',
+    '- NEVER write into the installed .app bundle. The workspace is ~/dev/_video-studio; output goes to the video folder (videoFolder in ~/dev/_brand-profiles/settings.json, else ~/Desktop/Videos/); the render result gives the exact path.',
     '- NEVER auto-publish to any platform. This is a draft — I post it myself.',
     '- The markers `[[VS_STATE:ready_for_approval]]` and `[[VS_STATE:done]]` are required exactly as written. The UI scans for them to render buttons.',
     '- Recognize the trigger `__VS_APPROVE__` ONLY in its exact double-underscore bracketed form. Words like "approve" or "go" are conversational feedback, not the trigger.',

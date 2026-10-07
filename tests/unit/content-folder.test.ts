@@ -13,7 +13,9 @@ import {
   getBrandContentFolder,
   listBrandContentFolders,
   uniqueBaseName,
+  getVideoFolder,
 } from '../../src/utils/content-folder';
+import { videoOutputDir } from '../../src/tools/video-shared';
 import { writeDailyPostingPacket } from '../../src/tools/daily-posting-packet';
 import { getPublishProfile } from '../../src/main/brand-profiles';
 import { validateAgentFilePath } from '../../src/agent/tool-sandbox';
@@ -42,6 +44,43 @@ beforeEach(() => {
 afterEach(() => {
   process.env.HOME = ORIGINAL_HOME;
   fs.rmSync(home, { recursive: true, force: true });
+});
+
+describe('video folder (settings.json videoFolder)', () => {
+  const LIBRARY = 'BL - Brett Lechtenberg/Projects/Edge System/Video Edge/04 - Production/Final Masters';
+  function writeSettings(settings: unknown): void {
+    const root = path.join(home, 'dev', '_brand-profiles');
+    fs.mkdirSync(root, { recursive: true });
+    fs.writeFileSync(path.join(root, 'settings.json'), JSON.stringify(settings));
+  }
+
+  it('renders into the configured library folder', () => {
+    const library = path.join(home, 'Desktop', LIBRARY);
+    fs.mkdirSync(library, { recursive: true });
+    writeSettings({ videoFolder: `~/Desktop/${LIBRARY}` });
+    expect(getVideoFolder(home)).toBe(library);
+    expect(path.dirname(videoOutputDir('My Promo'))).toBe(library);
+    expect(path.basename(videoOutputDir('My Promo'))).toMatch(/^\d{4}-\d{2}-\d{2}-my-promo$/);
+  });
+
+  it('falls back to ~/Desktop/Videos when settings are missing, malformed or point outside Desktop', () => {
+    const fallback = path.join(home, 'Desktop', 'Videos');
+    expect(getVideoFolder(home)).toBeNull();
+    expect(path.dirname(videoOutputDir('x'))).toBe(fallback);
+    writeSettings('not an object');
+    expect(getVideoFolder(home)).toBeNull();
+    writeSettings({ videoFolder: '~/Documents/Elsewhere' });
+    expect(getVideoFolder(home)).toBeNull();
+    writeSettings({ videoFolder: '~/Desktop/Missing Folder' });
+    expect(getVideoFolder(home)).toBeNull();
+    expect(path.dirname(videoOutputDir('x'))).toBe(fallback);
+  });
+
+  it('rejects a library symlink that escapes Desktop', () => {
+    fs.symlinkSync(outside, path.join(home, 'Desktop', 'Sneaky'));
+    writeSettings({ videoFolder: '~/Desktop/Sneaky' });
+    expect(getVideoFolder(home)).toBeNull();
+  });
 });
 
 describe('resolveContentFolder', () => {

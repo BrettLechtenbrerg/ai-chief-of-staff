@@ -4,7 +4,10 @@ Video Studio is the video capability alongside Content Writer / Ad Creator. A
 sidebar button opens a setup panel; the user picks a **brand** and an **aspect
 ratio**, clicks **Plan a Video**, and reviews a storyboard and rendered previews
 before requesting the final local MP4. Finished videos land in unique private
-folders under `~/Desktop/Videos/`. Publication remains separately approval-gated.
+folders under the video folder: `videoFolder` in `~/dev/_brand-profiles/settings.json`
+(validated by `src/utils/content-folder.ts`: an existing folder inside `~/Desktop`;
+for Brett, Video Edge's Final Masters), otherwise `~/Desktop/Videos/`. Publication
+remains separately approval-gated.
 
 ## The key architectural decision: Remotion is EXTERNAL
 
