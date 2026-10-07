@@ -2,7 +2,27 @@
 
 This is the canonical session-kickoff document. If you're a fresh Claude session, start here.
 
-## Current handoff — publish-step fix, September 29, 2026 (evening)
+## Current handoff — posts save into business buckets, October 7, 2026
+
+Brett reorganized his Desktop into business buckets and approved this change.
+Brand profiles now carry `contentFolder` (`~/dev/_brand-profiles` `57f0689`).
+New `src/utils/content-folder.ts` validates it: a leading `~/` only, no `.`/`..`
+parts, and the realpath must be an existing directory strictly inside the real
+`~/Desktop`; otherwise null and the old Desktop inbox is used. Daily packets go to
+`<bucket>/Daily Posting Packets/` with a " (2)" suffix instead of overwriting;
+the Content Writer prompt swaps `~/Desktop/Blogs` for the picked brand's bucket
+(`_cwResolvePostsRoot`); `generate_blog_image` also allows the validated buckets;
+`PublishProfile.contentFolder` carries the path to the UI. Sandbox roots are
+unchanged (home is already granted). Commit `3b7490e`. Typecheck, lint and
+**105 files / 1,881 tests** passed. Signed and notarized private Intel build
+(`release/personal-content-buckets-2026-10-07`) installed with `install-local.cjs`
+→ `installed-ready`; rollback `/Applications/.acos-install-ymGFqE/previous.app`.
+codesign/spctl pass, and the installed `content-folder.js` resolves brett-personal,
+tsai and pmma to their buckets (gift-connect falls back). No live Content Writer,
+packet or image run (no paid calls). Still `1.0.0-beta.25`; no public release.
+Routines remain manual-only.
+
+## Previous handoff — publish-step fix, September 29, 2026 (evening)
 
 The belt-order "please post the blog" run stopped at the push; the agent said
 the shell refused paths outside the workspace (the matching refusal is
