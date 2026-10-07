@@ -2,7 +2,23 @@
 
 This is the canonical session-kickoff document. If you're a fresh Claude session, start here.
 
-## Current handoff — posts save into business buckets, October 7, 2026
+## Current handoff — Video Studio saves into Video Edge, October 7, 2026
+
+Brett approved removing the `~/Desktop/Videos` shortcut. `videoOutputDir()` now
+uses `videoFolder` from `~/dev/_brand-profiles/settings.json` (validated by
+`getVideoFolder()` in `src/utils/content-folder.ts`, same rules as `contentFolder`),
+which points to Video Edge's `04 - Production/Final Masters`. It falls back to
+`~/Desktop/Videos/` if the setting is missing or invalid. Commit `5361984`
+(settings `b71318a`). Typecheck, lint and **105 files / 1,884 tests** passed.
+Signed and notarized private Intel build (`release/personal-video-folder-2026-10-07`).
+The first install attempt timed out because the app did not quit (no forced
+kill; nothing changed). After Brett quit it, `install-local.cjs` →
+`installed-ready`; rollback `/Applications/.acos-install-y9vKau/previous.app`.
+codesign/spctl pass, and the installed `getVideoFolder()` resolves to Final
+Masters. The Desktop `Videos` symlink was then removed (target untouched). No
+live render (no paid calls). Still `1.0.0-beta.25`; routines manual-only.
+
+## Previous handoff — posts save into business buckets, October 7, 2026
 
 Brett reorganized his Desktop into business buckets and approved this change.
 Brand profiles now carry `contentFolder` (`~/dev/_brand-profiles` `57f0689`).
